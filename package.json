@@ -1,0 +1,73 @@
+{
+	"name": "analogway-awj",
+	"version": "0.9.0",
+	"api_version": "1.0.0",
+	"keywords": [
+		"Image Processing",
+		"Video"
+	],
+	"manufacturer": "Analog Way",
+	"product": [
+		"AWJ Protocol Device",
+		"LivePremier",
+		"Alta 4K",
+		"Midra 4K"
+	],
+	"shortname": "AWJdevice",
+	"description": "Module for controlling the Analog Way AWJ protocol devices (LivePremier, Alta 4K, Midra 4K)",
+	"main": "dist/index.js",
+	"scripts": {
+		"prepare": "husky install",
+		"dev": "yarn build:watch",
+		"build": "npx rimraf dist && npx typescript@~4.6 -p tsconfig.build.json",
+		"build:main": "tsc -p tsconfig.build.json",
+		"build:watch": "tsc -p tsconfig.build.json --watch",
+		"lint:raw": "eslint --ext .ts --ext .js --ignore-pattern dist",
+		"lint": "yarn lint:raw .",
+		"lint-fix": "yarn lint --fix",
+		"license-validate": "yarn sofie-licensecheck",
+		"postinstall": "yarn build"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/bitfocus/companion-module-analogway-awj.git"
+	},
+	"author": "Dorian Meid <dnmeid@gmx.net>",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/bitfocus/companion-module-analogway-awj/issues"
+	},
+	"prettier": "@sofie-automation/code-standard-preset/.prettierrc.json",
+	"lint-staged": {
+		"*.{css,json,md,scss}": [
+			"prettier --write"
+		],
+		"*.{ts,tsx,js,jsx}": [
+			"yarn lint:raw --fix"
+		]
+	},
+	"engines": {
+		"node": "^14"
+	},
+	"dependencies": {
+		"@tsconfig/node14": "^1.0.1",
+		"@types/node": "^14.18.3",
+		"@types/superagent": "4.1.15",
+		"@types/urijs": "1.19.19",
+		"socket.io-client": "^4.5.1",
+		"superagent": "^8.0.3",
+		"tslib": "2.4.1",
+		"urijs": "^1.19.11",
+		"ws": "^8.8.1"
+	},
+	"devDependencies": {
+		"@typescript-eslint/eslint-plugin": "^5.42.0",
+		"@typescript-eslint/parser": "^5.42.0",
+		"eslint": "^8.11.0",
+		"eslint-plugin-prettier": "^4.0.0",
+		"husky": "^7.0.4",
+		"lint-staged": "^12.3.5",
+		"prettier": "^2.5.1",
+		"typescript": "~4.6"
+	}
+}
