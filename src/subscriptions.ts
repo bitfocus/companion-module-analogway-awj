@@ -465,6 +465,16 @@ const livepremierSubscriptions = {
 			return true
 		},
 	},
+	shutdown: {
+		pat: 'DEVICE/device/system/shutdown/cmd/pp/xRequest',
+		fun: (instance: AWJinstance, _path?: string | string[], value?: string | string[] | number | boolean): boolean => {
+			if (value === 'SHUTDOWN') {
+				instance.log('info', 'Device has been shut down.')
+				instance.status(instance.STATUS_OK, 'Shut down')
+			}
+			return false
+		},
+	}
 }
 
 const altaSubscriptions = {
@@ -700,6 +710,26 @@ const midraSubscriptions = {
 		pat: 'DEVICE/device/streaming/status/pp/mode',
 		fbk: 'deviceStreaming'
 	},
+	standby: {
+		pat: 'DEVICE/device/system/shutdown/standby/control/pp/xRequest',
+		fun: (instance: AWJinstance, path: string | string[], value?: string | string[] | number | boolean): boolean => {
+			if (value === 'STANDBY') {
+				instance.log('info', 'Device going to standby.')
+				instance.status(instance.STATUS_OK, 'Standby')
+			}
+			return false
+		},
+	},
+	shutdown: {
+		pat: 'DEVICE/device/system/shutdown/standby/control/pp/xRequest',
+		fun: (instance: AWJinstance, _path?: string | string[], value?: string | string[] | number | boolean): boolean => {
+			if (value === 'SWITCH_OFF') {
+				instance.log('info', 'Device has been shut down.')
+				instance.status(instance.STATUS_OK, 'Shut down')
+			}
+			return false
+		},
+	}
 }
 
 let subscriptions = commonSubscriptions

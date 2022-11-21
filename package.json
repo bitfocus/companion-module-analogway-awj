@@ -1,6 +1,6 @@
 {
 	"name": "analogway-awj",
-	"version": "0.9.0",
+	"version": "1.0.0",
 	"api_version": "1.0.0",
 	"keywords": [
 		"Image Processing",
@@ -32,7 +32,7 @@
 		"type": "git",
 		"url": "git+https://github.com/bitfocus/companion-module-analogway-awj.git"
 	},
-	"author": "Dorian Meid <dnmeid@gmx.net>",
+	"author": "Dorian Meid <meid@backstage.org>",
 	"license": "MIT",
 	"bugs": {
 		"url": "https://github.com/bitfocus/companion-module-analogway-awj/issues"

@@ -226,7 +226,6 @@ class State {
 			try {
 				this.stateobj.LOCAL.socketId = data.socketId
 				this.stateobj[channel] = { ...data.snapshot }
-				this.instance.log('debug', 'state channel init')
 				feedbacks = checkForAction(this.instance)
 			} catch (error) {
 				this.instance.log('debug', 'could not set JSON while init ' + error)
@@ -254,7 +253,7 @@ class State {
 		// if we are at the leaf -> update
 		if (patharray.length === 0) {
 			obj[first] = value
-			console.log('state update')
+			//console.log('state update')
 			//console.log('\nstate update', JSON.stringify(this.stateobj))
 		} else {
 			// if we are at an non existing branch -> create

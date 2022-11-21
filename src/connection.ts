@@ -11,6 +11,7 @@ import { WebSocket } from 'ws'
 import { State } from './state'
 import { checkSubscriptions, updateSubscriptions } from './subscriptions'
 import { mapOut, updateMappings } from './mappings'
+import { url } from 'inspector'
 
 class AWJdevice {
 	instance: AWJinstance
@@ -22,8 +23,9 @@ class AWJdevice {
 	port: number | undefined
 	host: string | undefined
 	addr: string | undefined
+	authcookie = ''
 	reconnectmin = 100
-	reconnectmax = 8_000
+	reconnectmax = 16_500
 	reconnectinterval = this.reconnectmin
 	readonly delimiter = '!' // '\x04'
 	readonly bufferMaxLength = 64_000
@@ -95,14 +97,11 @@ class AWJdevice {
 		return null
 	}
 
-	connect(addr: string): void {
-		this.addr = addr
-		this.shouldBeConnected = true
-		let authcookie = ''
-		if (this.addr.match(/^https?:\/\//) == null) {
-			this.addr = 'http://' + this.addr
+	getURLobj(address: string) {
+		if (address.match(/^https?:\/\//) == null) {
+			address = 'http://' + address
 		}
-		const urlObj = new URI(this.addr)
+		const urlObj = new URI(address)
 		if (urlObj.is('domain')) {
 			//console.log('URL Domain', urlObj)
 		} else if (urlObj.is('ipv4')) {
@@ -120,16 +119,22 @@ class AWJdevice {
 		}
 		if (urlObj.protocol() !== 'http' && urlObj.protocol() !== 'https') {
 			this.instance.log('error', 'Protocol needs to be either http or https but is ' + urlObj.protocol())
-			return
+			return null
 		}
+		return urlObj
+	}
+
+	connect(addr: string): void {
+		this.addr = addr
+		this.shouldBeConnected = true
+		let authcookie = ''
+
+		const urlObj =  this.getURLobj(this.addr)
 
 		const handleAPIresponse = (res) => {
 			if (res.body.device) {
 				this.state.setUnmapped('DEVICE', res.body)
-				console.log('rest get API result')
-				//mapInit(this.state)
-				console.log('INIT')
-				console.log('###########')
+				//console.log('rest get API result')
 				const serialNumber = (): string => {
 					const sn = this.state.getUnmapped('DEVICE/device/system/serial/pp/serialNumber')
 					if (sn === 'ZZ9999') return ' Simulator'
@@ -251,12 +256,12 @@ class AWJdevice {
 								.then((res) => {
 									// Got succesful auth response
 									if (res.header['set-cookie']) {
-										authcookie = res.header['set-cookie']
+										this.authcookie = res.header['set-cookie']
 										this.instance.log('info', 'Login to device is successful')
 									}
 									superagent
 										.get(`${urlObj.protocol()}://${urlObj.host()}/api/stores/device`)
-										.set('Cookie', authcookie)
+										.set('Cookie', this.authcookie)
 										.then(handleAPIresponse)
 										.catch((err) => {
 											this.instance.status(this.instance.STATUS_ERROR)
@@ -282,24 +287,26 @@ class AWJdevice {
 					console.log('superagent down', err)
 					console.log('ws close and retry in', this.reconnectinterval)
 					this.disconnect()
+					if (this.wsTimeout) clearTimeout(this.wsTimeout)
 					this.wsTimeout = setTimeout(() => {
 						this.connect(this.addr)
 					}, this.reconnectinterval)
-					this.reconnectinterval *= 1.8
+					this.reconnectinterval *= 1.2
 					if (this.reconnectinterval > this.reconnectmax) this.reconnectinterval = this.reconnectmax
 				})
 		})
 
 		this.websocket.on('close', (ev) => {
-			console.log('ws closed', ev.toString())
+			console.log('ws closed', ev.toString(), this.shouldBeConnected ? 'should be connected' : 'should not be connected')
 			if (this.shouldBeConnected) {
 				this.instance.status(this.instance.STATUS_ERROR)
 				this.hadError = true
 				console.log('ws retry in', this.reconnectinterval)
+				if (this.wsTimeout) clearTimeout(this.wsTimeout)
 				this.wsTimeout = setTimeout(() => {
 					this.connect(this.addr)
 				}, this.reconnectinterval)
-				this.reconnectinterval *= 2
+				this.reconnectinterval *= 1.2
 				if (this.reconnectinterval > this.reconnectmax) this.reconnectinterval = this.reconnectmax
 			}
 		})
@@ -331,22 +338,82 @@ class AWJdevice {
 				data.toString().match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
 				data.toString().match(/"device","system","temperature",/) === null
 			) {
-				console.log('\n\nincoming WS message', data.toString().substring(0, 50000))
+				console.log('\n\nincoming WS message', data.toString().substring(0, 200))
 				this.state.apply(JSON.parse(data.toString()))
 			}
 		})
-
-		// AWJ
-		// this.socket.connect(
-		// 	{
-		// 		port,
-		// 		host,
-		// 	},
-		// 	() => {
-		// 		console.log(`AWJ Client connected to: ${host} :  ${port}`)
-		// 	}
-		// )
+		
 	}
+
+	resetReconnectInterval(): void {
+		this.reconnectinterval = this.reconnectmin
+	}
+
+	restPOST(href: string, message: string): void {
+		const urlObj = this.getURLobj(href)
+		if (urlObj === null) return
+		if (urlObj.username() !== 'Admin' && this.authcookie.length === 0) {
+			superagent
+				.post(`${urlObj.protocol()}://${urlObj.host()}${urlObj.resource()}`)
+				.retry(2)
+				.set('Content-Type', 'application/json')
+				.redirects(0)
+				.ok((res) => res.status < 400)
+				.send(message)
+				.then((res) => {
+					this.instance.log('debug', 'http POST successfull ' + res.statusCode)
+				})
+				.catch((err) => {
+					this.instance.log('debug', 'http POST failed ' + err)
+				})
+		} else if (this.authcookie.length > 0) { 
+			superagent
+				.post(`${urlObj.protocol()}://${urlObj.host()}${urlObj.resource()}`)
+				.retry(2)
+				.set('Content-Type', 'application/json')
+				.set('Cookie', this.authcookie)
+				.redirects(0)
+				.ok((res) => res.status < 400)
+				.send(message)
+				.then((res) => {
+					this.instance.log('debug', 'http POST successfull ' + res.statusCode)
+				})
+				.catch((err) => {
+					this.instance.log('debug', 'http POST failed ' + err)
+				})
+		} else if (urlObj.username() === 'Admin' && this.authcookie.length === 0) {
+			superagent
+				.post(`${urlObj.protocol()}://${urlObj.host()}/auth/login`)
+				.set('Content-Type', 'application/json')
+				.redirects(0)
+				.ok((res) => res.status < 400)
+				.send(JSON.stringify({ password: urlObj.password() }))
+				.then((res) => {
+					// Got succesful auth response
+					if (res.header['set-cookie']) {
+						this.authcookie = res.header['set-cookie']
+						this.instance.log('info', 'Login to device is successful')
+					}
+					superagent
+						.post(`${urlObj.protocol()}://${urlObj.host()}${urlObj.resource()}`)
+						.retry(2)
+						.set('Content-Type', 'application/json')
+						.set('Cookie', this.authcookie)
+						.redirects(0)
+						.ok((res) => res.status < 400)
+						.send(message)
+						.then((res) => {
+							this.instance.log('debug', 'http POST successfull ' + res.statusCode)
+						})
+						.catch((err) => {
+							this.instance.log('debug', 'http POST failed ' + err)
+						})
+				})
+				.catch((err) => {
+					this.instance.log('error', 'Password failed ' + err)
+				})
+		}
+	} 
 
 	disconnect(): void {
 		clearTimeout(this.wsTimeout)
@@ -365,6 +432,8 @@ class AWJdevice {
 		this.websocket = null
 		//this.tcpsocket.destroy()
 		this.buffer = ''
+		this.authcookie = ''
+		this.instance.log('debug', 'Connection has been destroyed due to removal or disable by user')
 	}
 
 	async sendRawTCPmessage(message: string): Promise<void> {

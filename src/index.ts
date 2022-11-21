@@ -84,7 +84,6 @@ class AWJinstance extends instance_skel<Config> {
 	public updateConfig(config: Config): void {
 		const oldconfig = { config: { ...this.config }, label: this.label }
 		this.config = config
-		console.log('update config', this.config, this.config.deviceaddr)
 
 		if (this.config.deviceaddr !== oldconfig.config.deviceaddr) {
 			// new address, reconnect

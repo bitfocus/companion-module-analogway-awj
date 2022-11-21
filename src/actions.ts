@@ -509,7 +509,6 @@ export function getActions(instance: AWJinstance): any {
 					return state.isLocked(screen, preset)
 				})
 			) {
-				console.log('abort MM load because of lock')
 				return // TODO: resembles original WebRCS behavior, but could be also individual screen handling
 			}
 			// if (state.isLocked(layer.screenAuxKey, preset)) continue
@@ -3273,17 +3272,20 @@ export function getActions(instance: AWJinstance): any {
 		],
 		callback: (action: CompanionActionEvent) => {
 			let path = 'device/system/shutdown/cmd/pp/xRequest'
-			if (state.platform === 'midra') path = 'device/system/shutdown/standby/contro/pp/xRequestl'
+			if (state.platform === 'midra') path = 'device/system/shutdown/standby/control/pp/xRequest'
 
 			if (action.options.action === 'on') {
 				const mac = instance.config.macaddress.split(/[,:-_.\s]/).join('')
 				void device.wake(mac)
+				device.resetReconnectInterval()
 			}
-			if (action.options.action === 'wake') {
-				device.sendWSmessage(path, 'WAKE_UP')
+			if (action.options.action === 'wake' && state.platform === 'midra') {
+				device.restPOST(instance.config.deviceaddr + '/api/tpp/v1/system/wakeup', '')
+				device.resetReconnectInterval()
 			}
-			if (action.options.action === 'standby') {
+			if (action.options.action === 'standby' && state.platform === 'midra') {
 				device.sendWSmessage(path, 'STANDBY')
+				instance.status(instance.STATUS_OK, 'Standby')
 			}
 			if (action.options.action === 'off' && state.platform === 'livepremier') {
 				// device.sendWSmessage(path + 'pp/wakeOnLan', true)

@@ -344,7 +344,7 @@ export function mapInit(state: State, path?: string): void {
 // this function is unused
 export function mapPath(state: State, path: string): void {
 	const object = state.get('DEVICE/'+path)
-	console.log('mapping', path, object)
+	//console.log('mapping', path, object)
 	const mapped = mapIn(path, object)
 	if (typeof object === 'undefined') {
 		console.log('not mapping undefined');
