@@ -16,3 +16,4 @@ For a complete explanation see HELP.md
 # Version history:
 
 1.0.0 initial release
+1.0.1 Bugfix: TypeScript type errors don't block the build system

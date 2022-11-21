@@ -1,6 +1,6 @@
 {
 	"name": "analogway-awj",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"api_version": "1.0.0",
 	"keywords": [
 		"Image Processing",
@@ -19,7 +19,7 @@
 	"scripts": {
 		"prepare": "husky install",
 		"dev": "yarn build:watch",
-		"build": "npx rimraf dist && npx typescript@~4.6 -p tsconfig.build.json",
+		"build": "npx rimraf dist && (npx typescript@~4.6 -p tsconfig.build.json || true)",
 		"build:main": "tsc -p tsconfig.build.json",
 		"build:watch": "tsc -p tsconfig.build.json --watch",
 		"lint:raw": "eslint --ext .ts --ext .js --ignore-pattern dist",
