@@ -11,7 +11,7 @@ import { WebSocket } from 'ws'
 import { State } from './state'
 import { checkSubscriptions, updateSubscriptions } from './subscriptions'
 import { mapOut, updateMappings } from './mappings'
-import { url } from 'inspector'
+
 
 class AWJdevice {
 	instance: AWJinstance
@@ -19,7 +19,7 @@ class AWJdevice {
 	system: CompanionSystem
 	tcpsocket: net.Socket | undefined
 	websocket: WebSocket | undefined | null
-	wsTimeout: NodeJS.Timeout
+	wsTimeout: NodeJS.Timeout | undefined
 	port: number | undefined
 	host: string | undefined
 	addr: string | undefined
@@ -58,7 +58,7 @@ class AWJdevice {
 
 		this.tcpsocket.on('data', (data: string) => {
 			this.bufferFragment(data)
-			let message = null
+			let message: string | null = null
 			// eslint-disable-next-line no-cond-assign
 			while ((message = this.getNextMessage())) {
 				// check if there is data followed by a delimiter
@@ -124,14 +124,17 @@ class AWJdevice {
 		return urlObj
 	}
 
-	connect(addr: string): void {
+	connect(addr: string | undefined): void {
 		this.addr = addr
+		if (this.addr === undefined) return
 		this.shouldBeConnected = true
-		let authcookie = ''
 
-		const urlObj =  this.getURLobj(this.addr)
+		const urlObj = this.getURLobj(this.addr)
+		if (urlObj === null) return
 
-		const handleAPIresponse = (res) => {
+		//superagent.get().then()
+
+		const handleAPIresponse = (res: superagent.Response) => {
 			if (res.body.device) {
 				this.state.setUnmapped('DEVICE', res.body)
 				//console.log('rest get API result')
@@ -283,9 +286,9 @@ class AWJdevice {
 						}
 					}
 				})
-				.catch((err) => {
-					console.log('superagent down', err)
-					console.log('ws close and retry in', this.reconnectinterval)
+				.catch(() => {
+					// console.log('superagent down', err)
+					// console.log('ws close and retry in', this.reconnectinterval)
 					this.disconnect()
 					if (this.wsTimeout) clearTimeout(this.wsTimeout)
 					this.wsTimeout = setTimeout(() => {
@@ -296,12 +299,12 @@ class AWJdevice {
 				})
 		})
 
-		this.websocket.on('close', (ev) => {
-			console.log('ws closed', ev.toString(), this.shouldBeConnected ? 'should be connected' : 'should not be connected')
+		this.websocket.on('close', () => {
+			// console.log('ws closed', ev.toString(), this.shouldBeConnected ? 'should be connected' : 'should not be connected')
 			if (this.shouldBeConnected) {
 				this.instance.status(this.instance.STATUS_ERROR)
 				this.hadError = true
-				console.log('ws retry in', this.reconnectinterval)
+				// console.log('ws retry in', this.reconnectinterval)
 				if (this.wsTimeout) clearTimeout(this.wsTimeout)
 				this.wsTimeout = setTimeout(() => {
 					this.connect(this.addr)
@@ -338,7 +341,7 @@ class AWJdevice {
 				data.toString().match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
 				data.toString().match(/"device","system","temperature",/) === null
 			) {
-				console.log('\n\nincoming WS message', data.toString().substring(0, 200))
+				// console.log('\n\nincoming WS message', data.toString().substring(0, 200))
 				this.state.apply(JSON.parse(data.toString()))
 			}
 		})
@@ -441,11 +444,11 @@ class AWJdevice {
 		return new Promise((resolve, reject) => {
 			this.tcpsocket?.write(message)
 
-			this.tcpsocket?.on('data', (data: any) => {
+			this.tcpsocket?.on('data', (data: void | PromiseLike<void>): void => {
 				resolve(data)
 			})
 
-			this.tcpsocket?.on('error', (err: any) => {
+			this.tcpsocket?.on('error', (err: unknown) => {
 				reject(err)
 				this.instance.status(this.instance.STATUS_ERROR)
 			})
@@ -455,7 +458,7 @@ class AWJdevice {
 	sendRawWSmessage(message: string): void {
 		if (this.websocket?.readyState === 1) {
 			this.websocket?.send(message)
-			console.log('sendig WS message', message)
+			// console.log('sendig WS message', message)
 		}
 	}
 
@@ -541,9 +544,9 @@ class AWJdevice {
 		this.sendRawWSmessage(JSON.stringify(obj))
 	}
 
-	sendAWJmessage(op: string, path: string, value: string): void
-	sendAWJmessage(op: string, path: string, value: number): void
-	sendAWJmessage(op: string, path: string, value: boolean): void
+	sendAWJmessage(_op: string, _path: string, _value: string): void
+	sendAWJmessage(_op: string, _path: string, _value: number): void
+	sendAWJmessage(_op: string, _path: string, _value: boolean): void
 	sendAWJmessage(op: string, path: string, value: string | number | boolean): void {
 		if (typeof value === 'string')
 			return void this.sendRawTCPmessage(`{"op":"${op}, "path":"${path}", "value":"${value}"}${this.delimiter}`)

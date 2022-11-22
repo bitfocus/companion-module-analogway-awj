@@ -1,5 +1,5 @@
 import AWJinstance from './index'
-import { CompanionPreset, DropdownChoice } from '../../../instance_skel_types'
+import { CompanionPreset } from '../../../instance_skel_types'
 import {
 	choicesBackgroundSources,
 	choicesBackgroundSourcesPlusNone,
@@ -18,6 +18,8 @@ import {
 	getWidgetChoices,
 	getWidgetSourceChoices,
 } from './choices'
+
+type Dropdown<t> = {id: t, label: string}
 
 export function getPresets(instance: AWJinstance): CompanionPreset[] {
 	const state = instance.state
@@ -897,10 +899,10 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 	}
 
 	// MARK: Choose Input ...
-	function makeInputSelectionPreset(input: DropdownChoice, layertypes: string[], layerdescription: string) {
+	function makeInputSelectionPreset(input: Dropdown<string>, layertypes: string[], layerdescription: string) {
 		let sourceLabelVariable = ''
 		// sourceLayer, sourceNative, sourceBack, sourceFront
-		if (input.id.toString().match(/^IN|LIVE|STILL|SCREEN/)) {
+		if (input.id.match(/^IN|LIVE|STILL|SCREEN/)) {
 			sourceLabelVariable = `\\n$(${ilabel}:${input.id.replace('LIVE_', 'INPUT_')}label)`
 		}
 		const preparedPreset = {
@@ -956,21 +958,21 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 
 	if (state.platform === 'midra') {
 		makeInputSelectionPreset({ id: 'COLOR', label: 'Color' }, ['sourceLayer'], 'Live')
-		getSourceChoices(state).filter(choice => choice.id !== 'NONE' && choice.id !== 'COLOR').forEach((choice: DropdownChoice) => {
+		getSourceChoices(state).filter(choice => choice.id !== 'NONE' && choice.id !== 'COLOR').forEach((choice: Dropdown<string>) => {
 			makeInputSelectionPreset(choice, ['sourceLayer', 'sourceBack'], 'Live/Background')
 		})
-		choicesBackgroundSourcesPlusNone.filter(choice => choice.id !== 'NONE').forEach((choice: DropdownChoice) => {
+		choicesBackgroundSourcesPlusNone.filter(choice => choice.id !== 'NONE').forEach((choice: Dropdown<string>) => {
 			makeInputSelectionPreset(choice, ['sourceNative'], 'Background')
 		})
-		choicesForegroundImagesSource.filter(choice => choice.id !== 'NONE').forEach((choice: DropdownChoice) => {
+		choicesForegroundImagesSource.filter(choice => choice.id !== 'NONE').forEach((choice: Dropdown<string>) => {
 			makeInputSelectionPreset(choice, ['sourceFront'], 'Foreground')
 		})
 	}
 	if (state.platform === 'livepremier') {
-		getSourceChoices(state).filter(choice => choice.id !== 'NONE' && choice.id !== 'COLOR').forEach((choice: DropdownChoice) => {
+		getSourceChoices(state).filter(choice => choice.id !== 'NONE' && choice.id !== 'COLOR').forEach((choice: Dropdown<string>) => {
 			makeInputSelectionPreset(choice, ['sourceLayer', 'sourceBack'], '')
 		})
-		choicesBackgroundSources.forEach((choice: DropdownChoice) => {
+		choicesBackgroundSources.forEach((choice: Dropdown<string>) => {
 			makeInputSelectionPreset(choice, ['sourceNative'], 'Background')
 		})
 	}

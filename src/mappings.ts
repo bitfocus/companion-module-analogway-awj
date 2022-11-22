@@ -3,11 +3,11 @@ import { State } from './state'
 
 type MapItem = {
 	patin: string,
-	pathinrep?: (arg0: string) => string,
-	valinrep?: (arg0: unknown) => unknown,
+	pathinrep?: (_arg0: string) => string,
+	valinrep?: (_arg0: any) => unknown,
 	patout: string,
-	pathoutrep?: (arg0: string) => string
-	valoutrep?: (arg0: unknown) => unknown,
+	pathoutrep?: (_arg0: string) => string
+	valoutrep?: (_arg0: any) => unknown,
 	initfrom?: string,
 	initto?: string,
 }
@@ -172,7 +172,7 @@ const midraMap: MapItem[] = [
 	{
 		patin: 'live/multiviewer/widgetSelection/widgetKeys',
 		pathinrep: (itm) => itm.replace('live/multiviewer/widgetSelection/widgetKeys', 'live/multiviewers/widgetSelection/widgetIds'),
-		valinrep: (itm) => itm.map((widget: string) => {return {widgetKey: widget, multiviewerKey: '1'}}),
+		valinrep: (itm: string[]) => itm.map((widget: string) => {return {widgetKey: widget, multiviewerKey: '1'}}),
 		patout: 'live/multiviewers/widgetSelection/widgetIds',
 		pathoutrep: (itm) => itm.replace('live/multiviewers/widgetSelection/widgetIds', 'live/multiviewer/widgetSelection/widgetKeys'),
 		valoutrep: (itm) => itm.map((widget: {widgetKey: string}) => widget.widgetKey),
@@ -301,7 +301,8 @@ export function mapIn(pat: string | string[], value: unknown): {path: string, va
  * @param value the value to transform
  * @returnes the transformed value
  */
-export function mapOut(pat: string | string[], value: unknown): {path: string, value: unknown} {
+export function mapOut(pat: string | string[] | undefined, value: unknown): { path: string, value: unknown } {
+	if (pat === undefined) return {path: '', value: value}
 	let path: string
 	if (Array.isArray(pat)) {
 		path = pat.join('/')
@@ -335,6 +336,7 @@ export function mapInit(state: State, path?: string): void {
 		})
 		if (mapping.length > 0) {
 			mapping.forEach((map) => {
+				if (map.initfrom === undefined) return
 				mapPath(state, map.initfrom)
 			})
 		}

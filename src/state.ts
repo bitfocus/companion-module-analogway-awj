@@ -1,7 +1,7 @@
 import AWJinstance from './index'
 import { checkForAction } from './subscriptions'
 import { mapIn, mapOut } from './mappings'
-import { InputValue } from './../../../instance_skel_types'
+//import { InputValue } from './../../../instance_skel_types'
 import { Choicemeta, getAuxArray, getScreensArray } from './choices'
 
 type Channel = 'REMOTE' | 'DEVICE' | 'LOCAL'
@@ -144,7 +144,7 @@ class State {
 			const npath = path.replace(/^\//, '')
 			;[first, ...patharray] = npath.split('/')
 		} else {
-			;[first, ...patharray] = path
+			[first, ...patharray] = path
 		}
 		// if we are at the leaf -> return element
 		if (patharray.length === 0) {
@@ -183,7 +183,7 @@ class State {
 		}
 	}
 
-	public apply(obj: any, path?: string | string[] | undefined): void {
+	public apply(obj: any): void {
 		if (obj.channel === undefined || obj.data === undefined) return
 		const channel: Channel = obj.channel
 		const data = obj.data
@@ -232,10 +232,10 @@ class State {
 			}
 		}
 		if (feedbacks && typeof feedbacks === 'string') {
-			console.log('checking feedback from external msg', feedbacks)
+			// console.log('checking feedback from external msg', feedbacks)
 			this.instance.checkFeedbacks(feedbacks)
 		} else if (feedbacks && Array.isArray(feedbacks)) {
-			console.log('checking feedbacks from external msg', feedbacks)
+			// console.log('checking feedbacks from external msg', feedbacks)
 			feedbacks.forEach((fb) => this.instance.checkFeedbacks(fb))
 		}
 	}
@@ -248,7 +248,7 @@ class State {
 			const npath = path.replace(/^\//, '')
 			;[first, ...patharray] = npath.split('/')
 		} else {
-			;[first, ...patharray] = path
+			[first, ...patharray] = path
 		}
 		// if we are at the leaf -> update
 		if (patharray.length === 0) {
@@ -301,7 +301,7 @@ class State {
 			const npath = path.replace(/^\//, '')
 			;[first, ...patharray] = npath.split('/')
 		} else {
-			;[first, ...patharray] = path
+			[first, ...patharray] = path
 		}
 		// if we are at the leaf -> update
 		if (patharray.length === 0) {
@@ -380,13 +380,15 @@ class State {
 		}
 	}
 
+	
+
 	/**
 	 * Returns the actual preset (A or B) representing program or preview of the given input or of the selection
 	 * @param screen S1-S... or A1-A...
 	 * @param preset can be A or B or PGM or PVW or 'sel', A and B are returned unchanged
 	 * @returns A or B, whichever is the actual preset for program or preview, during fades the preset is changed only at the end of the fade
 	 */
-	public getPreset(screen: string, preset: 'A' | 'B' | 'PGM' | 'PVW' | 'sel' | 'pgm' | 'pvw'): string {
+	public getPreset(screen: string, preset: string): string {
 		if (screen.match(/^S|A\d+$/) === null) return ''
 		if (preset.match(/^A|B|PGM|PVW|SEL$/i) === null) return ''
 		if (preset.toLowerCase() === 'sel') {
@@ -425,7 +427,7 @@ class State {
 	 * @param input array of strings to check
 	 * @returns either all active screens or the input
 	 */
-	public getChosenScreens(input: InputValue | InputValue[]): string[] {
+	public getChosenScreens(input: string | string[]): string[] {
 		if (typeof input === 'string') {
 			input = [input]
 		}
@@ -479,7 +481,7 @@ class State {
 	 * @param input array of strings to check
 	 * @returns either all active screens or the input
 	 */
-	public getChosenScreenAuxes(input: InputValue | InputValue[] | undefined): string[] {
+	public getChosenScreenAuxes(input: string | string[] | undefined): string[] {
 		if (input === undefined) return []
 		if (typeof input === 'string') {
 			input = [input]

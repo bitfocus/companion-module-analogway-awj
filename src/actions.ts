@@ -33,12 +33,20 @@ import {
 	getWidgetChoices,
 	getWidgetSourceChoices,
 } from './choices'
-import { CompanionAction, CompanionActionEvent, CompanionActionEventInfo, CompanionActions, CompanionInputFieldDropdown, ConfigValue, DropdownChoice, SomeCompanionInputField } from '../../../instance_skel_types'
+import { CompanionAction, CompanionActionEvent, CompanionActionEventInfo, CompanionActions, CompanionInputFieldDropdown, CompanionOptionValues, ConfigValue, DropdownChoice, SomeCompanionInputField } from '../../../instance_skel_types'
 import { Config } from './config'
 import { AWJdevice } from './connection'
 
-const XUPDATE = '{"channel":"DEVICE","data":{"path":"device/screenGroupList/control/pp/xUpdate","value":true}}'
-const XUPDATEmidra = '{"channel":"DEVICE","data":{"path":"device/preset/control/pp/xUpdate","value":true}}'
+type ActionEvent<T> = {
+	id: string
+	action: string
+	options: T
+}
+
+type Dropdown<t> = {id: t, label: string}
+
+// const XUPDATE = '{"channel":"DEVICE","data":{"path":"device/screenGroupList/control/pp/xUpdate","value":true}}'
+// const XUPDATEmidra = '{"channel":"DEVICE","data":{"path":"device/preset/control/pp/xUpdate","value":true}}'
 
 /**
  * AWJ paths have some differences to JSON paths and the internal object, this function converts AWJ to JSON path.
@@ -147,6 +155,7 @@ export function getActions(instance: AWJinstance): any {
 	/**
 	 *  MARK: Recall Screen Memory
 	 */
+	type DeviceScreenAuxMemory = { options: {screens: string[], preset: string, memory: string, selectScreens: boolean}}
 	const deviceScreenMemory_livepremier = {
 		label: 'Recall Screen Memory',
 		options: [
@@ -179,7 +188,7 @@ export function getActions(instance: AWJinstance): any {
 				default: true,
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			const screens = state.getChosenScreenAuxes(action.options.screens)
 			const preset = state.getPresetSelection(action.options.preset, true)
 			for (const screen of screens) {
@@ -274,7 +283,7 @@ export function getActions(instance: AWJinstance): any {
 				default: true,
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			const screens = state.getChosenScreens(action.options.screens)
 			const preset = state.getPresetSelection(action.options.preset, true)
 			for (const screen of screens) {
@@ -371,8 +380,8 @@ export function getActions(instance: AWJinstance): any {
 			},
 		],
 		callback: (action: CompanionActionEvent) => {
-			const screens = state.getChosenAuxes(action.options.screens)
-			const preset = state.getPresetSelection(action.options.preset, true)
+			const screens = state.getChosenAuxes(action.options.screens as string[])
+			const preset = state.getPresetSelection(action.options.preset as string, true)
 			for (const screen of screens) {
 				if (state.isLocked(screen, preset)) continue
 				device.sendWSmessage(
@@ -436,6 +445,7 @@ export function getActions(instance: AWJinstance): any {
 	/**
 	 * MARK: Recall Master Memory
 	 */
+	type DeviceMasterMemory = {preset: string, memory: string, selectScreens: boolean}
 	actions['deviceMasterMemory'] = {
 		label: 'Recall Master Memory',
 		options: [
@@ -460,7 +470,7 @@ export function getActions(instance: AWJinstance): any {
 				default: true,
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			const preset = state.getPresetSelection(action.options.preset, true)
 			let screens = []
 
@@ -577,7 +587,7 @@ export function getActions(instance: AWJinstance): any {
 				choices: getScreenAuxChoices(state),
 				default: [getScreenAuxChoices(state)[0]?.id],
 				multiple: true,
-				isVisible: (action) => {
+				isVisible: (action: any) => {
 					return action.options.method === 'spec'
 				},
 			},
@@ -587,7 +597,7 @@ export function getActions(instance: AWJinstance): any {
 				label: 'Preset',
 				choices: [{ id: 'sel', label: 'Selected' }, ...choicesPreset],
 				default: 'pvw',
-				isVisible: (action) => {
+				isVisible: (action: any) => {
 					return action.options.method === 'spec'
 				},
 			},
@@ -610,7 +620,7 @@ export function getActions(instance: AWJinstance): any {
 				default: getLayerMemoryChoices(state)[0]?.id,
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			let layers: { screenAuxKey: string; layerKey: string }[] = []
 			let preset: string
 			if (action.options.method === 'sel') {
@@ -692,7 +702,7 @@ export function getActions(instance: AWJinstance): any {
 				default: getMultiviewerMemoryChoices(state)[0]?.id,
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			for (const mv of action.options.multiviewer) {
 				device.sendWSmessage(
 					[
@@ -773,7 +783,7 @@ export function getActions(instance: AWJinstance): any {
 				default: ['sel'],
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			let dir = 'xTake'
 			for (const screen of state.getChosenScreenAuxes(action.options.screens)) {
 				if (state.platform === 'livepremier') {
@@ -804,7 +814,7 @@ export function getActions(instance: AWJinstance): any {
 				default: ['sel'],
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			for (const screen of state.getChosenScreenAuxes(action.options.screens)) {
 				device.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'xCut'], true)
 			}
@@ -845,7 +855,7 @@ export function getActions(instance: AWJinstance): any {
 				range: true,
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			const time = action.options.time as number * 10
 			state.getChosenScreenAuxes(action.options.screens).forEach((screen) => {
 				const presetPgm = state.getPreset(screen, 'PGM')
@@ -898,7 +908,7 @@ export function getActions(instance: AWJinstance): any {
 				range: true,
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			const time = action.options.time as number * 10
 			state.getChosenScreenAuxes(action.options.screens).forEach((screen: string) =>
 				device.sendWSmessage(['device', 'transition', 'screenList', 'items', screen, 'control', 'pp', 'takeTime'], time)
@@ -933,7 +943,7 @@ export function getActions(instance: AWJinstance): any {
 					choices: getScreenAuxChoices(state),
 					default: [getScreenAuxChoices(state)[0]?.id],
 					multiple: true,
-					isVisible: (action: CompanionActionEvent) => {
+					isVisible: (action: any) => {
 						return action.options.method === 'spec'
 					},
 				},
@@ -943,12 +953,12 @@ export function getActions(instance: AWJinstance): any {
 					label: 'Preset',
 					choices: choicesPreset,
 					default: 'pvw',
-					isVisible: (action: CompanionActionEvent) => {
+					isVisible: (action: any) => {
 						return action.options.method === 'spec'
 					},
 				},
 			],
-			callback: (action: CompanionActionEvent) => {
+			callback: (action: any) => {
 				if (action.options.method === 'spec') {
 					for (const screen of action.options.screen) {
 						if (state.isLocked(screen, action.options.preset)) continue
@@ -1018,7 +1028,7 @@ export function getActions(instance: AWJinstance): any {
 				label: 'Screen Layer Source',
 				choices: [{ id: 'keep', label: "Don't change source"}, ...getSourceChoices(state)],
 				default: 'keep',
-				isVisible: (action: CompanionActionEvent) => {
+				isVisible: (action: any) => {
 					if (action.options.method === 'sel') return true
 					if (action.options.method === 'spec') {
 						for (const screen of action.options.screen.filter((screen: string) => screen.startsWith('S'))) {
@@ -1034,7 +1044,7 @@ export function getActions(instance: AWJinstance): any {
 				label: 'Screen Background Source',
 				choices: [{ id: 'keep', label: "Don't change source"}, ...choicesBackgroundSourcesPlusNone],
 				default: 'keep',
-				isVisible: (action: CompanionActionEvent) => {
+				isVisible: (action: any) => {
 					if (action.options.method === 'sel') return true
 					if (action.options.method === 'spec') {
 						for (const screen of action.options.screen.filter((screen: string) => screen.startsWith('S'))) {
@@ -1050,7 +1060,7 @@ export function getActions(instance: AWJinstance): any {
 				label: 'Aux Layer Source',
 				choices: [{ id: 'keep', label: "Don't change source"}, ...getAuxSourceChoices(state)],
 				default: 'keep',
-				isVisible: (action: CompanionActionEvent) => {
+				isVisible: (action: any) => {
 					if (action.options.method === 'sel') return true
 					if (action.options.method === 'spec') {
 						for (const screen of action.options.screen.filter((screen: string) => screen.startsWith('A'))) {
@@ -1085,7 +1095,7 @@ export function getActions(instance: AWJinstance): any {
 					choices: getScreenAuxChoices(state),
 					default: [getScreenAuxChoices(state)[0]?.id],
 					multiple: true,
-					isVisible: (action: CompanionActionEvent) => {
+					isVisible: (action: any) => {
 						return action.options.method === 'spec'
 					},
 				},
@@ -1095,12 +1105,12 @@ export function getActions(instance: AWJinstance): any {
 					label: 'Preset',
 					choices: choicesPreset,
 					default: 'pvw',
-					isVisible: (action: CompanionActionEvent) => {
+					isVisible: (action: any) => {
 						return action.options.method === 'spec'
 					}
 				},
 			],
-			callback: (action: CompanionActionEvent) => {
+			callback: (action: any) => {
 				if (action.options.method === 'spec') {
 					for (const screen of action.options.screen as string[]) {
 						if (state.isLocked(screen, action.options.preset as string)) continue
@@ -1172,7 +1182,7 @@ export function getActions(instance: AWJinstance): any {
 				label: 'Screen Background Source',
 				choices: [{ id: 'keep', label: "Don't change source"}, ...choicesBackgroundSourcesPlusNone],
 				default: 'keep',
-				isVisible: (action: CompanionActionEvent) => {
+				isVisible: (action: any) => {
 					if (action.options.method === 'sel') return true
 					if (action.options.method === 'spec') {
 						for (const screen of action.options.screen.filter((screen: string) => screen.startsWith('S'))) {
@@ -1188,7 +1198,7 @@ export function getActions(instance: AWJinstance): any {
 				label: 'Screen Layer Source',
 				choices: [{ id: 'keep', label: "Don't change source"}, ...getSourceChoices(state)],
 				default: 'keep',
-				isVisible: (action: CompanionActionEvent) => {
+				isVisible: (action: any) => {
 					if (action.options.method === 'sel') return true
 					for (const screen of action.options.screen as string[]) {
 						if (
@@ -1206,7 +1216,7 @@ export function getActions(instance: AWJinstance): any {
 				label: 'Screen Foreground Source',
 				choices: [{ id: 'keep', label: "Don't change source"}, ...choicesForegroundImagesSource],
 				default: 'keep',
-				isVisible: (action: CompanionActionEvent) => {
+				isVisible: (action: any) => {
 					if (action.options.method === 'sel') return true
 					if (action.options.method === 'spec') {
 						for (const screen of action.options.screen.filter((screen: string) => screen.startsWith('S'))) {
@@ -1222,7 +1232,7 @@ export function getActions(instance: AWJinstance): any {
 				label: 'Aux Background Source',
 				choices: [{ id: 'keep', label: "Don't change source"}, ...getAuxBackgroundChoices(state)],
 				default: 'keep',
-				isVisible: (action: CompanionActionEvent) => {
+				isVisible: (action: any) => {
 					if (action.options.method === 'sel') return true
 					if (action.options.method === 'spec') {
 						for (const screen of action.options.screen.filter((screen: string) => screen.startsWith('A'))) {
@@ -1241,7 +1251,7 @@ export function getActions(instance: AWJinstance): any {
 		actions['deviceInputPlug'] = {
 			label: 'Set Input Plug',
 			options: [],
-			callback: (action: CompanionActionEvent) => {
+			callback: (action: any) => {
 				device.sendWSmessage([
 					'device', 'inputList', 'items',
 					action.options.input?.toString() ?? '',
@@ -1321,7 +1331,7 @@ export function getActions(instance: AWJinstance): any {
 				default: 'DISABLE',
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			device.sendWSmessage(
 				[
 					'device',
@@ -1368,9 +1378,9 @@ export function getActions(instance: AWJinstance): any {
 				default: 2,
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			const input = action.options.input
-			let val: boolean = false
+			let val = false
 			if (action.options.mode === 1) {
 				val = true
 			} else if (action.options.mode === 2) {
@@ -1402,7 +1412,7 @@ export function getActions(instance: AWJinstance): any {
 					default: 'pvw',
 				},
 			],
-			callback: (action: CompanionActionEvent) => {
+			callback: (action: any) => {
 				if (state.isLocked(action.options.screen, action.options.preset)) return
 				const layer = action.options[`layer${action.options.screen}`]
 				const preset = state.getPreset(action.options.screen, action.options.preset)
@@ -1586,7 +1596,7 @@ export function getActions(instance: AWJinstance): any {
 				default: ['sel'],
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			for (const screen of state.getChosenScreenAuxes(action.options.screens)) {
 				if (state.isLocked(screen, 'PREVIEW')) return
 				device.sendWSmessage(
@@ -1617,7 +1627,7 @@ export function getActions(instance: AWJinstance): any {
 				default: 'on',
 			},
 		],
-		callback: (act: CompanionActionEvent) => {
+		callback: (act: any) => {
 			const allscreens = getScreensAuxArray(state, true).map((itm: Choicemeta) => itm.id)
 			// device/transition/screenList/items/1/control/pp/enablePresetToggle
 			// device/screenGroupList/items/S1/control/pp/copyMode
@@ -1726,7 +1736,7 @@ export function getActions(instance: AWJinstance): any {
 				default: getWidgetSourceChoices(state)[0]?.id,
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			let widgetSelection = []
 			if (action.options.widget === 'sel') {
 				if (state.syncSelection) {
@@ -1813,7 +1823,7 @@ export function getActions(instance: AWJinstance): any {
 				default: 2,
 			},
 		],
-		callback: (action: CompanionActionEvent, info: CompanionActionEventInfo | null) => {
+		callback: (action: any, info: CompanionActionEventInfo | null) => {
 			let sel = action.options.sel
 			if (sel === 6 || (sel === 5 && info === null)) {
 				state.setUnmapped('LOCAL/intelligent/screenSelectionRunning', undefined)
@@ -1926,7 +1936,7 @@ export function getActions(instance: AWJinstance): any {
 				default: 'toggle',
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			const screens = action.options.screens
 			const pst = action.options.preset === 'PREVIEW' ? 'Prw' : 'Pgm'
 			if (state.syncSelection) {
@@ -2021,7 +2031,7 @@ export function getActions(instance: AWJinstance): any {
 				default: 'tgl',
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			if (state.syncSelection) {
 				switch (action.options.mode) {
 					case 'pgm':
@@ -2147,17 +2157,7 @@ export function getActions(instance: AWJinstance): any {
 				}
 			}
 			if (state.syncSelection) {
-				if (state.platform === 'xxx')
-					device.sendWSdata('REMOTE', 'replace', 'live/screens/layerSelection', [
-						ret.map((layer: {screenAuxKey: string, layerKey: string}) => {
-							return {
-								screenAuxKey: layer.screenAuxKey.replace(/^S(\d+)/, 'SCREEN_$1').replace(/^A(\d+)/, 'AUX_$1'),
-								layerKey: layer.layerKey.replace('NATIVE', 'BKG').replace(/^(\d+)$/, 'LIVE_$1')
-							}
-						})
-					])
-				if (true)
-					device.sendWSdata('REMOTE', 'replace', 'live/screens/layerSelection', [ret])
+				device.sendWSdata('REMOTE', 'replace', 'live/screens/layerSelection', [ret])
 			} else {
 				state.set('LOCAL/layerIds', ret)
 				instance.checkFeedbacks('remoteLayerSelection')
@@ -2166,7 +2166,7 @@ export function getActions(instance: AWJinstance): any {
 	}
 	for (const screen of screens) {
 		// eslint-disable-next-line @typescript-eslint/ban-types
-		let visFn: Function = (_action) => {
+		let visFn: Function = () => {
 			return true
 		}
 		// make the code more injection proof
@@ -2189,7 +2189,7 @@ export function getActions(instance: AWJinstance): any {
 			choices: layerChoices,
 			default: [defaultChoice],
 			multiple: true,
-			isVisible: visFn as (options: CompanionActionEvent) => boolean,
+			isVisible: visFn as (options: any) => boolean,
 		})
 	}
 
@@ -2211,7 +2211,7 @@ export function getActions(instance: AWJinstance): any {
 				default: 2,
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			const clients = state.get('REMOTE/system/network/websocketServer/clients')
 			let syncstate: boolean
 			const myid: string = state.get('LOCAL/socketId')
@@ -2270,7 +2270,7 @@ export function getActions(instance: AWJinstance): any {
 				default: 'on',
 			},
 		],
-		callback: (act: CompanionActionEvent) => {
+		callback: (act: any) => {
 			let action = act.options.stream
 			if (action === 'toggle') {
 				if (state.getUnmapped('DEVICE/device/streaming/status/pp/mode') === 'NONE') action = 'on'
@@ -2305,7 +2305,7 @@ export function getActions(instance: AWJinstance): any {
 				default: 'on',
 			},
 		],
-		callback: (act: CompanionActionEvent) => {
+		callback: (act: any) => {
 			let action = act.options.stream
 			if (action === 'toggle') {
 				if (state.getUnmapped('DEVICE/device/streaming/control/audio/live/pp/mute')) action = 'on'
@@ -2355,7 +2355,7 @@ export function getActions(instance: AWJinstance): any {
 			},
 		],
 	}
-	if (state.platform === 'lifepremier') actions['deviceAudioRouteBlock'].callback = (action: CompanionActionEvent) => {
+	if (state.platform === 'lifepremier') actions['deviceAudioRouteBlock'].callback = (action: any) => {
 			const outstart = audioOutputChoices.findIndex((item) => {
 				return item.id === action.options.out
 			})
@@ -2387,7 +2387,7 @@ export function getActions(instance: AWJinstance): any {
 				}
 			}
 	}
-	if (state.platform === 'midra') actions['deviceAudioRouteBlock'].callback = (action: CompanionActionEvent) => {
+	if (state.platform === 'midra') actions['deviceAudioRouteBlock'].callback = (action: any) => {
 			const outstart = audioOutputChoices.findIndex((item) => {
 				return item.id === action.options.out
 			})
@@ -2455,7 +2455,7 @@ export function getActions(instance: AWJinstance): any {
 			},
 		],
 	}
-	if (state.platform === 'lifepremier') actions['deviceAudioRouteChannels'].callback = (action: CompanionActionEvent) => {
+	if (state.platform === 'lifepremier') actions['deviceAudioRouteChannels'].callback = (action: any) => {
 		if (action.options.in.length > 0) {
 			const outstart = audioOutputChoices.findIndex((item) => {
 				return item.id === action.options.out
@@ -2498,7 +2498,7 @@ export function getActions(instance: AWJinstance): any {
 			device.sendWSmessage(path, audioInputChoices[0]?.id)
 		}
 	}
-	if (state.platform === 'midra') actions['deviceAudioRouteChannels'].callback = (action: CompanionActionEvent) => {
+	if (state.platform === 'midra') actions['deviceAudioRouteChannels'].callback = (action: any) => {
 		let inputlist = ['NONE']
 		if (action.options.in?.length > 0) {
 			inputlist = action.options.in as string[]
@@ -2601,7 +2601,7 @@ export function getActions(instance: AWJinstance): any {
 				default: config.color_dark,
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			device.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'pp', 'type'],
 				action.options.type
@@ -2681,7 +2681,7 @@ export function getActions(instance: AWJinstance): any {
 				placeholder: 'e.g. 1:22:33',
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			let timetype = 'countdownDuration'
 			const type = state.get(['DEVICE', 'device', 'timerList', 'items', action.options.timer, 'control', 'pp', 'type'])
 			if (type === 'CURRENTTIME') {
@@ -2731,7 +2731,7 @@ export function getActions(instance: AWJinstance): any {
 				default: 'start',
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			instance.log('debug', `RUNNiNg Action ${JSON.stringify(action)}`)
 			let cmd = 'xPause'
 			if (action.options.cmd === 'start') {
@@ -3132,7 +3132,7 @@ export function getActions(instance: AWJinstance): any {
 				default: false,
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			let value = ''
 			if (action.options.valuetype === '1') {
 				value = `"${action.options.textValue}"`
@@ -3159,7 +3159,7 @@ export function getActions(instance: AWJinstance): any {
 				instance.log('warn', 'Custom command transmission failed')
 			}
 		},
-		learn: (action: CompanionActionEvent) => {
+		learn: (action: any) => {
 			const newoptions = {}
 			const lastMsg = state.get('LOCAL/lastMsg')
 			const path = lastMsg.path
@@ -3220,7 +3220,7 @@ export function getActions(instance: AWJinstance): any {
 				default: 2,
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			let newstate = false
 			if (action.options.action === 1) {
 				newstate = true
@@ -3270,7 +3270,7 @@ export function getActions(instance: AWJinstance): any {
 				default: devicePowerChoices[0].id,
 			},
 		],
-		callback: (action: CompanionActionEvent) => {
+		callback: (action: any) => {
 			let path = 'device/system/shutdown/cmd/pp/xRequest'
 			if (state.platform === 'midra') path = 'device/system/shutdown/standby/control/pp/xRequest'
 

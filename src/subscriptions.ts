@@ -753,7 +753,7 @@ export function updateSubscriptions(platform: string): void {
  * @param pat The path in the state object to check if a feedback or action exists for
  */
 function checkForAction(instance: AWJinstance, pat?: string | string[], value?: any): string | string[] | undefined {
-	console.log('Checking for action', pat, value);
+	// console.log('Checking for action', pat, value);
 	let path: string
 	if (pat === undefined) {
 		Object.keys(subscriptions).forEach((key) => {
@@ -782,9 +782,9 @@ function checkForAction(instance: AWJinstance, pat?: string | string[], value?: 
 		return false
 	})
 	if (subscription) {
-		console.log('found subscription', subscription)
+		// console.log('found subscription', subscription)
 		if (subscriptions?.[subscription]?.fun && typeof subscriptions[subscription].fun === 'function') {
-			console.log('found subscription fun')
+			// console.log('found subscription fun')
 			if (value) {
 				const update = subscriptions[subscription].fun(instance, path, value)
 				if (update) void instance.updateInstance()
@@ -794,7 +794,7 @@ function checkForAction(instance: AWJinstance, pat?: string | string[], value?: 
 			}
 		}
 		if (subscriptions?.[subscription]?.fbk) {
-			console.log('found feedback', subscriptions[subscription].fbk)
+			// console.log('found feedback', subscriptions[subscription].fbk)
 			return subscriptions[subscription].fbk
 		}
 	}
