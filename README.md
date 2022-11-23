@@ -18,3 +18,4 @@ For a complete explanation see HELP.md
 1.0.0 initial release  
 1.0.1 Bugfix: TypeScript type errors don't block the build system  
 1.0.2 Bugfix: Fix more TypeScript errors  
+1.0.3 Bugfix: wake on lan for LivePremier 
