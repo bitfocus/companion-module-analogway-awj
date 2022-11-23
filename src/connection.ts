@@ -3,7 +3,7 @@ import {
 	CompanionSystem
 } from '../../../instance_skel_types'
 //import { DeviceType } from '../types/Device'
-import udp = require('../../../udp')
+import dgram = require("dgram")
 import net = require('net')
 import URI = require('urijs')
 import superagent = require('superagent')
@@ -37,47 +37,47 @@ class AWJdevice {
 		this.instance = instance
 		this.state = instance.state
 		this.system = system
-		this.tcpsocket = new net.Socket()
+		//this.tcpsocket = new net.Socket()
 		this.hadError = false
 		this.shouldBeConnected = false
-		this.tcpsocket.setNoDelay(true)
-		this.tcpsocket.setKeepAlive(true, 2500)
-		this.tcpsocket.setEncoding('utf8')
-		this.tcpsocket.on('ready', () => {
-			this.instance.status(this.instance.STATUS_OK)
-		})
+		//this.tcpsocket.setNoDelay(true)
+		//this.tcpsocket.setKeepAlive(true, 2500)
+		//this.tcpsocket.setEncoding('utf8')
+		//this.tcpsocket.on('ready', () => {
+		//	this.instance.status(this.instance.STATUS_OK)
+		//})
 
-		this.tcpsocket.on('close', () => {
-			console.log('AWJ Client closed')
-			if (this.shouldBeConnected) {
-				this.instance.status(this.instance.STATUS_ERROR)
-				console.log('Retry AWJ connection in 2s')
-				// setTimeout(() => this.connect(this.host, this.port), 2000)
-			}
-		})
+		// this.tcpsocket.on('close', () => {
+		// 	console.log('AWJ Client closed')
+		// 	if (this.shouldBeConnected) {
+		// 		this.instance.status(this.instance.STATUS_ERROR)
+		// 		console.log('Retry AWJ connection in 2s')
+		// 		// setTimeout(() => this.connect(this.host, this.port), 2000)
+		// 	}
+		// })
 
-		this.tcpsocket.on('data', (data: string) => {
-			this.bufferFragment(data)
-			let message: string | null = null
-			// eslint-disable-next-line no-cond-assign
-			while ((message = this.getNextMessage())) {
-				// check if there is data followed by a delimiter
-				console.log('AWJ received ', message)
-				let obj = {}
-				try {
-					obj = JSON.parse(message) // check if the data is a valid json, could be only a fragment
-				} catch (error) {
-					console.log('Received data is no valid JSON')
-					continue
-				}
-				if (Object.prototype.hasOwnProperty.call(obj, 'path') && Object.prototype.hasOwnProperty.call(obj, 'value')) {
-					// check if json has the properties of AWJ
-					console.log('Received valid:', obj)
-				} else {
-					console.log('Received data does not contain required properties', obj)
-				}
-			}
-		})
+	// 	this.tcpsocket.on('data', (data: string) => {
+	// 		this.bufferFragment(data)
+	// 		let message: string | null = null
+	// 		// eslint-disable-next-line no-cond-assign
+	// 		while ((message = this.getNextMessage())) {
+	// 			// check if there is data followed by a delimiter
+	// 			console.log('AWJ received ', message)
+	// 			let obj = {}
+	// 			try {
+	// 				obj = JSON.parse(message) // check if the data is a valid json, could be only a fragment
+	// 			} catch (error) {
+	// 				console.log('Received data is no valid JSON')
+	// 				continue
+	// 			}
+	// 			if (Object.prototype.hasOwnProperty.call(obj, 'path') && Object.prototype.hasOwnProperty.call(obj, 'value')) {
+	// 				// check if json has the properties of AWJ
+	// 				console.log('Received valid:', obj)
+	// 			} else {
+	// 				console.log('Received data does not contain required properties', obj)
+	// 			}
+	// 		}
+	// 	})
 	}
 
 	bufferFragment(data: string): void {
@@ -131,8 +131,6 @@ class AWJdevice {
 
 		const urlObj = this.getURLobj(this.addr)
 		if (urlObj === null) return
-
-		//superagent.get().then()
 
 		const handleAPIresponse = (res: superagent.Response) => {
 			if (res.body.device) {
@@ -439,21 +437,21 @@ class AWJdevice {
 		this.instance.log('debug', 'Connection has been destroyed due to removal or disable by user')
 	}
 
-	async sendRawTCPmessage(message: string): Promise<void> {
-		// if (this.tcpsocket.readyState === 'open')
-		return new Promise((resolve, reject) => {
-			this.tcpsocket?.write(message)
+	// async sendRawTCPmessage(message: string): Promise<void> {
+	// 	// if (this.tcpsocket.readyState === 'open')
+	// 	return new Promise((resolve, reject) => {
+	// 		this.tcpsocket?.write(message)
 
-			this.tcpsocket?.on('data', (data: void | PromiseLike<void>): void => {
-				resolve(data)
-			})
+	// 		this.tcpsocket?.on('data', (data: void | PromiseLike<void>): void => {
+	// 			resolve(data)
+	// 		})
 
-			this.tcpsocket?.on('error', (err: unknown) => {
-				reject(err)
-				this.instance.status(this.instance.STATUS_ERROR)
-			})
-		})
-	}
+	// 		this.tcpsocket?.on('error', (err: unknown) => {
+	// 			reject(err)
+	// 			this.instance.status(this.instance.STATUS_ERROR)
+	// 		})
+	// 	})
+	// }
 
 	sendRawWSmessage(message: string): void {
 		if (this.websocket?.readyState === 1) {
@@ -544,17 +542,17 @@ class AWJdevice {
 		this.sendRawWSmessage(JSON.stringify(obj))
 	}
 
-	sendAWJmessage(_op: string, _path: string, _value: string): void
-	sendAWJmessage(_op: string, _path: string, _value: number): void
-	sendAWJmessage(_op: string, _path: string, _value: boolean): void
-	sendAWJmessage(op: string, path: string, value: string | number | boolean): void {
-		if (typeof value === 'string')
-			return void this.sendRawTCPmessage(`{"op":"${op}, "path":"${path}", "value":"${value}"}${this.delimiter}`)
-		if (typeof value === 'number' || typeof value === 'boolean')
-			return void this.sendRawTCPmessage(
-				`{"op":"${op}, "path":"${path}", "value":${value.toString()}}${this.delimiter}`
-			)
-	}
+	// sendAWJmessage(_op: string, _path: string, _value: string): void
+	// sendAWJmessage(_op: string, _path: string, _value: number): void
+	// sendAWJmessage(_op: string, _path: string, _value: boolean): void
+	// sendAWJmessage(op: string, path: string, value: string | number | boolean): void {
+	// 	if (typeof value === 'string')
+	// 		return void this.sendRawTCPmessage(`{"op":"${op}, "path":"${path}", "value":"${value}"}${this.delimiter}`)
+	// 	if (typeof value === 'number' || typeof value === 'boolean')
+	// 		return void this.sendRawTCPmessage(
+	// 			`{"op":"${op}, "path":"${path}", "value":${value.toString()}}${this.delimiter}`
+	// 		)
+	// }
 
 	sendXupdate(platform?: string): void {
 		if (!platform) platform = this.state.platform
@@ -585,18 +583,21 @@ class AWJdevice {
 		return buffer
 	}
 	/**
-	 * [wake on lan]
+	 * wake on lan
 	 */
-	async wake(mac: string): Promise<void> {
+	wake(mac: string): void {
 		// create magic packet
 		const magicPacket = this.createMagicPacket(mac)
-		const socket = new udp('255.255.255.255', 9, { broadcast: true })
-
-		return new Promise((resolve, reject) => {
-			socket.send(magicPacket, (err) => {
-				if (err) reject(err)
-				else resolve()
-			})
+		const socket = dgram.createSocket("udp4")
+		socket.bind(() => {
+			socket.setBroadcast(true)
+			socket.send(magicPacket, 9, '255.255.255.255', (err) => {
+					if (err) {
+						this.instance.log('error', 'Could not send wake on lan packet. '+ err)
+					}
+					else this.instance.log('info', 'wake on lan packet sent')
+					socket.close()
+				})
 		})
 	}
 }

@@ -3276,7 +3276,7 @@ export function getActions(instance: AWJinstance): any {
 
 			if (action.options.action === 'on') {
 				const mac = instance.config.macaddress.split(/[,:-_.\s]/).join('')
-				void device.wake(mac)
+				device.wake(mac)
 				device.resetReconnectInterval()
 			}
 			if (action.options.action === 'wake' && state.platform === 'midra') {

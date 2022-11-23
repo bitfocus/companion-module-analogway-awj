@@ -1,4 +1,4 @@
-# Analog Way LivePremier AWJ
+# Analog Way AWJ
 
 **Most important:**  
 **Beware of selection synchronization!**  
