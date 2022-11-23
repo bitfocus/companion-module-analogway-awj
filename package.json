@@ -1,6 +1,6 @@
 {
 	"name": "analogway-awj",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"api_version": "1.0.0",
 	"keywords": [
 		"Image Processing",
@@ -57,7 +57,7 @@
 		"dgram": "^1.0.1",
 		"socket.io-client": "^4.5.1",
 		"superagent": "^8.0.3",
-		"tslib": "2.4.0",
+		"tslib": "^2.4.0",
 		"urijs": "^1.19.11",
 		"ws": "^8.8.1"
 	},
