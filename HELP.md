@@ -344,6 +344,10 @@ screenA1timePGM | the transtion time for the aux and preset
 screenA1timePVW | the transtion time for the aux and preset
 selectedPreset	| PGM or PVW
 timer1_status | Running or Stopped and so on
+tally_S1_pgm_LIVE_1 | the tally state (0 or 1) of the source LIVE_1 in S1 program
+
+The tally variables are not automatically generated for all possible combinations. Instead the variables are generated along with your used feedbacks. That means if you want to use a variable for source LIVE_3 on screen S2 preview, you have to add a feedback showing that state on some button. At the time you add the feedback the variable will also be added and can be used in triggers.  
+Caveat: there is a bug in Companion 2.x where feedback subscriptions are not processed correctly at Companion startup. That means if you create a feedback, the variable will show in the variables list and can be used in triggers. If you restart Companion the variable is still there and usable but it won't be shown in the variables list. To make it accessible again, you have to change a parameter in one of the feedbacks generating the variable.
 
 
 ## Presets

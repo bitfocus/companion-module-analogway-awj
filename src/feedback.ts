@@ -127,7 +127,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 2,
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent) => {
+		callback: (feedback: CompanionFeedbackEvent & {options: {screens: string[], preset: string, memory: string, unmodified: number}}) => {
 			const screens = state.platform === 'midra' ? state.getChosenScreens(feedback.options.screens) : state.getChosenScreenAuxes(feedback.options.screens)
 			const presets = feedback.options.preset === 'all' ? ['pgm', 'pvw'] : [feedback.options.preset]
 			const map = {
@@ -177,8 +177,6 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				label: 'Screens / Auxscreens',
 				choices: [{ id: 'all', label: 'Any' }, ...getScreenAuxChoices(instance.state)],
 				multiple: true,
-				tags: true,
-				regex: '/^(S|A)([1-9]|[1-3][0-9]|4[0-8])$/',
 				default: ['all'],
 			},
 	)
@@ -241,7 +239,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 2,
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent) => {
+		callback: (feedback: CompanionFeedbackEvent & {options:{screens: string[], preset: string, memory: string, unmodified: number}}) => {
 			const screens = state.getChosenAuxes(feedback.options.screens)
 			const presets = feedback.options.preset === 'all' ? ['pgm', 'pvw'] : [feedback.options.preset]
 			const map = {
@@ -320,79 +318,109 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 'NONE',
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent) => {
-			// go thru the screens
-			for (const screen of state.getChosenScreenAuxes(feedback.options.screens)) {
-				const preset = state.getPreset(screen, feedback.options.preset)
-				for (const layer of getLayerChoices(state, screen)) {
-					const screenpath = [
-						'DEVICE',
-						'device',
-						'screenList',
-						'items',
-						screen
-					]
-					const presetpath = [...screenpath, 'presetList', 'items', preset]
-					const layerpath = [...presetpath, 'layerList', 'items', layer.id]
-
-					// check if source is used in background set on a screen
-					if (layer.id === 'NATIVE' && state.platform === 'midra') {
-						const set = state.get([...presetpath, 'background', 'source', 'pp', 'set'])
-						if (set === 'NONE') continue
-						const setinput = state.get([...screenpath, 'backgroundSetList', 'items', set, 'control', 'pp', 'singleContent'])
-						if (setinput === feedback.options.source) return true
-						else continue
-					}
-
-					// check is source is used in background layer on a aux
-					if (layer.id === 'BKG' && state.platform === 'midra') {
-						const bkginput = state.get([...presetpath, 'background', 'source', 'pp', 'content'])
-						if (bkginput === feedback.options.source) return true
-						else continue
-					}
-
-					// check if source is used in top layer
-					if (layer.id === 'TOP' && state.platform === 'midra') {
-						const frginput = state.get([...presetpath, 'top', 'source', 'pp', 'frame'])
-						if (frginput === feedback.options.source) return true
-						else continue
-					}
-					
-					if ((feedback.options.source === 'NONE' || feedback.options.source.toString().startsWith('BACKGROUND') && state.get(['source', 'pp', 'inputNum'], root) === feedback.options.source)) {
-						return true
-					}
-					if (state.get([...layerpath, 'source', 'pp', 'inputNum']) === feedback.options.source) {
-						let invisible = (
-							state.get([...layerpath, 'position', 'pp', 'sizeH']) === 0 ||
-							state.get([...layerpath, 'position', 'pp', 'sizeV']) === 0 ||
-							state.get([...layerpath, 'opacity', 'pp', 'opacity']) === 0 ||
-							state.get([...layerpath, 'cropping', 'classic', 'pp', 'top']) +
-								state.get([...layerpath,'cropping', 'classic', 'pp', 'bottom']) >
-								65528 ||
-							state.get([...layerpath, 'cropping', 'classic', 'pp', 'left']) +
-								state.get([...layerpath, 'cropping', 'classic', 'pp', 'right']) >
-								65528 ||
-							state.get([...layerpath, 'cropping', 'mask', 'pp', 'top']) +
-								state.get([...layerpath, 'cropping', 'mask', 'pp', 'bottom']) >
-								65528 ||
-							state.get([...layerpath, 'cropping', 'mask', 'pp', 'left']) +
-								state.get([...layerpath, 'cropping', 'mask', 'pp', 'right']) >
-								65528 ||
-							state.get([...layerpath, 'position', 'pp', 'posH']) + state.get([...layerpath, 'position', 'pp', 'sizeH']) / 2 <= 0 ||
-							state.get([...layerpath, 'position', 'pp', 'posV']) + state.get([...layerpath, 'position', 'pp', 'sizeV']) / 2 <= 0 ||
-							state.get([...layerpath, 'position', 'pp', 'posH']) - state.get([...layerpath, 'position', 'pp', 'sizeH']) / 2 >=
-								state.get(['DEVICE', 'device', 'screenList', 'items', screen, 'status', 'size', 'pp', 'sizeH']) ||
-							state.get([...layerpath, 'position', 'pp', 'posV']) - state.get([...layerpath, 'position', 'pp', 'sizeV']) / 2 >=
-								state.get(['DEVICE', 'device', 'screenList', 'items', screen, 'status', 'size', 'pp', 'sizeV'])
-						)
-						if (!invisible) {
+		callback: (feedback: CompanionFeedbackEvent & { options: { screens: string[], preset: string, source: string } }) => {  
+			const checkTally = (): boolean => {
+				// go thru the screens
+				for (const screen of state.getChosenScreenAuxes(feedback.options.screens)) {
+					const preset = state.getPreset(screen, feedback.options.preset)
+					for (const layer of getLayerChoices(state, screen)) {
+						const screenpath = [
+							'DEVICE',
+							'device',
+							'screenList',
+							'items',
+							screen
+						]
+						const presetpath = [...screenpath, 'presetList', 'items', preset]
+						const layerpath = [...presetpath, 'layerList', 'items', layer.id]
+	
+						// check if source is used in background set on a screen
+						if (layer.id === 'NATIVE' && state.platform === 'midra') {
+							const set = state.get([...presetpath, 'background', 'source', 'pp', 'set'])
+							if (set === 'NONE') continue
+							const setinput = state.get([...screenpath, 'backgroundSetList', 'items', set, 'control', 'pp', 'singleContent'])
+							if (setinput === feedback.options.source) return true
+							else continue
+						}
+	
+						// check is source is used in background layer on a aux
+						if (layer.id === 'BKG' && state.platform === 'midra') {
+							const bkginput = state.get([...presetpath, 'background', 'source', 'pp', 'content'])
+							if (bkginput === feedback.options.source) return true
+							else continue
+						}
+	
+						// check if source is used in top layer
+						if (layer.id === 'TOP' && state.platform === 'midra') {
+							const frginput = state.get([...presetpath, 'top', 'source', 'pp', 'frame'])
+							if (frginput === feedback.options.source) return true
+							else continue
+						}
+						
+						if ((feedback.options.source === 'NONE' || feedback.options.source?.toString().startsWith('BACKGROUND') && state.get([...presetpath, 'source', 'pp', 'inputNum']) === feedback.options.source)) {
 							return true
+						}
+						if (state.get([...layerpath, 'source', 'pp', 'inputNum']) === feedback.options.source) {
+							const invisible = (
+								state.get([...layerpath, 'position', 'pp', 'sizeH']) === 0 ||
+								state.get([...layerpath, 'position', 'pp', 'sizeV']) === 0 ||
+								state.get([...layerpath, 'opacity', 'pp', 'opacity']) === 0 ||
+								state.get([...layerpath, 'cropping', 'classic', 'pp', 'top']) +
+									state.get([...layerpath,'cropping', 'classic', 'pp', 'bottom']) >
+									65528 ||
+								state.get([...layerpath, 'cropping', 'classic', 'pp', 'left']) +
+									state.get([...layerpath, 'cropping', 'classic', 'pp', 'right']) >
+									65528 ||
+								state.get([...layerpath, 'cropping', 'mask', 'pp', 'top']) +
+									state.get([...layerpath, 'cropping', 'mask', 'pp', 'bottom']) >
+									65528 ||
+								state.get([...layerpath, 'cropping', 'mask', 'pp', 'left']) +
+									state.get([...layerpath, 'cropping', 'mask', 'pp', 'right']) >
+									65528 ||
+								state.get([...layerpath, 'position', 'pp', 'posH']) + state.get([...layerpath, 'position', 'pp', 'sizeH']) / 2 <= 0 ||
+								state.get([...layerpath, 'position', 'pp', 'posV']) + state.get([...layerpath, 'position', 'pp', 'sizeV']) / 2 <= 0 ||
+								state.get([...layerpath, 'position', 'pp', 'posH']) - state.get([...layerpath, 'position', 'pp', 'sizeH']) / 2 >=
+									state.get(['DEVICE', 'device', 'screenList', 'items', screen, 'status', 'size', 'pp', 'sizeH']) ||
+								state.get([...layerpath, 'position', 'pp', 'posV']) - state.get([...layerpath, 'position', 'pp', 'sizeV']) / 2 >=
+									state.get(['DEVICE', 'device', 'screenList', 'items', screen, 'status', 'size', 'pp', 'sizeV'])
+							)
+							if (!invisible) {
+								return true
+							}
 						}
 					}
 				}
+				return false
 			}
-			return false
+
+			const tally = checkTally()
+			const sortedScreens = [...feedback.options.screens].sort()
+			const varName = `tally_${sortedScreens.join('-')}_${feedback.options.preset}_${feedback.options.source}`
+			let varValue = '0'
+			if (tally) {
+				varValue = '1'
+			} else {
+				varValue = '0'
+			}
+			instance.getVariable(varName, (value: string) => {
+				if (value != varValue) instance.setVariable(varName, varValue)
+			})
+			return tally
 		},
+		subscribe: (feedback: CompanionFeedbackEvent & { options: { screens: string[], preset: string, source: string } }) => {
+			const sortedScreens = [...feedback.options.screens].sort()
+			const varName = `tally_${sortedScreens.join('-')}_${feedback.options.preset}_${feedback.options.source}`
+			instance.addVariable({
+				id: feedback.id,
+				label: `Tally for ${feedback.options.source} at screens ${sortedScreens.join(', ')}, preset ${feedback.options.preset}`,
+				name: varName
+			})
+		},
+		unsubscribe: (feedback: CompanionFeedbackEvent & { options: { screens: string[], preset: string, source: string } }) => {
+			const sortedScreens = [...feedback.options.screens].sort()
+			const varName = `tally_${sortedScreens.join('-')}_${feedback.options.preset}_${feedback.options.source}`
+			instance.removeVariable(feedback.id, varName)
+		}
 	}
 
 	// MARK: deviceTake
@@ -416,7 +444,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 'all',
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent) => {
+		callback: (feedback: CompanionFeedbackEvent & {options: {screens: string}}) => {
 			if (state.platform === 'livepremier' && state.getChosenScreenAuxes(feedback.options.screens)
 				.find((screen: string) => {
 					return state.get(`DEVICE/device/screenGroupList/items/${screen}/status/pp/transition`).match(/FROM/)
@@ -448,7 +476,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				choices: getScreenAuxChoices(instance.state),
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent) => {
+		callback: (feedback: CompanionFeedbackEvent & {options: {screen: string}}) => {
 			return state.getSelectedScreens()?.includes(feedback.options.screen)
 		},
 	}
@@ -482,7 +510,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 'PROGRAM',
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent) => {
+		callback: (feedback: CompanionFeedbackEvent & {options: {screen: string, preset: string}}) => {
 			return state.isLocked(feedback.options.screen, feedback.options.preset)
 		},
 	}
@@ -607,9 +635,9 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 			},
 		],
 		callback: (feedback: CompanionFeedbackEvent) => {
-			const mvw = feedback.options.widget.toString().split(':')[0] ?? '1'
-			const widget = feedback.options.widget.toString().split(':')[1] ?? '0'
-			let widgetSelection = []
+			const mvw = feedback.options.widget?.toString().split(':')[0] ?? '1'
+			const widget = feedback.options.widget?.toString().split(':')[1] ?? '0'
+			let widgetSelection: {widgetKey: string, multiviewerKey: string}[] = []
 			if (state.syncSelection) {
 				widgetSelection = [...state.get('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
 			} else {
@@ -640,7 +668,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 			},
 		],
 		callback: (feedback: CompanionFeedbackEvent) => {
-			const input = feedback.options.input.toString().replace('LIVE', 'IN')
+			const input = feedback.options.input?.toString().replace('LIVE', 'IN') || ''
 			const freeze = state.get('DEVICE/device/inputList/items/' + input + '/control/pp/freeze')
 			if (freeze) {
 				instance.setVariable('frozen_' + input, '*')
@@ -728,7 +756,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 					'gpio',
 					'gpoList',
 					'items',
-					feedback.options.gpo.toString(),
+					feedback.options.gpo?.toString() || '1',
 					'status',
 					'pp',
 					'state',
@@ -776,7 +804,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 					'gpio',
 					'gpiList',
 					'items',
-					feedback.options.gpo.toString(),
+					feedback.options.gpo?.toString() || '1',
 					'status',
 					'pp',
 					'state',

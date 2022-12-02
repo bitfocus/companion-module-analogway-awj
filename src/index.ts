@@ -3,6 +3,7 @@ import {
 	CompanionActions,
 	CompanionConfigField,
 	CompanionSystem,
+	CompanionVariable,
 } from '../../../instance_skel_types'
 import { getActions } from './actions'
 import { Config, GetConfigFields } from './config'
@@ -25,11 +26,13 @@ class AWJinstance extends instance_skel<Config> {
 	 */
 	public state: State
 	public device: AWJdevice
+	private variables: (CompanionVariable & {id?: string})[]
 
 	constructor(system: CompanionSystem, id: string, config: Config) {
 		super(system, id, config)
 		this.system = system
 		this.config = config
+		this.variables = []
 		this.state = new State(this)
 		this.device = new AWJdevice(this, system)
 	}
@@ -57,7 +60,9 @@ class AWJinstance extends instance_skel<Config> {
 			this.config.color_redgrey = 5588550
 			this.saveConfig()
 		}
-			this.device.connect(this.config.deviceaddr)
+		this.device.connect(this.config.deviceaddr)
+		this.variables = initVariables(this)
+		this.setVariableDefinitions(this.variables)
 
 		// void this.updateInstance()
 	}
@@ -128,20 +133,51 @@ class AWJinstance extends instance_skel<Config> {
 	 */
 	public async updateInstance(): Promise<void> {
 		this.setActions(getActions(this) as CompanionActions)
-		initVariables(this)
 
 		this.setFeedbackDefinitions(getFeedbacks(this, this.state))
 
 		this.setPresetDefinitions(getPresets(this))
 	}
 
-	public sendRaw(message: string): void {
-		void this.device.sendRawTCPmessage(message)
+	public sendRaw(_message: string): void {
+		//void this.device.sendRawTCPmessage(message)
 	}
 
 	connectDevice(): void {
 		const address = this.config.deviceaddr
 		this.device.connect(address)
+	}
+
+	public addVariable(newVariable: (CompanionVariable & { id?: string })): void {
+		this.variables.push(newVariable)
+		if (this.variables.some(variable => (variable.name === newVariable.name && variable.id !== newVariable.id))) { // the variable already exists from another id
+			return
+		} else {
+			const varnames = new Set(this.variables.map(variable => variable.name))
+			const vars: CompanionVariable[] = []
+			varnames.forEach(varname => {
+				vars.push(
+					this.variables.map(vari => { return { label: vari.label, name: vari.name } }).find(vari => vari.name === varname) || { label: '', name: '' }
+				)
+			})
+			this.setVariableDefinitions(this.variables)
+		}
+	}
+
+	public removeVariable(id: string, remVariable: string): void {
+		if (this.variables.filter(vari => vari.name === remVariable).length > 1 && this.variables.findIndex(vari => vari.name === remVariable && vari.id === id) != -1) {
+			this.variables.splice(this.variables.findIndex(vari => vari.name === remVariable && vari.id === id), 1)
+		} else if (this.variables.filter(vari => vari.name === remVariable).length === 1 && this.variables.findIndex(vari => vari.name === remVariable && vari.id === id) != -1) {
+			this.variables.splice(this.variables.findIndex(vari => vari.name === remVariable && vari.id === id), 1)
+			const varnames = new Set(this.variables.map(variable => variable.name))
+			const vars: CompanionVariable[] = []
+			varnames.forEach(varname => {
+				vars.push(
+					this.variables.map(vari => { return { label: vari.label, name: vari.name } }).find(vari => vari.name === varname) || { label: '', name: '' }
+				)
+			})
+			this.setVariableDefinitions(this.variables)
+		}
 	}
 
 	public timeToSeconds(timestring: string): number {

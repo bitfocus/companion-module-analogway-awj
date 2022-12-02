@@ -26,7 +26,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 	const ilabel = instance.label
 	const config = instance.config
 	const allscreens = state.getChosenScreenAuxes('all')
-	const presets: CompanionPreset[] = []
+	const presets: ({ bank: { show_topbar?: boolean } } & CompanionPreset)[] = []
 
 	// MARK: Master Memories
 	for (const memory of getMasterMemoryArray(state)) {
@@ -905,7 +905,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 		if (input.id.match(/^IN|LIVE|STILL|SCREEN/)) {
 			sourceLabelVariable = `\\n$(${ilabel}:${input.id.replace('LIVE_', 'INPUT_')}label)`
 		}
-		const preparedPreset = {
+		const preparedPreset: CompanionPreset = {
 			label: 'Choose Input ' + input.label + ' for selected '+ layerdescription +' Layer(s)',
 			category: 'Layer Source',
 			bank: {

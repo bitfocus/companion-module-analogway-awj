@@ -611,7 +611,7 @@ export function getLayersAsArray(state: State, param: string | number, bkg?: boo
  * @param bkg wether to include only live layers (false) or also background and eventually foreground layer (true or omitted) 
  */
 export function getLayerChoices(state: State, param: string | number, bkg?: boolean): Dropdown<string>[] {
-	const ret = []
+	const ret: Dropdown<string>[] = []
 	let layercount = 0
 	if (typeof param === 'number') {
 		if (bkg === undefined || bkg === true) ret.push({ id: 'NATIVE', label: 'Background' })
@@ -722,7 +722,7 @@ export function getAudioOutputChoices(state: State): Dropdown<string>[] {
 }
 
 export function getAudioOutputChoicesLifePremier(state: State): Dropdown<string>[] {
-	const ret = []
+	const ret: Dropdown<string>[] = []
 	for (const out of getAudioOutputsArray(state)) {
 		const channels = state.get(`DEVICE/device/audio/control/txList/items/${out.id}/channelList/itemKeys`) ?? []
 		const [outputtype, outnum] = out.id.split('_')
@@ -754,7 +754,7 @@ export function getAudioOutputChoicesLifePremier(state: State): Dropdown<string>
 }
 
 export function getAudioOutputChoicesMidra(state: State): Dropdown<string>[] {
-	const ret = []
+	const ret: Dropdown<string>[] = []
 	for (const out of getAudioOutputsArray(state)) {
 		const outarr = /\d*$/.exec(out.id)
 		let outnum = '0'
@@ -896,7 +896,7 @@ export function getAudioSourceChoicesMidra(state: State): Dropdown<string>[] {
 }
 
 export function getTimerArray(state: State): Choicemeta[] {
-	const ret = []
+	const ret: Choicemeta[] = []
 	const timers = state.get('DEVICE/device/timerList/items') ?? {}
 	for (const timer of Object.keys(timers)) {
 		ret.push({

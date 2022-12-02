@@ -20,3 +20,4 @@ For a complete explanation see HELP.md
 1.0.2 Bugfix: Fix more TypeScript errors  
 1.0.3 Bugfix: wake on lan for LivePremier  
 1.0.4 Brush: Change dependency of tslib from 2.4.0 to ^2.4.1 
+1.1.0 Feature: Provide variables for source tallies

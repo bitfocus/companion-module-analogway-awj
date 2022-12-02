@@ -6,6 +6,6 @@ module.exports = {
 	ignorePatterns: ['.eslintrc.js', 'dist', 'src/proto/*.*'],
 	"rules": {
 		"@typescript-eslint/no-explicit-any": "off",
-		"no-unused-vars": ["warn", { "destructuredArrayIgnorePattern": "^_", "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+		"@typescript-eslint/no-unused-vars": ["warn", { "destructuredArrayIgnorePattern": "^_", "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
   }
 }
