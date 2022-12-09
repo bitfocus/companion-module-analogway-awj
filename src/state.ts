@@ -1,6 +1,6 @@
 import AWJinstance from './index'
-import { checkForAction } from './subscriptions'
-import { mapIn, mapOut } from './mappings'
+import { checkForAction, Subscription } from './subscriptions'
+import { mapIn, mapOut, MapItem } from './mappings'
 //import { InputValue } from './../../../instance_skel_types'
 import { Choicemeta, getAuxArray, getScreensArray } from './choices'
 
@@ -123,6 +123,8 @@ class State {
 			},
 			layerIds: [],
 			intelligentParams: {},
+			subscriptions: {} as Record<string, Subscription>,
+			mappings: [] as MapItem[]
 		},
 	}
 
@@ -160,9 +162,9 @@ class State {
 	}
 
 	public get(path?: string | string[] | undefined, root?: any): any {
-		const mapped = mapOut(path, null)
+		const mapped = mapOut(this.stateobj.LOCAL.mappings, path, null)
 		const val = this.getUnmapped(mapped.path, root) // TODO: root mapping
-		return mapIn(mapped.path, val).value
+		return mapIn(this.stateobj.LOCAL.mappings, mapped.path, val).value
 	}
 
 	concat(first: string | string[], second: string | string[]): string | string[] {
@@ -191,13 +193,13 @@ class State {
 		// eslint-disable-next-line no-prototype-builtins
 		if (data.hasOwnProperty('path') && data.hasOwnProperty('value')) {
 			this.setUnmapped(data.path, data.value, this.stateobj[channel])
-			const mapped = mapIn(this.concat(channel, data.path), data.value)
+			const mapped = mapIn(this.stateobj.LOCAL.mappings, this.concat(channel, data.path), data.value)
 			feedbacks = checkForAction(this.instance, mapped.path, mapped.value)
 			if (channel === 'DEVICE' && !data.path.toString().endsWith(',control,pp,xUpdate')) {
 				this.setUnmapped('LOCAL/lastMsg', { path: data.path, value: data.value }) // TODO: what about mappings
 			}
 		} else if (data?.channel === 'PATCH' && data.patch) {
-			const mapped = mapIn(this.concat(channel, data.patch.path), data.patch.value)
+			const mapped = mapIn(this.stateobj.LOCAL.mappings, this.concat(channel, data.patch.path), data.patch.value)
 			if (data.patch.op === 'replace') {
 				try {
 					this.setUnmapped(data.patch.path, data.patch.value, this.stateobj[channel])
@@ -273,7 +275,7 @@ class State {
 	 * @param root is the root object from where the path applies, if not given defaults to the state object
 	 */
 	public set(path: string | string[], value: unknown, root: any = this.stateobj): void {
-		const mapped = mapIn(path, value)
+		const mapped = mapIn(this.stateobj.LOCAL.mappings, path, value)
 		this.setUnmapped(mapped.path, mapped.value, root) // TODO: root mapping
 	}
 
@@ -360,6 +362,14 @@ class State {
 
 	public get syncSelection(): boolean {
 		return this.stateobj.LOCAL.syncSelection
+	}
+
+	public get mappings(): MapItem[] {
+		return this.stateobj.LOCAL.mappings
+	}
+
+	public get subscriptions(): Record<string, Subscription> {
+		return this.stateobj.LOCAL.subscriptions
 	}
 
 	public isLocked(screen: string, preset: string): boolean {

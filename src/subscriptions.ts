@@ -1,5 +1,14 @@
+import { AWJdevice } from './connection'
 import AWJinstance from './index'
 // import { DeviceMap, DeviceMappingFunction } from '../types/DeviceMap';
+
+export type Subscription = {
+	pat: string,
+	fbk?: string | string[],
+	ini?: string[] | ((args: any) => string[]),
+	fun?: (instance: AWJinstance, path?: string | string[], _value?: string | string[] | number | boolean) => boolean
+
+}
 
 /**
  * This object holds all the paths we need to react on when receiving an update from the devive
@@ -9,7 +18,7 @@ import AWJinstance from './index'
  * @property def - Default value to use if not connected to a real device
  * @property {string[][]} defitems - Default items to use if not connected to a real device. Outer array for the item lists, inner array for the items in the list.
  */
-const commonSubscriptions = {
+const commonSubscriptions: Record<string, Subscription> = {
 	syncselection: {
 		pat: 'system/network/websocketServer/clients',
 		fbk: 'syncselection',
@@ -46,7 +55,7 @@ const commonSubscriptions = {
 		pat: 'DEVICE/device/timerList/items/TIMER_(\\d)/status/pp/state',
 		fbk: 'timerState',
 		ini: ['1', '2', '3', '4'],
-		fun: (instance: AWJinstance, path: string | string[], _value?: string | string[] | number | boolean): boolean => {
+		fun: (instance, path, _value) => {
 			if (!path) return false
 			const timer = path.toString().match(/(?<=TIMER_)(\d)\//) || ['0']
 			instance.setVariable('timer' + timer[0] + '_status', instance.state.getUnmapped(path))
@@ -76,7 +85,7 @@ const commonSubscriptions = {
 			})), [])
 			return paths
 		},
-		fun: (instance: AWJinstance, path: string | string[], _value?: string | string[] | number | boolean): boolean => {
+		fun: (instance, path, _value) => {
 			if (!path) return false
 			const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
@@ -112,7 +121,7 @@ const commonSubscriptions = {
 	screenMemoryLabel: {
 		pat: 'DEVICE/device/presetBank/bankList/items/(\\d+)/control/pp/label',
 		ini: Array.from({ length: 999 }, (_, i) => (i + 1).toString()),
-		fun: (instance: AWJinstance, path: string | string[], _value?: string | string[] | number | boolean): boolean => {
+		fun: (instance, path, _value) => {
 			if (!path) return false
 			const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
 			const label = memory.toString() !== '0' ? instance.state.get(path) : ''
@@ -165,7 +174,7 @@ const commonSubscriptions = {
 	masterMemoryLabel: {
 		pat: 'DEVICE/device/masterPresetBank/bankList/items/(\\d+)/control/pp/label',
 		ini: Array.from({ length: 499 }, (_, i) => (i + 1).toString()),
-		fun: (instance: AWJinstance, path: string | string[], _value?: string | string[] | number | boolean): boolean => {
+		fun: (instance, path, _value) => {
 			if (!path) return false
 			const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
 			instance.setVariable('masterMemory' + memory + 'label', instance.state.get(path))
@@ -175,7 +184,7 @@ const commonSubscriptions = {
 	multiviewerMemoryLabel: {
 		pat: 'DEVICE/device/monitoringBank/bankList/items/(\\d+)/control/pp/label',
 		ini: Array.from({ length: 49 }, (_, i) => (i + 1).toString()),
-		fun: (instance: AWJinstance, path: string | string[], _value?: string | string[] | number | boolean): boolean => {
+		fun: (instance, path, _value) => {
 			if (!path) return false
 			const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
 			instance.setVariable('multiviewerMemory' + memory + 'label', instance.state.get(path))
@@ -185,7 +194,7 @@ const commonSubscriptions = {
 	layerMemoryLabel: {
 		pat: 'DEVICE/device/layerBank/bankList/items/(\\d+)/control/pp/label',
 		ini: Array.from({ length: 49 }, (_, i) => (i + 1).toString()),
-		fun: (instance: AWJinstance, path: string | string[], _value?: string | string[] | number | boolean): boolean => {
+		fun: (instance, path, _value) => {
 			if (!path) return false
 			const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
 			instance.setVariable('layerMemory' + memory + 'label', instance.state.get(path))
@@ -195,7 +204,7 @@ const commonSubscriptions = {
 	stillLabel: {
 		pat: 'DEVICE/device/stillList/items/(\\d+)/control/pp/label',
 		ini: Array.from({ length: 47 }, (_, i) => (i + 1).toString()),
-		fun: (instance: AWJinstance, path: string | string[], _value?: string | string[] | number | boolean): boolean => {
+		fun: (instance, path, _value) => {
 			if (!path) return false
 			const input = Array.isArray(path) ? path[4] : path.split('/')[4]
 			instance.setVariable('STILL_' + input + 'label', instance.state.get(path))
@@ -211,7 +220,7 @@ const commonSubscriptions = {
 	screenLabel: {
 		pat: 'DEVICE/device/screenList/items/S(\\d{1,2})/control/pp/label',
 		ini: Array.from({ length: 23 }, (_, i) => (i + 1).toString()),
-		fun: (instance: AWJinstance, path: string | string[], _value?: string | string[] | number | boolean): boolean => {
+		fun: (instance, path, _value) => {
 			if (!path) return false
 			const input = Array.isArray(path) ? path[4] : path.split('/')[4]
 			instance.setVariable(input.replace('S', 'SCREEN_') + 'label', instance.state.get(path))
@@ -222,7 +231,7 @@ const commonSubscriptions = {
 	auxscreenLabel: {
 		pat: 'DEVICE/device/screenList/items/A(\\d{1,2})/control/pp/label',
 		ini: Array.from({ length: 23 }, (_, i) => (i + 1).toString()),
-		fun: (instance: AWJinstance, path: string | string[], _value?: string | string[] | number | boolean): boolean => {
+		fun: (instance, path, _value) => {
 			if (!path) return false
 			const input = Array.isArray(path) ? path[4] : path.split('/')[4]
 			instance.setVariable(input.replace('A', 'AUXSCREEN_') + 'label', instance.state.getUnmapped(path))
@@ -280,7 +289,7 @@ const commonSubscriptions = {
 	},
 }
 
-const livepremierSubscriptions = {
+const livepremierSubscriptions: Record<string, Subscription> = {
 	liveselection: {
 		pat: 'live/screens/screenAuxSelection',
 		fbk: 'liveScreenSelection',
@@ -292,7 +301,7 @@ const livepremierSubscriptions = {
 			...Array.from({ length: 24 }, (_, i) => 'S' + (i + 1).toString()),
 			...Array.from({ length: 24 }, (_, i) => 'A' + (i + 1).toString()),
 		],
-		fun: (instance: AWJinstance, path: string | string[], _value?: string | string[] | number | boolean): boolean => {
+		fun: (instance, path, _value) => {
 			const setMemoryVariables = (screen: string, preset: string, variableSuffix: string): void => {
 				const mem = instance.state.getUnmapped([
 					'DEVICE',
@@ -407,7 +416,7 @@ const livepremierSubscriptions = {
 	screenMemoryChange: {
 		pat: 'DEVICE/device/screenList/items/(S|A)\\d{1,3}/presetList/items/(A|B)/presetId/status/pp/id',
 		fbk: 'deviceScreenMemory',
-		fun: (instance: AWJinstance, path: string | string[], _value?: string | string[] | number | boolean): boolean => {
+		fun: (instance, path, _value) => {
 			if (!path) return false
 			const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
@@ -436,7 +445,7 @@ const livepremierSubscriptions = {
 	screenMemoryModifiedChange: {
 		pat: 'DEVICE/device/screenList/items/((?:S|A)\\d{1,3})/presetList/items/(A|B)/presetId/status/pp/isNotModified',
 		fbk: 'deviceScreenMemory',
-		fun: (instance: AWJinstance, path: string | string[], _value?: string | string[] | number | boolean): boolean => {
+		fun: (instance, path, _value) => {
 			if (!path) return false
 			const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
@@ -455,7 +464,7 @@ const livepremierSubscriptions = {
 	inputLabel: {
 		pat: 'DEVICE/device/inputList/items/IN_(\\d+)/control/pp/label',
 		ini: Array.from({ length: 32 }, (_, i) => (i + 1).toString()),
-		fun: (instance: AWJinstance, path: string | string[], _value?: string | string[] | number | boolean): boolean => {
+		fun: (instance, path, _value) => {
 			if (!path) return false
 			const input = Array.isArray(path) ? path[4] : path.split('/')[4]
 			instance.setVariable(input.replace(/^\w+_/, 'INPUT_') + 'label', instance.state.get(path))
@@ -474,7 +483,7 @@ const livepremierSubscriptions = {
 	}
 }
 
-const midraSubscriptions = {
+const midraSubscriptions: Record<string, Subscription> = {
 	screenPreset: {
 		pat: 'DEVICE/device/transition/screenList/items/(\\w+?)/status/pp/transition',
 		fbk: 'deviceTake',
@@ -482,7 +491,7 @@ const midraSubscriptions = {
 			...Array.from({ length: 8 }, (_, i) => 'S' + (i + 1).toString()),
 			...Array.from({ length: 8 }, (_, i) => 'A' + (i + 1).toString()),
 		],
-		fun: (instance: AWJinstance, path: string | string[], _value?: string | string[] | number | boolean): boolean => {
+		fun: (instance, path, _value) => {
 			const setMemoryVariables = (screen: string, preset: string, variableSuffix: string): void => {
 				const mem = instance.state.get([
 					'DEVICE',
@@ -570,7 +579,7 @@ const midraSubscriptions = {
 	screenMemoryChange: {
 		pat: 'DEVICE/device/screenList/items/((?:S|A)\\d{1,3})/presetList/items/(A|B)/status/pp/memoryId',
 		fbk: ['deviceScreenMemory', 'deviceAuxMemory'],
-		fun: (instance: AWJinstance, path: string | string[], _value?: string | string[] | number | boolean): boolean => {
+		fun: (instance, path, _value) => {
 			if (!path) return false
 			const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
@@ -600,7 +609,7 @@ const midraSubscriptions = {
 	screenMemoryModifiedChange: {
 		pat: 'DEVICE/device/screenList/items/((?:S|A)\\d{1,3})/presetList/items/(A|B)/status/pp/isModified',
 		fbk: ['deviceScreenMemory', 'deviceAuxMemory'],
-		fun: (instance: AWJinstance, path: string | string[], _value?: string | string[] | number | boolean): boolean => {
+		fun: (instance, path, _value) => {
 			if (!path) return false
 			const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
@@ -619,7 +628,7 @@ const midraSubscriptions = {
 	auxMemoryLabel: {
 		pat: 'DEVICE/device/preset/auxBank/slotList/items/(\\d+)/control/pp/label',
 		ini: Array.from({ length: 200 }, (_, i) => (i + 1).toString()),
-		fun: (instance: AWJinstance, path: string | string[], _value?: string | string[] | number | boolean): boolean => {
+		fun: (instance, path, _value) => {
 			if (!path) return false
 			const memory = Array.isArray(path) ? path[6] : path.split('/')[6]
 			const label = memory.toString() !== '0' ? instance.state.get(path) : ''
@@ -664,7 +673,7 @@ const midraSubscriptions = {
 	plugChange: {
 		pat: 'DEVICE/device/inputList/items/(\\w+)/status/pp/plug',
 		ini: Array.from({ length: 16 }, (_, i) => 'INPUT_'+(i + 1)),
-		fun: (instance: AWJinstance, path: string | string[], _value?: string | string[] | number | boolean): boolean => {
+		fun: (instance, path, _value) => {
 			if (!path) return false
 			const input = Array.isArray(path) ? path[4] : path.split('/')[4]
 			instance.setVariable(input.replace(/^\w+_/, 'INPUT_') + 'label',
@@ -678,7 +687,7 @@ const midraSubscriptions = {
 	},
 	inputLabel: {
 		pat: 'DEVICE/device/inputList/items/(\\w+)/plugList/items/\\d+/control/pp/label',
-		fun: (instance: AWJinstance, path: string | string[], _value?: string | string[] | number | boolean): boolean => {
+		fun: (instance, path, _value) => {
 			if (!path) return false
 			const input = Array.isArray(path) ? path[4] : path.split('/')[4]
 			const plug = Array.isArray(path) ? path[7] : path.split('/')[7]
@@ -705,7 +714,7 @@ const midraSubscriptions = {
 	},
 	standby: {
 		pat: 'DEVICE/device/system/shutdown/standby/control/pp/xRequest',
-		fun: (instance: AWJinstance, _path: string | string[], value?: string | string[] | number | boolean): boolean => {
+		fun: (instance, _path, value) => {
 			if (value === 'STANDBY') {
 				instance.log('info', 'Device going to standby.')
 				instance.status(instance.STATUS_OK, 'Standby')
@@ -725,19 +734,17 @@ const midraSubscriptions = {
 	}
 }
 
-let subscriptions = commonSubscriptions
-
 /**
  * Combines the common subscriptions with the platform specific ones
  * @param platform 
  */
-export function updateSubscriptions(platform: string): void {
-	if (platform === 'livepremier') {
-		subscriptions = { ...livepremierSubscriptions, ...commonSubscriptions }
-	} else if (platform === 'alta') {
-		subscriptions = { ...midraSubscriptions, ...commonSubscriptions }
-	} else if (platform === 'midra') {
-		subscriptions = { ...midraSubscriptions, ...commonSubscriptions }
+export function updateSubscriptions(connection: AWJdevice): void {
+	if (connection.state.platform === 'livepremier') {
+		connection.state.set('LOCAL/subscriptions', { ...livepremierSubscriptions, ...commonSubscriptions })
+	} else if (connection.state.platform === 'alta') {
+		connection.state.set('LOCAL/subscriptions', { ...midraSubscriptions, ...commonSubscriptions })
+	} else if (connection.state.platform === 'midra') {
+		connection.state.set('LOCAL/subscriptions', { ...midraSubscriptions, ...commonSubscriptions })
 	}
 }
 
@@ -747,16 +754,19 @@ export function updateSubscriptions(platform: string): void {
  */
 function checkForAction(instance: AWJinstance, pat?: string | string[], value?: any): string | string[] | undefined {
 	// console.log('Checking for action', pat, value);
+	const subscriptions = instance.state.subscriptions
 	let path: string
 	if (pat === undefined) {
 		Object.keys(subscriptions).forEach((key) => {
-			if (subscriptions?.[key]?.fun && typeof subscriptions[key].fun === 'function') {
-				const update = subscriptions[key].fun(instance)
+			const subscriptionobj = subscriptions[key]
+			if (subscriptionobj.fun && typeof subscriptionobj.fun === 'function') {
+				const update = subscriptionobj.fun(instance)
 				if (update) void instance.updateInstance()
 			}
-			if (subscriptions?.[key]?.fbk) {
+			if (subscriptions[key].fbk) {
 				return subscriptions[key].fbk
 			}
+			return
 		})
 		return undefined
 	} else if (typeof pat === 'string') {
@@ -776,13 +786,14 @@ function checkForAction(instance: AWJinstance, pat?: string | string[], value?: 
 	})
 	if (subscription) {
 		// console.log('found subscription', subscription)
-		if (subscriptions?.[subscription]?.fun && typeof subscriptions[subscription].fun === 'function') {
+		const subscriptionobj = subscriptions[subscription]
+		if (subscriptionobj.fun && typeof subscriptionobj.fun === 'function') {
 			// console.log('found subscription fun')
 			if (value) {
-				const update = subscriptions[subscription].fun(instance, path, value)
+				const update = subscriptionobj.fun(instance, path, value)
 				if (update) void instance.updateInstance()
 			} else {
-				const update = subscriptions[subscription].fun(instance, path)
+				const update = subscriptionobj.fun(instance, path)
 				if (update) void instance.updateInstance()
 			}
 		}
@@ -800,6 +811,7 @@ function checkForAction(instance: AWJinstance, pat?: string | string[], value?: 
  * @param subscription specific subscription or all subscriptions if omitted
  */
 export function checkSubscriptions(instance: AWJinstance, subscription?: string): void {
+	const subscriptions = instance.state.subscriptions
 	let subKeys: string[]
 	let update = false
 	if (typeof subscription === 'string') {
@@ -809,24 +821,27 @@ export function checkSubscriptions(instance: AWJinstance, subscription?: string)
 		update = true
 	}
 	for (const sub of subKeys) {
-		let pattern = subscriptions?.[sub]?.pat
-		if (subscriptions?.[sub]?.fun && typeof subscriptions[sub].fun === 'function') {
+		const subscriptionobj = subscriptions[sub]
+		let pattern = subscriptionobj.pat
+		if (subscriptionobj.fun && typeof subscriptionobj.fun === 'function') {
 			if (pattern.indexOf('(') === -1) {
-				subscriptions[sub].fun(instance, pattern)
+				subscriptionobj.fun(instance, pattern)
 			} else {
-				if (subscriptions[sub].ini && Array.isArray(subscriptions[sub].ini)) {
+				if (subscriptionobj.ini && Array.isArray(subscriptionobj.ini)) {
 					// if ini is array just replace the the one and only caspturing group with all the values of the array and run the fun with all resulting paths
 					while (pattern.match(/\([^()]+\)/)) {
 						pattern = pattern.replace(/\([^()]+\)/g, '*')
 					}
-					for (const item of subscriptions[sub].ini) {
-						const upd = subscriptions[sub].fun(instance, pattern.replace('*', item))
+					for (const item of subscriptionobj.ini) {
+						const upd = subscriptionobj.fun(instance, pattern.replace('*', item))
 						if (upd) update = true
 					}
-				} else if (subscriptions[sub].ini && typeof subscriptions[sub].ini === 'function') {
+				} else if (subscriptionobj.ini && typeof subscriptionobj.ini === 'function') {
 					// if ini is a function run fun with all the paths generated by ini
-					subscriptions[sub].ini(instance).forEach((path: string) => {
-						subscriptions[sub].fun(instance, path)
+					subscriptionobj.ini(instance).forEach((path: string) => {
+						if (subscriptionobj.fun && typeof subscriptionobj.fun === 'function') {
+							subscriptionobj.fun(instance, path)
+						}
 					})
 				}
 
@@ -845,4 +860,4 @@ export function checkSubscriptions(instance: AWJinstance, subscription?: string)
 	}
 }
 
-export { subscriptions, checkForAction }
+export { checkForAction }

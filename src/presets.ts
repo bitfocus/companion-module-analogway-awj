@@ -122,7 +122,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 						unmodified: 0,
 					},
 					style: {
-						bgcolor: config.color_greendark,
+						bgcolor: config.color_green,
 					},
 				},
 				{
@@ -134,7 +134,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 						unmodified: 0,
 					},
 					style: {
-						bgcolor: config.color_reddark,
+						bgcolor: config.color_red,
 					},
 				},
 				{
@@ -146,7 +146,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 						unmodified: 1,
 					},
 					style: {
-						bgcolor: config.color_green,
+						bgcolor: config.color_greendark,
 					},
 				},
 				{
@@ -158,7 +158,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 						unmodified: 1,
 					},
 					style: {
-						bgcolor: config.color_red,
+						bgcolor: config.color_reddark,
 					},
 				},
 			],
@@ -206,7 +206,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 						unmodified: 0,
 					},
 					style: {
-						bgcolor: config.color_greendark,
+						bgcolor: config.color_green,
 					},
 				},
 				{
@@ -218,7 +218,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 						unmodified: 0,
 					},
 					style: {
-						bgcolor: config.color_reddark,
+						bgcolor: config.color_red,
 					},
 				},
 				{
@@ -230,7 +230,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 						unmodified: 1,
 					},
 					style: {
-						bgcolor: config.color_green,
+						bgcolor: config.color_greendark,
 					},
 				},
 				{
@@ -242,7 +242,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 						unmodified: 1,
 					},
 					style: {
-						bgcolor: config.color_red,
+						bgcolor: config.color_reddark,
 					},
 				},
 			],

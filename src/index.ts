@@ -51,13 +51,13 @@ class AWJinstance extends instance_skel<Config> {
 			this.config.sync = true
 			this.config.color_bright = 16777215
 			this.config.color_dark = 2239025
-			this.config.color_highlight = 2196944
-			this.config.color_green = 56339
-			this.config.color_greendark = 40971
-			this.config.color_greengrey = 4609352
-			this.config.color_red = 16733974
-			this.config.color_reddark = 14155776
-			this.config.color_redgrey = 5588550
+			this.config.color_highlight = this.rgb(24,111,173)
+			this.config.color_green = this.rgb(0,203,56)
+			this.config.color_greendark = this.rgb(0,115,27)
+			this.config.color_greengrey = this.rgb(45,79,49)
+			this.config.color_red = this.rgb(213,0,0)
+			this.config.color_reddark = this.rgb(82,0,0)
+			this.config.color_redgrey = this.rgb(79,31,31)
 			this.saveConfig()
 		}
 		this.device.connect(this.config.deviceaddr)
@@ -132,10 +132,9 @@ class AWJinstance extends instance_skel<Config> {
 	 * @description sets actions, variables, presets and feedbacks available for this instance
 	 */
 	public async updateInstance(): Promise<void> {
-		this.setActions(getActions(this) as CompanionActions)
 
 		this.setFeedbackDefinitions(getFeedbacks(this, this.state))
-
+		this.setActions(getActions(this) as CompanionActions)
 		this.setPresetDefinitions(getPresets(this))
 	}
 

@@ -985,6 +985,9 @@ export function getActions(instance: AWJinstance): any {
 						if (state.isLocked(screen, action.options.preset)) continue
 						for (const layer of action.options[`layer${screen}`]) {
 							let sourcetype = 'sourceLayer'
+							if (screen.startsWith('A')) {
+								sourcetype = 'sourceBack'
+							}
 							if (layer === 'NATIVE') {
 								sourcetype = 'sourceNative'
 							}
@@ -1003,8 +1006,21 @@ export function getActions(instance: AWJinstance): any {
 						.filter((selection) => state.isLocked(selection.screenAuxKey, preset) === false)
 						.forEach((layer) => {
 							let source = 'keep'
-							if (layer.layerKey === 'NATIVE' && action.options['sourceNative'] !== 'keep') source = action.options['sourceNative']
-							else if (layer.layerKey.match(/^\d+$/) && action.options['sourceLayer'] !== 'keep') source = action.options['sourceLayer']
+							if (
+								layer.screenAuxKey.startsWith('S') &&
+								layer.layerKey === 'NATIVE' &&
+								action.options['sourceNative'] !== 'keep'
+							) source = action.options['sourceNative']
+							else if (
+								layer.screenAuxKey.startsWith('S') &&
+								layer.layerKey.match(/^\d+$/) &&
+								action.options['sourceLayer'] !== 'keep'
+							) source = action.options['sourceLayer']
+							else if (
+								layer.screenAuxKey.startsWith('A') &&
+								layer.layerKey.match(/^\d+$/) &&
+								action.options['sourceBack'] !== 'keep'
+							) source = action.options['sourceBack']
 							if (source !== 'keep'){
 								device.sendWSmessage([
 									'device', 'screenList', 'items', layer.screenAuxKey,
@@ -2392,7 +2408,7 @@ export function getActions(instance: AWJinstance): any {
 			},
 		],
 	} as AWJaction<DeviceAudioRouteBlock>
-	if (state.platform === 'lifepremier') actions['deviceAudioRouteBlock'].callback = (action: ActionEvent<DeviceAudioRouteBlock>) => {
+	if (state.platform === 'livepremier') actions['deviceAudioRouteBlock'].callback = (action: ActionEvent<DeviceAudioRouteBlock>) => {
 			const outstart = audioOutputChoices.findIndex((item) => {
 				return item.id === action.options.out
 			})
@@ -2493,7 +2509,7 @@ export function getActions(instance: AWJinstance): any {
 			},
 		],
 	} as AWJaction<DeviceAudioRouteChannels>
-	if (state.platform === 'lifepremier') actions['deviceAudioRouteChannels'].callback = (action: ActionEvent<DeviceAudioRouteChannels>) => {
+	if (state.platform === 'livepremier') actions['deviceAudioRouteChannels'].callback = (action: ActionEvent<DeviceAudioRouteChannels>) => {
 		if (action.options.in.length > 0) {
 			const outstart = audioOutputChoices.findIndex((item) => {
 				return item.id === action.options.out

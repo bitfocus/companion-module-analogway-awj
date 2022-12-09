@@ -207,8 +207,8 @@ class AWJdevice {
 						this.instance.log('error', 'Connected to an AWJ device but device type is not compatible with this module')
 						return
 					}
-					updateMappings(this.state.platform)
-					updateSubscriptions(this.state.platform)
+					updateMappings(this.instance)
+					updateSubscriptions(this)
 
 					if (this.instance.config.sync === true && this.hadError === false) {
 						console.log('switching sync on because of config')
@@ -339,7 +339,7 @@ class AWJdevice {
 				data.toString().match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
 				data.toString().match(/"device","system","temperature",/) === null
 			) {
-				// console.log('\n\nincoming WS message', data.toString().substring(0, 200))
+				//this.instance.debug('incoming WS message', data.toString().substring(0, 200))
 				this.state.apply(JSON.parse(data.toString()))
 			}
 		})
@@ -456,7 +456,7 @@ class AWJdevice {
 	sendRawWSmessage(message: string): void {
 		if (this.websocket?.readyState === 1) {
 			this.websocket?.send(message)
-			// console.log('sendig WS message', message)
+			//this.instance.debug('sendig WS message', this.websocket.url ,message)
 		}
 	}
 
@@ -464,7 +464,7 @@ class AWJdevice {
 		path: string | string[],
 		value: string | string[] | number | boolean
 	): void {
-		const mapped = mapOut(path, value)
+		const mapped = mapOut(this.state.mappings, path, value)
 		const obj = {
 			channel: 'DEVICE',
 			data: {
@@ -483,7 +483,7 @@ class AWJdevice {
 	 * @param value
 	 */
 	sendWSpatch(channel: string, op: string, path: string | string[], value: string | number | boolean | object): void {
-		const mapped = mapOut(path, value)
+		const mapped = mapOut(this.state.mappings, path, value)
 		const obj = {
 			channel,
 			data: {
@@ -508,7 +508,7 @@ class AWJdevice {
 	sendWSdata(channel: string, name: string, path: string | string[], args: unknown[]): void {
 		let obj = {}
 		if (args.length === 0) {
-			const mapped = mapOut(path, [])
+			const mapped = mapOut(this.state.mappings, path, [])
 			obj = {
 				channel,
 				data: {
@@ -518,7 +518,7 @@ class AWJdevice {
 				}
 			}
 		} else {
-			const mapped = mapOut(path, args[0])
+			const mapped = mapOut(this.state.mappings, path, args[0])
 			if (args.length === 1) {
 				obj = {
 					channel,
@@ -557,7 +557,7 @@ class AWJdevice {
 	sendXupdate(platform?: string): void {
 		if (!platform) platform = this.state.platform
 		const updates: Record<string, string> = {
-			livecore: '{"channel":"DEVICE","data":{"path":"device/screenGroupList/control/pp/xUpdate","value":true}}',
+			livepremier: '{"channel":"DEVICE","data":{"path":"device/screenGroupList/control/pp/xUpdate","value":true}}',
 			midra: '{"channel":"DEVICE","data":{"path":"device/preset/control/pp/xUpdate","value":true}}'
 		}
 		const xUpdate = updates[platform]

@@ -716,12 +716,12 @@ export function getAudioOutputChoices(state: State): Dropdown<string>[] {
 	if (state.platform === 'midra') {
 		return getAudioOutputChoicesMidra(state)
 	} else {
-		return getAudioOutputChoicesLifePremier(state)
+		return getAudioOutputChoicesLivePremier(state)
 	}
 
 }
 
-export function getAudioOutputChoicesLifePremier(state: State): Dropdown<string>[] {
+export function getAudioOutputChoicesLivePremier(state: State): Dropdown<string>[] {
 	const ret: Dropdown<string>[] = []
 	for (const out of getAudioOutputsArray(state)) {
 		const channels = state.get(`DEVICE/device/audio/control/txList/items/${out.id}/channelList/itemKeys`) ?? []
@@ -806,12 +806,12 @@ export function getAudioInputChoices(state: State): Dropdown<string>[] {
 	if (state.platform === 'midra') {
 		return getAudioInputChoicesMidra(state)
 	} else {
-		return getAudioInputChoicesLifePremier(state)
+		return getAudioInputChoicesLivePremier(state)
 	}
 
 }
 
-export function getAudioInputChoicesLifePremier(state: State): Dropdown<string>[] {
+export function getAudioInputChoicesLivePremier(state: State): Dropdown<string>[] {
 	const ret = [{ id: 'NONE', label: 'No Source' }]
 	const inputs = state.get('DEVICE/device/audio/control/rxList/itemKeys') ?? []
 	for (const input of inputs) {

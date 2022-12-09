@@ -1,7 +1,8 @@
+import AWJinstance from '{{PACKAGE-NAME}}'
 import { State } from './state'
 
 
-type MapItem = {
+export type MapItem = {
 	patin: string,
 	pathinrep?: (_arg0: string) => string,
 	valinrep?: (_arg0: any) => unknown,
@@ -244,20 +245,17 @@ const midraMap: MapItem[] = [
 	},
 ]
 
-
-let deviceMap = midraMap
-
 /**
  * Updates which mappings to use on platform
- * @param platform 
+ * @param connection 
  */
-export function updateMappings(platform: string): void {
-	if (platform === 'livepremier') {
-		deviceMap = []
-	} else if (platform === 'alta') {
-		deviceMap = midraMap
-	} else if (platform === 'midra') {
-		deviceMap = midraMap
+export function updateMappings(instance: AWJinstance): void {
+	if (instance.state.platform === 'livepremier') {
+		instance.state.set('LOCAL/mappings', [] )
+	} else if (instance.state.platform === 'alta') {
+		instance.state.set('LOCAL/mappings', midraMap )
+	} else if (instance.state.platform === 'midra') {
+		instance.state.set('LOCAL/mappings', midraMap )
 	}
 }
 
@@ -268,7 +266,7 @@ export function updateMappings(platform: string): void {
  * @param value the value to transform
  * @returnes {path, value} the transormed path and value
  */
-export function mapIn(pat: string | string[], value: unknown): {path: string, value: unknown} {
+export function mapIn(deviceMap: MapItem[], pat: string | string[], value: unknown): { path: string, value: unknown } {
 	let path: string
 	if (Array.isArray(pat)) {
 		path = pat.join('/')
@@ -301,7 +299,7 @@ export function mapIn(pat: string | string[], value: unknown): {path: string, va
  * @param value the value to transform
  * @returnes the transformed value
  */
-export function mapOut(pat: string | string[] | undefined, value: unknown): { path: string, value: unknown } {
+export function mapOut(deviceMap: MapItem[], pat: string | string[] | undefined, value: unknown): { path: string, value: unknown } {
 	if (pat === undefined) return {path: '', value: value}
 	let path: string
 	if (Array.isArray(pat)) {
@@ -329,7 +327,7 @@ export function mapOut(pat: string | string[] | undefined, value: unknown): { pa
 }
 
 // this function is unused
-export function mapInit(state: State, path?: string): void {
+export function mapInit(deviceMap: MapItem[], state: State, path?: string): void {
 	if (path === undefined) {
 		const mapping = deviceMap.filter((itm) => {
 			return typeof itm.initfrom === 'string'
@@ -337,17 +335,17 @@ export function mapInit(state: State, path?: string): void {
 		if (mapping.length > 0) {
 			mapping.forEach((map) => {
 				if (map.initfrom === undefined) return
-				mapPath(state, map.initfrom)
+				mapPath(deviceMap, state, map.initfrom)
 			})
 		}
 	}
 }
 
 // this function is unused
-export function mapPath(state: State, path: string): void {
+export function mapPath(deviceMap: MapItem[], state: State, path: string): void {
 	const object = state.get('DEVICE/'+path)
 	//console.log('mapping', path, object)
-	const mapped = mapIn(path, object)
+	const mapped = mapIn(deviceMap, path, object)
 	if (typeof object === 'undefined') {
 		console.log('not mapping undefined');
 		return
@@ -356,11 +354,11 @@ export function mapPath(state: State, path: string): void {
 		state.set('DEVICE', mapped.path, mapped.value)
 	} else if (Array.isArray(object)) {
 		state.set('DEVICE', mapped.path, [])
-		object.forEach((itm) => mapPath(state, path+'/'+itm))
+		object.forEach((itm) => mapPath(deviceMap, state, path+'/'+itm))
 		//state.delete('DEVICE/'+path)
 	} else if (typeof object === 'object') {
 		state.set('DEVICE', mapped.path, {})
-		Object.keys(object).forEach((key) => mapPath(state, path+'/'+key))
+		Object.keys(object).forEach((key) => mapPath(deviceMap, state, path+'/'+key))
 		//state.delete('DEVICE/'+path)
 	} else {
 		const temp = JSON.stringify(object)
