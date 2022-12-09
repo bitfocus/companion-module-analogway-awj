@@ -750,24 +750,21 @@ export function updateSubscriptions(connection: AWJdevice): void {
 
 /**
  * Returns a string with the feedback ID if a feedback exists and runs an action if there is a 'fun' property
- * @param pat The path in the state object to check if a feedback or action exists for
+ * @param pat The path in the state object to check if a feedback or action exists for, if undefined checks all possible subscriptions
  */
 function checkForAction(instance: AWJinstance, pat?: string | string[], value?: any): string | string[] | undefined {
 	// console.log('Checking for action', pat, value);
 	const subscriptions = instance.state.subscriptions
 	let path: string
 	if (pat === undefined) {
-		Object.keys(subscriptions).forEach((key) => {
+		let update = false
+		for (const key of Object.keys(subscriptions)) {
 			const subscriptionobj = subscriptions[key]
 			if (subscriptionobj.fun && typeof subscriptionobj.fun === 'function') {
-				const update = subscriptionobj.fun(instance)
-				if (update) void instance.updateInstance()
+				update = subscriptionobj.fun(instance)
 			}
-			if (subscriptions[key].fbk) {
-				return subscriptions[key].fbk
-			}
-			return
-		})
+		}
+		if (update) void instance.updateInstance()
 		return undefined
 	} else if (typeof pat === 'string') {
 		path = pat
@@ -812,15 +809,10 @@ function checkForAction(instance: AWJinstance, pat?: string | string[], value?: 
  */
 export function checkSubscriptions(instance: AWJinstance, subscription?: string): void {
 	const subscriptions = instance.state.subscriptions
-	let subKeys: string[]
 	let update = false
-	if (typeof subscription === 'string') {
-		subKeys = [subscription]
-	} else {
-		subKeys = Object.keys(subscriptions)
-		update = true
-	}
-	for (const sub of subKeys) {
+
+	const checkSub = (sub: string): boolean => {
+		let update = false
 		const subscriptionobj = subscriptions[sub]
 		let pattern = subscriptionobj.pat
 		if (subscriptionobj.fun && typeof subscriptionobj.fun === 'function') {
@@ -828,7 +820,7 @@ export function checkSubscriptions(instance: AWJinstance, subscription?: string)
 				subscriptionobj.fun(instance, pattern)
 			} else {
 				if (subscriptionobj.ini && Array.isArray(subscriptionobj.ini)) {
-					// if ini is array just replace the the one and only caspturing group with all the values of the array and run the fun with all resulting paths
+					// if ini is array just replace the the one and only capturing group with all the values of the array and run the fun with all resulting paths
 					while (pattern.match(/\([^()]+\)/)) {
 						pattern = pattern.replace(/\([^()]+\)/g, '*')
 					}
@@ -847,12 +839,24 @@ export function checkSubscriptions(instance: AWJinstance, subscription?: string)
 
 			}
 		}
+		return update
 	}
+
+	if (typeof subscription === 'string') {
+		update = checkSub(subscription)
+
+	} else {
+		// check all subscriptions
+		Object.keys(subscriptions).forEach((sub) => checkSub(sub))
+		update = true
+	}
+	
 	if (update) {
 		void (async () => {
 			try {
-				await instance.updateInstance()
+				void instance.updateInstance()
 				instance.checkFeedbacks()
+				instance.subscribeFeedbacks()
 			} catch (error) {
 				instance.log('error', 'Cannot update the instance. '+ error)
 			}

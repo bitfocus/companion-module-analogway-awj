@@ -1,7 +1,7 @@
 # Analog Way AWJ
 
 **Most important:**  
-**Beware of selection synchronization!**  
+**[Beware of selection synchronization!](#sync)**  
 **There are many presets but much more actions and feedbacks, presets are a good starting point though.**
 
 This module works with all Analog Way devices which support the AWJ protocol. As of now this are the devices of the LivePremier, Alta 4K and Midra 4K series. Although all these devices share the same protocol, they have quite different capabilities and workflows. Companion tries to hide this as much as possible from you and make this module as generic as possible. Basically all the available features are retrieved from the device and only available features are presented to you in dropdowns and so on. E.g. you will only get selections for the inputs built into your device or you get only presets for memories which hold data. That also means you have to be connected to a device to get any selections at all. If you want to preprogram your show, you need to use one of the Analog Way simulators which you can download for free from https://analogway.com If you have programmed a show with one device and exchange it to a different device later, all your programmed values will stay in the actions and feedbacks but of course they won't work if your new device doesn't support that features, e.g. if you have programmed Aux 6 with LivePremier this action won't work on a Midra 4K device. Or if you have programmed an input plug selection at Midra the action won't work on LivePremier. Most of the actions and feedbacks will work on all devices the same, e.g. transitioning screen 2 will do this on any device if you have activated screen 2.
@@ -36,7 +36,7 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 
 - Turn sync selection on after connection established
   
-  If you check this box, the selection synchronization will be automatically turned on after the connection is established. See the action 'Sync selection' to learn what that means.
+  If you check this box, the selection synchronization will be automatically turned on after the connection is established. See the action ['Sync selection'](#sync) to learn what that means.
 
 - Colors
   
@@ -159,7 +159,7 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 	Available at: LivePremier, Alta 4K, Midra 4K  
 	There are different strategies how to select layers. Either you can use the currently selected screens and then select one or more layers on the selected screens or you can specify the screens where to select the layer or layers. If you choose one of the select options, then all layers which are not chosen for selection are getting deselected. If you choose one of the toggle options, the specified layer or layers are toggled. Companion can't know the number of layers available at the selected screen when you set up the action, so for the options with selected screens you get the maximum possible layer options. There is no harm if you include a layer which is not available later.
 
-- Sync selection
+- <a name="sync"></a>Sync selection
 
 	Available at: LivePremier, Alta 4K, Midra 4K  
 	With this action you can turn selection syncronization on or off. It is the same functionality like the toggle 'Selection Synced to Server' in WebRCS. You most likely want to have this turned on most of the times and you can automatically activate syncronization after connecting to a device in the configuration.  
@@ -167,8 +167,9 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 	What is it about: In WebRCS most of the manipulations are a multi step process. First you select something and then you apply a manipulation to the selection. E.g. first you select a layer and then you adjust the source of that layer or first you select a screen and then you press Take to transition that screen. WebRCS keeps track of many selections like screen selection, layer selection, widget selection...  
 	In Companion you have the choice of wether you want to use direct commands like "Transition S1" or you can use the same procedure as WebRCS where you select first and then do something with the selection. That means Companion has to keep track of the selection as well.  
 	All WebRCS Clients and Companion is in fact a WebRCS client have their own selection. Client 1 can e.g. have screen S1 selected and client 2 can have screen S2 selected. If client one hits Take, S1 will transition and if client 2 hits take, S2 will transition, but none of the clients knows which screen is selected in the other client. Your Analog Way device itself also can keep track of all the selections. If you turn selection syncronization on, actually the client now will use the selection of the device instead of its local selection. If you change the selection it will be changed on the device. If other clients also syncronize to the device they will immediately see the changes.  
-	If you are using only one WebRCS Client selection syncronization doesn't matter, you are absolute good to go with the local selection of the client. But if you want to integrate Companion into your workflow usually you want to turn syncronization on on Companion and on your WebRCS client.  
-	Having said that, there are also situations where you don't want selection syncronization. As far as it concerns Companion then you can either use direct commands or you can permanently or temporarily disable syncronization. You even could turn sync off, select something locally and turn sync on again in one button. 
+	If you are using only one WebRCS client, selection syncronization doesn't matter, you are absolute good to go with the local selection of the client. But if you want to integrate Companion into your workflow, usually you want to turn syncronization on on Companion and on your WebRCS client.  
+	Having said that, there are also situations where you don't want selection syncronization. As far as it concerns Companion then you can either use direct commands or you can permanently or temporarily disable syncronization. You even could turn sync off, select something locally and turn sync on again in one button.  
+	For your convenience Companion can automatically turn on its syncronization after a connection is established. WebRCS clients although will always start without syncronization and you have to turn it on manually in the client.  
 
 - Stream Control
 
@@ -347,7 +348,7 @@ timer1_status | Running or Stopped and so on
 tally_S1_pgm_LIVE_1 | the tally state (0 or 1) of the source LIVE_1 in S1 program
 
 The tally variables are not automatically generated for all possible combinations. Instead the variables are generated along with your used feedbacks. That means if you want to use a variable for source LIVE_3 on screen S2 preview, you have to add a feedback showing that state on some button. At the time you add the feedback the variable will also be added and can be used in triggers.  
-Caveat: there is a bug in Companion 2.x where feedback subscriptions are not processed correctly at Companion startup. That means if you create a feedback, the variable will show in the variables list and can be used in triggers. If you restart Companion the variable is still there and usable but it won't be shown in the variables list. To make it accessible again, you have to change a parameter in one of the feedbacks generating the variable.
+Caveat: there have been reports of rare cases where feedback subscriptions are not processed correctly at Companion startup. That means if you create a feedback, the variable will show in the variables list and can be used in triggers. If you restart Companion the variable is still there and usable but it won't be shown in the variables list. To make it accessible again, you have to change a parameter in one of the feedbacks generating the variable.
 
 
 ## Presets

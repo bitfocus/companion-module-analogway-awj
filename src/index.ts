@@ -60,9 +60,11 @@ class AWJinstance extends instance_skel<Config> {
 			this.config.color_redgrey = this.rgb(79,31,31)
 			this.saveConfig()
 		}
-		this.device.connect(this.config.deviceaddr)
+		this.setFeedbackDefinitions(getFeedbacks(this, this.state)) 
 		this.variables = initVariables(this)
 		this.setVariableDefinitions(this.variables)
+		this.subscribeFeedbacks()
+		this.device.connect(this.config.deviceaddr)
 
 		// void this.updateInstance()
 	}
