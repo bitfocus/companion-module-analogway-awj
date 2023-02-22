@@ -1,5 +1,5 @@
 {
-	"extends": "@tsconfig/node14/tsconfig.json",
+	"extends": "@companion-module/tools/tsconfig/node18/recommended",
 	"compilerOptions": {
 		"sourceMap": true,
 		"paths": {

@@ -34,26 +34,24 @@
 	},
 	"dependencies": {
 		"@companion-module/base": "~1.2.0",
-		"@tsconfig/node14": "^1.0.1",
+		"@tsconfig/node18": "^1.0.1",
 		"dgram": "^1.0.1",
-		"socket.io-client": "^4.5.1",
 		"superagent": "^8.0.3",
-		"tslib": "^2.4.0",
 		"urijs": "^1.19.11",
 		"ws": "^8.8.1"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^0.5.2",
-		"@types/node": "^14.18.3",
-		"@types/superagent": "4.1.15",
+		"@companion-module/tools": "^1.0.2",
+		"@types/node": "^18.14.0",
+		"@types/superagent": "4.1.16",
 		"@types/urijs": "1.19.19",
-		"@typescript-eslint/eslint-plugin": "^5.42.0",
-		"@typescript-eslint/parser": "^5.42.0",
-		"eslint": "^8.11.0",
+		"@typescript-eslint/eslint-plugin": "^5.53.0",
+		"@typescript-eslint/parser": "^5.53.0",
+		"eslint": "^8.34.0",
 		"eslint-plugin-prettier": "^4.0.0",
 		"husky": "^7.0.4",
-		"lint-staged": "^12.3.5",
-		"prettier": "^2.5.1",
-		"typescript": "~4.6"
+		"lint-staged": "^13.1.2",
+		"prettier": "^2.8.4",
+		"typescript": "~4.9.5"
 	}
 }

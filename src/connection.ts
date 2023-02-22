@@ -1,8 +1,12 @@
 import { AWJinstance } from './index'
-import dgram = require("dgram")
-import net = require('net')
-import URI = require('urijs')
-import superagent = require('superagent')
+//import dgram = require("dgram")
+import * as dgram from 'dgram'
+//import net = require('net')
+import * as net from 'net'
+//import URI = require('urijs')
+import URI from 'urijs'
+//import superagent = require('superagent')
+import * as superagent from 'superagent'
 import { WebSocket } from 'ws'
 import { State } from './state'
 import { checkSubscriptions, updateSubscriptions } from './subscriptions'
