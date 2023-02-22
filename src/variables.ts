@@ -1,13 +1,15 @@
-import AWJinstance from './index'
-// import InstanceSkel = require('../../../instance_skel')
-import { CompanionVariable } from '../../../instance_skel_types'
-//import { getLiveInputChoices } from './choices'
+import { CompanionVariableDefinition } from '@companion-module/base'
+import {AWJinstance} from './index'
 
-export function initVariables(_instance: AWJinstance): CompanionVariable[] {
-	const variables: CompanionVariable[] = [
+export function initVariables(_instance: AWJinstance): CompanionVariableDefinition[] {
+	const variables: CompanionVariableDefinition[] = [
 		{
-			label: 'Selected Preset',
-			name: 'selectedPreset',
+			variableId: 'connectionLabel',
+			name: 'The label of this connection',
+		},
+		{
+			variableId: 'selectedPreset',
+			name: 'Selected Preset',
 		},
 	]
 

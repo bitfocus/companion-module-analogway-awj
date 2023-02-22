@@ -1,9 +1,3 @@
-import {
-	// DropdownChoice,
-	// ConfigValue,
-	// CompanionInputFieldNumber,
-	// CompanionInputFieldDropdown,
-} from '../../../instance_skel_types'
 import { State } from './state'
 
 type Dropdown<t> = {id: t, label: string}

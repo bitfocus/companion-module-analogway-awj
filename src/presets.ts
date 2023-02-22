@@ -1,5 +1,4 @@
-import AWJinstance from './index'
-import { CompanionPreset } from '../../../instance_skel_types'
+import {AWJinstance} from './index'
 import {
 	choicesBackgroundSources,
 	choicesBackgroundSourcesPlusNone,
@@ -18,48 +17,61 @@ import {
 	getWidgetChoices,
 	getWidgetSourceChoices,
 } from './choices'
+import {
+	combineRgb,
+	CompanionButtonPresetDefinition,
+	CompanionButtonStyleProps,
+	CompanionPresetDefinitions,
+	splitRgb
+} from '@companion-module/base'
 
 type Dropdown<t> = {id: t, label: string}
 
-export function getPresets(instance: AWJinstance): CompanionPreset[] {
+export function getPresets(instance: AWJinstance): CompanionPresetDefinitions {
 	const state = instance.state
 	const ilabel = instance.label
 	const config = instance.config
 	const allscreens = state.getChosenScreenAuxes('all')
-	const presets: ({ bank: { show_topbar?: boolean } } & CompanionPreset)[] = []
+	//const presets: ({ style: { show_topbar?: boolean } } & CompanionPreset)[] = []
+	const presets: CompanionPresetDefinitions = {}
 
 	// MARK: Master Memories
 	for (const memory of getMasterMemoryArray(state)) {
 		// const label = state.get(['DEVICE', 'device', 'presetBank', 'bankList', 'items', memory, 'control', 'pp', 'label'])
 		const bgcolor = parseInt(state.get(['REMOTE', 'banks', 'master', 'items', memory.id, 'color'])?.slice(1), 16)
 		const color =
-			(instance.rgbRev(bgcolor).r + instance.rgbRev(bgcolor).g + instance.rgbRev(bgcolor).b) / 3 > 127
+			(splitRgb(bgcolor).r + splitRgb(bgcolor).g + splitRgb(bgcolor).b) / 3 > 127
 				? config.color_dark
 				: config.color_bright
 
-		presets.push({
-			label: `Load Master Memory ${memory.id}`,
+		presets[`Load Master Memory ${memory.id}`] = {
+		type: 'button',
+			name: `Load Master Memory ${memory.id}`,
 			category: 'Master Memories',
-			bank: {
+			style: {
 				text: `MM${memory.id}\\n$(${ilabel}:masterMemory${memory.id}label)`,
-				style: 'text',
 				size: 'auto',
 				color,
 				bgcolor,
 			},
-			actions: [
+			steps: [
 				{
-					action: 'deviceMasterMemory',
-					options: {
-						memory: memory.id,
-						selectScreens: true,
+				down: [
+					{
+						actionId: 'deviceMasterMemory',
+						options: {
+							preset: 'sel',
+							memory: memory.id,
+							selectScreens: true,
+						},
 					},
+				],
+				up: [],
 				},
-			],
-			release_actions: [],
+				],
 			feedbacks: [
 				{
-					type: 'deviceMasterMemory',
+					feedbackId: 'deviceMasterMemory',
 					options: {
 						memory: memory.id,
 						preset: 'pvw',
@@ -69,7 +81,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 				{
-					type: 'deviceMasterMemory',
+					feedbackId: 'deviceMasterMemory',
 					options: {
 						memory: memory.id,
 						preset: 'pgm',
@@ -79,30 +91,32 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 			],
-		})
+		}
 	}
 	// MARK: Screen Memories
 	for (const memory of getScreenMemoryArray(state)) {
 		// const label = state.get(['DEVICE', 'device', 'presetBank', 'bankList', 'items', memory, 'control', 'pp', 'label'])
 		const bgcolor = parseInt(state.get(['REMOTE', 'banks', 'screen', 'items', memory.id, 'color'])?.slice(1), 16)
 		const color =
-			(instance.rgbRev(bgcolor).r + instance.rgbRev(bgcolor).g + instance.rgbRev(bgcolor).b) / 3 > 127
+			(splitRgb(bgcolor).r + splitRgb(bgcolor).g + splitRgb(bgcolor).b) / 3 > 127
 				? config.color_dark
 				: config.color_bright
 
-		presets.push({
-			label: `Load Screen Memory ${memory.id}`,
+		presets[`Load Screen Memory ${memory.id}`] = {
+		type: 'button',
+			name: `Load Screen Memory ${memory.id}`,
 			category: 'Screen Memories',
-			bank: {
+			style: {
 				text: `SM${memory.id}\\n$(${ilabel}:screenMemory${memory.id}label)`,
-				style: 'text',
 				size: 'auto',
 				color,
 				bgcolor,
 			},
-			actions: [
+			steps: [
+{
+down: [
 				{
-					action: 'deviceScreenMemory',
+					actionId: 'deviceScreenMemory',
 					options: {
 						screen: ['sel'],
 						preset: 'sel',
@@ -111,10 +125,12 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 			],
-			release_actions: [],
+			up: [],
+},
+],
 			feedbacks: [
 				{
-					type: 'deviceScreenMemory',
+					feedbackId: 'deviceScreenMemory',
 					options: {
 						screens: ['all'],
 						preset: 'pvw',
@@ -126,7 +142,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 				{
-					type: 'deviceScreenMemory',
+					feedbackId: 'deviceScreenMemory',
 					options: {
 						screens: ['all'],
 						preset: 'pgm',
@@ -138,7 +154,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 				{
-					type: 'deviceScreenMemory',
+					feedbackId: 'deviceScreenMemory',
 					options: {
 						screens: ['all'],
 						preset: 'pvw',
@@ -150,7 +166,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 				{
-					type: 'deviceScreenMemory',
+					feedbackId: 'deviceScreenMemory',
 					options: {
 						screens: ['all'],
 						preset: 'pgm',
@@ -162,7 +178,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 			],
-		})
+		}
 	}
 
 	// MARK: Aux Memories
@@ -170,23 +186,25 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 		// const label = state.get(['DEVICE', 'device', 'presetBank', 'bankList', 'items', memory, 'control', 'pp', 'label'])
 		const bgcolor = parseInt(state.get(['REMOTE', 'banks', 'screen', 'items', memory.id, 'color'])?.slice(1), 16)
 		const color =
-			(instance.rgbRev(bgcolor).r + instance.rgbRev(bgcolor).g + instance.rgbRev(bgcolor).b) / 3 > 127
+			(splitRgb(bgcolor).r + splitRgb(bgcolor).g + splitRgb(bgcolor).b) / 3 > 127
 				? config.color_dark
 				: config.color_bright
 
-		presets.push({
-			label: `Load Aux Memory ${memory.id}`,
+		presets[`Load Aux Memory ${memory.id}`] = {
+		type: 'button',
+			name: `Load Aux Memory ${memory.id}`,
 			category: 'Aux Memories',
-			bank: {
+			style: {
 				text: `AM${memory.id}\\n$(${ilabel}:auxMemory${memory.id}label)`,
-				style: 'text',
 				size: 'auto',
 				color,
 				bgcolor,
 			},
-			actions: [
+			steps: [
+{
+down: [
 				{
-					action: 'deviceAuxMemory',
+					actionId: 'deviceAuxMemory',
 					options: {
 						screens: ['sel'],
 						preset: 'sel',
@@ -195,10 +213,12 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 			],
-			release_actions: [],
+			up: [],
+},
+],
 			feedbacks: [
 				{
-					type: 'deviceAuxMemory',
+					feedbackId: 'deviceAuxMemory',
 					options: {
 						screens: ['all'],
 						preset: 'pvw',
@@ -210,7 +230,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 				{
-					type: 'deviceAuxMemory',
+					feedbackId: 'deviceAuxMemory',
 					options: {
 						screens: ['all'],
 						preset: 'pgm',
@@ -222,7 +242,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 				{
-					type: 'deviceAuxMemory',
+					feedbackId: 'deviceAuxMemory',
 					options: {
 						screens: ['all'],
 						preset: 'pvw',
@@ -234,7 +254,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 				{
-					type: 'deviceAuxMemory',
+					feedbackId: 'deviceAuxMemory',
 					options: {
 						screens: ['all'],
 						preset: 'pgm',
@@ -246,7 +266,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 			],
-		})
+		}
 	}
 
 	// MARK: Layer Memories
@@ -254,23 +274,25 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 		// const label = state.get(['DEVICE', 'device', 'layerBank', 'bankList', 'items', memory, 'control', 'pp', 'label'])
 		const bgcolor = parseInt(state.get(['REMOTE', 'banks', 'layer', 'items', memory, 'color'])?.slice(1), 16)
 		const color =
-			(instance.rgbRev(bgcolor).r + instance.rgbRev(bgcolor).g + instance.rgbRev(bgcolor).b) / 3 > 127
+			(splitRgb(bgcolor).r + splitRgb(bgcolor).g + splitRgb(bgcolor).b) / 3 > 127
 				? config.color_dark
 				: config.color_bright
 
-		presets.push({
-			label: `Load Layer Memory${memory}`,
+		presets[`Load Layer Memory${memory}`] = {
+		type: 'button',
+			name: `Load Layer Memory${memory}`,
 			category: 'Layer Memories',
-			bank: {
+			style: {
 				text: `LM${memory}\\n$(${ilabel}:layerMemory${memory}label)`,
-				style: 'text',
 				size: 'auto',
 				color,
 				bgcolor,
 			},
-			actions: [
+			steps: [
+{
+down: [
 				{
-					action: 'deviceLayerMemory',
+					actionId: 'deviceLayerMemory',
 					options: {
 						method: 'sel',
 						screen: 'S1',
@@ -280,34 +302,40 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 			],
-			release_actions: [],
+			up: [],
+},
+],
 			feedbacks: [],
-		})
+		}
 	}
 
 	// MARK: Take All Screens
-	presets.push({
-		label: 'Take All Screens',
+	presets['Take All Screens'] = {
+		type: 'button',
+		name: 'Take All Screens',
 		category: 'Transition',
-		bank: {
+		style: {
 			text: 'Take\\nAll',
-			style: 'text',
 			size: 'auto',
 			color: config.color_bright,
 			bgcolor: config.color_reddark,
 		},
-		actions: [
+		steps: [
+{
+down: [
 			{
-				action: 'deviceTakeScreen',
+				actionId: 'deviceTakeScreen',
 				options: {
 					screens: ['all'],
 				},
 			},
 		],
-		release_actions: [],
+		up: [],
+},
+],
 		feedbacks: [
 			{
-				type: 'deviceTake',
+				feedbackId: 'deviceTake',
 				options: {
 					screens: ['all'],
 				},
@@ -316,31 +344,35 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 				},
 			},
 		],
-	})
+	}
 
 	// MARK: Take Selected Screens
-	presets.push({
-		label: 'Take Selected Screens',
+	presets['Take Selected Screens'] = {
+		type: 'button',
+		name: 'Take Selected Screens',
 		category: 'Transition',
-		bank: {
+		style: {
 			text: 'Take\\nSel',
-			style: 'text',
 			size: 'auto',
 			color: config.color_bright,
 			bgcolor: config.color_reddark,
 		},
-		actions: [
+		steps: [
+{
+down: [
 			{
-				action: 'deviceTakeScreen',
+				actionId: 'deviceTakeScreen',
 				options: {
 					screens: ['sel'],
 				},
 			},
 		],
-		release_actions: [],
+		up: [],
+},
+],
 		feedbacks: [
 			{
-				type: 'deviceTake',
+				feedbackId: 'deviceTake',
 				options: {
 					screens: ['all'],
 				},
@@ -349,32 +381,36 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 				},
 			},
 		],
-	})
+	}
 
 	// MARK: Take Screen ...
 	for (const screen of allscreens) {
-		presets.push({
-			label: 'Take Screen ' + screen,
+		presets['Take Screen ' + screen] = {
+		type: 'button',
+			name: 'Take Screen ' + screen,
 			category: 'Transition',
-			bank: {
+			style: {
 				text: 'Take\\n' + screen,
-				style: 'text',
 				size: 'auto',
 				color: config.color_bright,
 				bgcolor: config.color_reddark,
 			},
-			actions: [
+			steps: [
+{
+down: [
 				{
-					action: 'deviceTakeScreen',
+					actionId: 'deviceTakeScreen',
 					options: {
 						screens: [screen],
 					},
 				},
 			],
-			release_actions: [],
+			up: [],
+},
+],
 			feedbacks: [
 				{
-					type: 'deviceTake',
+					feedbackId: 'deviceTake',
 					options: {
 						screens: [screen],
 					},
@@ -383,136 +419,156 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 			],
-		})
+		}
 	}
 
 	// MARK: Cut All Screens
-	presets.push({
-		label: 'Cut All Screens',
+	presets['Cut All Screens'] = {
+		type: 'button',
+		name: 'Cut All Screens',
 		category: 'Transition',
-		bank: {
+		style: {
 			text: 'Cut\\nAll',
-			style: 'text',
 			size: 'auto',
 			color: config.color_bright,
 			bgcolor: config.color_reddark,
 		},
-		actions: [
+		steps: [
+{
+down: [
 			{
-				action: 'deviceCutScreen',
+				actionId: 'deviceCutScreen',
 				options: {
 					screens: ['all'],
 				},
 			},
 		],
-		release_actions: [],
+		up: [],
+},
+],
 		feedbacks: [],
-	})
+	}
 
 	// MARK: Cut Selected Screens
-	presets.push({
-		label: 'Cut Selected Screens',
+	presets['Cut Selected Screens'] = {
+		type: 'button',
+		name: 'Cut Selected Screens',
 		category: 'Transition',
-		bank: {
+		style: {
 			text: 'Cut\\nSel',
-			style: 'text',
 			size: 'auto',
 			color: config.color_bright,
 			bgcolor: config.color_reddark,
 		},
-		actions: [
+		steps: [
+{
+down: [
 			{
-				action: 'deviceCutScreen',
+				actionId: 'deviceCutScreen',
 				options: {
 					screens: ['sel'],
 				},
 			},
 		],
-		release_actions: [],
+		up: [],
+},
+],
 		feedbacks: [],
-	})
+	}
 
 	// MARK: Cut Screen ...
 	for (const screen of allscreens) {
-		presets.push({
-			label: 'Cut Screen ' + screen,
+		presets['Cut Screen ' + screen] = {
+		type: 'button',
+			name: 'Cut Screen ' + screen,
 			category: 'Transition',
-			bank: {
+			style: {
 				text: 'Cut\\n' + screen,
-				style: 'text',
 				size: 'auto',
 				color: config.color_bright,
 				bgcolor: config.color_reddark,
 			},
-			actions: [
+			steps: [
+{
+down: [
 				{
-					action: 'deviceCutScreen',
+					actionId: 'deviceCutScreen',
 					options: {
 						screens: [screen],
 					},
 				},
 			],
-			release_actions: [],
+			up: [],
+},
+],
 			feedbacks: [],
-		})
+		}
 	}
 
 	// MARK: Toggle Sync
-	presets.push({
-		label: 'Toggle Sync',
+	presets['Toggle Sync'] = {
+		type: 'button',
+		name: 'Toggle Sync',
 		category: 'Live',
-		bank: {
-			text: ilabel + '\\n🔗\\nLocal',
-			style: 'text',
+		style: {
+			text: `$(${ilabel}:connectionLabel)\\n🔗\\nLocal`,
 			size: '18',
 			color: config.color_bright,
 			bgcolor: config.color_dark,
 			show_topbar: false,
-		},
-		actions: [
+		} as CompanionButtonStyleProps, // TODO: add show_topbar to type definition
+		steps: [
+{
+down: [
 			{
-				action: 'remoteSync',
+				actionId: 'remoteSync',
 				options: {
 					sync: 2,
 				},
 			},
 		],
-		release_actions: [],
+		up: [],
+},
+],
 		feedbacks: [
 			{
-				type: 'syncselection',
+				feedbackId: 'syncselection',
 				options: {},
 				style: {
-					text: ilabel + '\\n🔗\\nSynced',
+					text: `$(${ilabel}:connectionLabel)\\n🔗\\nSynced`,
 					bgcolor: config.color_highlight,
 				},
 			},
 		],
-	})
+	}
 
-	// MARK: Toggle Preset
-	presets.push({
-		label: 'Toggle Preset',
+	// MARK: Select Preset
+	presets['Toggle Preset'] = {
+		type: 'button',
+		name: 'Toggle Preset',
 		category: 'Live',
-		bank: {
+		style: {
 			text: '⬇︎\\nPVW',
-			style: 'text',
 			size: '24',
 			color: config.color_dark,
 			bgcolor: config.color_green,
 		},
-		actions: [
+		steps: [
 			{
-				action: 'selectPreset',
-				options: {
-					mode: 'tgl',
-				},
+				down: [
+					{
+						actionId: 'selectPreset',
+						options: {
+							mode: 'tgl',
+						},
+					},
+				],
+				up: [],
 			},
 		],
-		release_actions: [],
 		feedbacks: [
 			{
-				type: 'livePresetSelection',
+				feedbackId: 'livePresetSelection',
 				options: {
 					preset: 'PROGRAM',
 				},
@@ -522,64 +578,108 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 				},
 			},
 		],
-	})
+	}
 
-	// MARK: Copy preview from program
-	presets.push({
-		label: 'Copy program of selected screens to preview',
+	// MARK: Preset Toggle
+	presets['Preset Toggle'] = {
+		type: 'button',
+		name: 'Preset Toggle',
 		category: 'Live',
-		bank: {
-			text: 'Copy\\nPgm➔Pvw\\nSelected',
-			style: 'text',
+		style: {
+			text: 'Preset\\nToggle\\noff',
 			size: '14',
 			color: config.color_bright,
 			bgcolor: config.color_dark,
 		},
-		actions: [
+		steps: [
+{
+down: [
 			{
-				action: 'deviceCopyProgram',
+				actionId: 'devicePresetToggle',
+				options: {
+					action: 'toggle',
+				},
+			},
+		],
+		up: [],
+},
+],
+		feedbacks: [
+			{
+				feedbackId: 'presetToggle',
+				options: {},
+				style: {
+					text: 'Preset\\nToggle\\non',
+					bgcolor: config.color_highlight,
+				},
+			},
+		],
+	}
+
+	// MARK: Copy preview from program
+	presets['Copy program of selected screens to preview'] = {
+		type: 'button',
+		name: 'Copy program of selected screens to preview',
+		category: 'Live',
+		style: {
+			text: 'Copy\\nPgm➔Pvw\\nSelected',
+			size: '14',
+			color: config.color_bright,
+			bgcolor: config.color_dark,
+		},
+		steps: [
+{
+down: [
+			{
+				actionId: 'deviceCopyProgram',
 				options: {
 					screens: ['sel'],
 				},
 			},
 		],
-		release_actions: [],
+		up: [],
+},
+],
 		feedbacks: [],
-	})
+	}
 
 	// MARK: Toggle Screen X Selection
 	for (const screen of allscreens) {
-		presets.push({
-			label: 'Do intelligent selection for screen ' + screen,
+		presets['Do intelligent selection for screen ' + screen] = {
+			type: 'button',
+			name: 'Do intelligent selection for screen ' + screen,
 			category: 'Screens',
-			bank: {
+			style: {
 				text: 'Select ' + screen,
-				style: 'text',
 				size: 'auto',
 				color: config.color_bright,
 				bgcolor: config.color_dark,
 			},
-			actions: [
+			steps: [
 				{
-					action: 'selectScreen',
-					options: {
-						screen: screen,
-						sel: 4,
-					},
-				},
-			],
-			release_actions: [
-				{
-					action: 'selectScreen',
-					options: {
-						screen: screen,
-						sel: 5,
-					},
-				},
+					down: [
+						{
+							actionId: 'selectScreen',
+							options: {
+								screen: screen,
+								sel: 4,
+							},
+						},
+					],
+					up: [
+						{
+							actionId: 'selectScreen',
+							options: {
+								screen: screen,
+								sel: 5,
+							},
+						},
+					],
+				}
 			],
 			feedbacks: [
 				{
-					type: 'liveScreenSelection',
+					feedbackId: 'liveScreenSelection',
 					options: {
 						screen: screen,
 					},
@@ -588,30 +688,34 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 			],
-		})
-		presets.push({
-			label: 'Toggle Screen ' + screen + ' Selection and show some useful data of PGM',
+		}
+		presets['Toggle Screen ' + screen + ' Selection and show some useful data of PGM'] = {
+			type: 'button',
+			name: 'Toggle Screen ' + screen + ' Selection and show some useful data of PGM',
 			category: 'Screens',
-			bank: {
+			style: {
 				text: `${screen} PGM\\n$(${ilabel}:screen${screen}label)\\n$(${ilabel}:screen${screen}timePGM)\\n$(${ilabel}:screen${screen}memoryPGM)$(${ilabel}:screen${screen}memoryModifiedPGM)\\n$(${ilabel}:screen${screen}memoryLabelPGM)`,
-				style: 'text',
 				size: 'auto',
 				color: config.color_bright,
 				bgcolor: config.color_reddark,
 			},
-			actions: [
+			steps: [
 				{
-					action: 'selectScreen',
-					options: {
-						screen: screen,
-						sel: 2,
-					},
-				},
+					down: [
+						{
+							actionId: 'selectScreen',
+							options: {
+								screen: screen,
+								sel: 2,
+							},
+						},
+					],
+					up: [],
+				}
 			],
-			release_actions: [],
 			feedbacks: [
 				{
-					type: 'liveScreenSelection',
+					feedbackId: 'liveScreenSelection',
 					options: {
 						screen: screen,
 					},
@@ -620,29 +724,33 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 			],
-		})
-		presets.push({
-			label: 'Copy PGM of ' + screen + ' to PVW and show some useful data of PVW',
+		}
+		presets['Copy PGM of ' + screen + ' to PVW and show some useful data of PVW'] = {
+		type: 'button',
+			name: 'Copy PGM of ' + screen + ' to PVW and show some useful data of PVW',
 			category: 'Screens',
-			bank: {
+			style: {
 				text: `${screen} PVW\\n$(${ilabel}:screen${screen}label)\\n$(${ilabel}:screen${screen}timePVW)\\n$(${ilabel}:screen${screen}memoryPVW)$(${ilabel}:screen${screen}memoryModifiedPVW)\\n$(${ilabel}:screen${screen}memoryLabelPVW)`,
-				style: 'text',
 				size: 'auto',
 				color: config.color_bright,
 				bgcolor: config.color_greendark,
 			},
-			actions: [
+			steps: [
+{
+down: [
 				{
-					action: 'deviceCopyProgram',
+					actionId: 'deviceCopyProgram',
 					options: {
 						screens: [screen],
 					},
 				},
 			],
-			release_actions: [],
+			up: [],
+},
+],
 			feedbacks: [
 				{
-					type: 'remoteLayerSelection',
+					feedbackId: 'remoteLayerSelection',
 					options: {
 						screen: screen,
 						layer: 'all',
@@ -653,25 +761,27 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 			],
-		})
+		}
 	}
 
 	// MARK: Toggle Lock PGM All Screens
-	presets.push({
-		label: 'Toggle Lock PGM All Screens',
+	presets['Toggle Lock PGM All Screens'] = {
+		type: 'button',
+		name: 'Toggle Lock PGM All Screens',
 		category: 'Lock Screens',
-		bank: {
+		style: {
 			text: 'PGM',
-			style: 'text',
 			size: '24',
 			color: config.color_dark,
 			bgcolor: config.color_reddark,
 			png64:
 				'iVBORw0KGgoAAAANSUhEUgAAADcAAAA3CAYAAACo29JGAAABt0lEQVRoge1ay5LEIAiErf1uR/lx9jJOGddXFEZj2UeNSNtExARgY6D2BMYYzvURker8KsZLhHLQICpqsIdUDEmSIoZqpGoOp8ZLkPwZNdCgVtVJIkKNsBwmVwDCjchgZj8GAGRC/HdkcMEBBAAgIjDGsDGmxZwfg96uMYZHFNVQDokIAIDvrP7r9fo8KxWi3cplHEevVtiYczZhgyEK5RH1xJULHa5tFNpJXJKcD0cAaHc8fs4vzhKpYGWIkQtVWwVHuadiKIlrABEvOe99cunCUsohymaGJZRzzn1YWWsvfSOEpysXh11Izlr7j+wdTCeXgnMOnHPDdqaTk37PQkwnN7Ib1jCdXEo5Zr6Q7l2A23cbq6F0wJ6unCaa81yh4PT9Q4602PGFa2tEDSdxqWpAo6rYOiy3Jve1s2X0nuA3ilt15Zg5ecv1bledW51cWJu1tEtClVzDlt16G92FrTeUQ24AtXrmMTfOOeQIqH+PVyUX5LKYCCaeEYe6cv5zVtTMQZ8apm0oW5xQZkKdXC6R3/ic3I2j3FNxzpZPxdbktCtx9SNWCUe5Xsz+CeBcpz8VW5PbGn/AbcB8DcHhggAAAABJRU5ErkJggg==',
 		},
-		actions: [
+		steps: [
+{
+down: [
 			{
-				action: 'lockScreen',
+				actionId: 'lockScreen',
 				options: {
 					screens: ['all'],
 					preset: 'PROGRAM',
@@ -679,10 +789,12 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 				},
 			},
 		],
-		release_actions: [],
+		up: [],
+},
+],
 		feedbacks: [
 			{
-				type: 'liveScreenLock',
+				feedbackId: 'liveScreenLock',
 				options: {
 					screen: 'all',
 					preset: 'PROGRAM',
@@ -694,25 +806,27 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 				},
 			},
 		],
-	})
+	}
 
 	// MARK: Toggle Lock PGM Screen ...
 	for (const screen of allscreens) {
-		presets.push({
-			label: 'Toggle Lock PGM Screen ' + screen,
+		presets['Toggle Lock PGM Screen ' + screen] = {
+		type: 'button',
+			name: 'Toggle Lock PGM Screen ' + screen,
 			category: 'Lock Screens',
-			bank: {
+			style: {
 				text: screen + '\\nPGM',
-				style: 'text',
 				size: '18',
 				color: config.color_dark,
 				bgcolor: config.color_reddark,
 				png64:
 					'iVBORw0KGgoAAAANSUhEUgAAADcAAAA3CAYAAACo29JGAAABt0lEQVRoge1ay5LEIAiErf1uR/lx9jJOGddXFEZj2UeNSNtExARgY6D2BMYYzvURker8KsZLhHLQICpqsIdUDEmSIoZqpGoOp8ZLkPwZNdCgVtVJIkKNsBwmVwDCjchgZj8GAGRC/HdkcMEBBAAgIjDGsDGmxZwfg96uMYZHFNVQDokIAIDvrP7r9fo8KxWi3cplHEevVtiYczZhgyEK5RH1xJULHa5tFNpJXJKcD0cAaHc8fs4vzhKpYGWIkQtVWwVHuadiKIlrABEvOe99cunCUsohymaGJZRzzn1YWWsvfSOEpysXh11Izlr7j+wdTCeXgnMOnHPDdqaTk37PQkwnN7Ib1jCdXEo5Zr6Q7l2A23cbq6F0wJ6unCaa81yh4PT9Q4602PGFa2tEDSdxqWpAo6rYOiy3Jve1s2X0nuA3ilt15Zg5ecv1bledW51cWJu1tEtClVzDlt16G92FrTeUQ24AtXrmMTfOOeQIqH+PVyUX5LKYCCaeEYe6cv5zVtTMQZ8apm0oW5xQZkKdXC6R3/ic3I2j3FNxzpZPxdbktCtx9SNWCUe5Xsz+CeBcpz8VW5PbGn/AbcB8DcHhggAAAABJRU5ErkJggg==',
 			},
-			actions: [
+			steps: [
+{
+down: [
 				{
-					action: 'lockScreen',
+					actionId: 'lockScreen',
 					options: {
 						screens: [screen],
 						preset: 'PROGRAM',
@@ -720,10 +834,12 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 			],
-			release_actions: [],
+			up: [],
+},
+],
 			feedbacks: [
 				{
-					type: 'liveScreenLock',
+					feedbackId: 'liveScreenLock',
 					options: {
 						screen: screen,
 						preset: 'PROGRAM',
@@ -735,25 +851,27 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 			],
-		})
+		}
 	}
 
 	// MARK: Toggle Lock PVW All Screens
-	presets.push({
-		label: 'Toggle Lock PVW All Screens',
+	presets['Toggle Lock PVW All Screens'] = {
+		type: 'button',
+		name: 'Toggle Lock PVW All Screens',
 		category: 'Lock Screens',
-		bank: {
+		style: {
 			text: 'PVW',
-			style: 'text',
 			size: '24',
 			color: config.color_dark,
 			bgcolor: config.color_greendark,
 			png64:
 				'iVBORw0KGgoAAAANSUhEUgAAADcAAAA3CAYAAACo29JGAAABt0lEQVRoge1ay5LEIAiErf1uR/lx9jJOGddXFEZj2UeNSNtExARgY6D2BMYYzvURker8KsZLhHLQICpqsIdUDEmSIoZqpGoOp8ZLkPwZNdCgVtVJIkKNsBwmVwDCjchgZj8GAGRC/HdkcMEBBAAgIjDGsDGmxZwfg96uMYZHFNVQDokIAIDvrP7r9fo8KxWi3cplHEevVtiYczZhgyEK5RH1xJULHa5tFNpJXJKcD0cAaHc8fs4vzhKpYGWIkQtVWwVHuadiKIlrABEvOe99cunCUsohymaGJZRzzn1YWWsvfSOEpysXh11Izlr7j+wdTCeXgnMOnHPDdqaTk37PQkwnN7Ib1jCdXEo5Zr6Q7l2A23cbq6F0wJ6unCaa81yh4PT9Q4602PGFa2tEDSdxqWpAo6rYOiy3Jve1s2X0nuA3ilt15Zg5ecv1bledW51cWJu1tEtClVzDlt16G92FrTeUQ24AtXrmMTfOOeQIqH+PVyUX5LKYCCaeEYe6cv5zVtTMQZ8apm0oW5xQZkKdXC6R3/ic3I2j3FNxzpZPxdbktCtx9SNWCUe5Xsz+CeBcpz8VW5PbGn/AbcB8DcHhggAAAABJRU5ErkJggg==',
 		},
-		actions: [
+		steps: [
+{
+down: [
 			{
-				action: 'lockScreen',
+				actionId: 'lockScreen',
 				options: {
 					screens: ['all'],
 					preset: 'PREVIEW',
@@ -761,10 +879,12 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 				},
 			},
 		],
-		release_actions: [],
+		up: [],
+},
+],
 		feedbacks: [
 			{
-				type: 'liveScreenLock',
+				feedbackId: 'liveScreenLock',
 				options: {
 					screen: 'all',
 					preset: 'PREVIEW',
@@ -776,25 +896,27 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 				},
 			},
 		],
-	})
+	}
 
 	// MARK: Toggle Lock PVW Screen ...
 	for (const screen of allscreens) {
-		presets.push({
-			label: 'Toggle Lock PVW Screen ' + screen,
+		presets['Toggle Lock PVW Screen ' + screen] = {
+		type: 'button',
+			name: 'Toggle Lock PVW Screen ' + screen,
 			category: 'Lock Screens',
-			bank: {
+			style: {
 				text: screen + '\\nPVW',
-				style: 'text',
 				size: '18',
 				color: config.color_dark,
 				bgcolor: config.color_greendark,
 				png64:
 					'iVBORw0KGgoAAAANSUhEUgAAADcAAAA3CAYAAACo29JGAAABt0lEQVRoge1ay5LEIAiErf1uR/lx9jJOGddXFEZj2UeNSNtExARgY6D2BMYYzvURker8KsZLhHLQICpqsIdUDEmSIoZqpGoOp8ZLkPwZNdCgVtVJIkKNsBwmVwDCjchgZj8GAGRC/HdkcMEBBAAgIjDGsDGmxZwfg96uMYZHFNVQDokIAIDvrP7r9fo8KxWi3cplHEevVtiYczZhgyEK5RH1xJULHa5tFNpJXJKcD0cAaHc8fs4vzhKpYGWIkQtVWwVHuadiKIlrABEvOe99cunCUsohymaGJZRzzn1YWWsvfSOEpysXh11Izlr7j+wdTCeXgnMOnHPDdqaTk37PQkwnN7Ib1jCdXEo5Zr6Q7l2A23cbq6F0wJ6unCaa81yh4PT9Q4602PGFa2tEDSdxqWpAo6rYOiy3Jve1s2X0nuA3ilt15Zg5ecv1bledW51cWJu1tEtClVzDlt16G92FrTeUQ24AtXrmMTfOOeQIqH+PVyUX5LKYCCaeEYe6cv5zVtTMQZ8apm0oW5xQZkKdXC6R3/ic3I2j3FNxzpZPxdbktCtx9SNWCUe5Xsz+CeBcpz8VW5PbGn/AbcB8DcHhggAAAABJRU5ErkJggg==',
 			},
-			actions: [
+			steps: [
+{
+down: [
 				{
-					action: 'lockScreen',
+					actionId: 'lockScreen',
 					options: {
 						screens: [screen],
 						preset: 'PREVIEW',
@@ -802,10 +924,12 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 			],
-			release_actions: [],
+			up: [],
+},
+],
 			feedbacks: [
 				{
-					type: 'liveScreenLock',
+					feedbackId: 'liveScreenLock',
 					options: {
 						screen: screen,
 						preset: 'PREVIEW',
@@ -817,25 +941,27 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 			],
-		})
+		}
 	}
 
 	// MARK: Select Layer
 	for (const screen of getScreensAuxArray(state)) {
 		for (const layer of getLayerChoices(state, screen.id)) {
-			presets.push({
-				label: 'Select Layer' + layer.label + ' of ' + screen.id,
+			presets['Select Layer' + layer.label + ' of ' + screen.id] = {
+		type: 'button',
+				name: 'Select Layer' + layer.label + ' of ' + screen.id,
 				category: 'Select Layers',
-				bank: {
+				style: {
 					text: 'Select ' + screen.id + ' ' + layer.label.replace('Layer ', 'L'),
-					style: 'text',
 					size: '14',
 					color: config.color_bright,
 					bgcolor: config.color_dark,
 				},
-				actions: [
+				steps: [
+{
+down: [
 					{
-						action: 'selectLayer',
+						actionId: 'selectLayer',
 						options: {
 							method: 'spec',
 							screen: [screen.id],
@@ -844,10 +970,12 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 						},
 					},
 				],
-				release_actions: [],
+				up: [],
+},
+],
 				feedbacks: [
 					{
-						type: 'remoteLayerSelection',
+						feedbackId: 'remoteLayerSelection',
 						options: {
 							screen: screen.id,
 							layer: layer.id,
@@ -858,20 +986,22 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 						},
 					},
 				],
-			})
-			presets.push({
-				label: 'Toggle Layer' + layer.label + ' of ' + screen.id,
+			}
+			presets['Toggle Layer' + layer.label + ' of ' + screen.id] = {
+		type: 'button',
+				name: 'Toggle Layer' + layer.label + ' of ' + screen.id,
 				category: 'Select Layers',
-				bank: {
+				style: {
 					text: 'Toggle ' + screen.id + ' ' + layer.label.replace('Layer ', 'L'),
-					style: 'text',
 					size: '14',
 					color: config.color_bright,
 					bgcolor: config.color_dark,
 				},
-				actions: [
+				steps: [
+{
+down: [
 					{
-						action: 'selectLayer',
+						actionId: 'selectLayer',
 						options: {
 							method: 'spectgl',
 							screen: [screen.id],
@@ -880,10 +1010,12 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 						},
 					},
 				],
-				release_actions: [],
+				up: [],
+},
+],
 				feedbacks: [
 					{
-						type: 'remoteLayerSelection',
+						feedbackId: 'remoteLayerSelection',
 						options: {
 							screen: screen.id,
 							layer: layer.id,
@@ -894,7 +1026,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 						},
 					},
 				],
-			})
+			}
 		}
 	}
 
@@ -905,28 +1037,32 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 		if (input.id.match(/^IN|LIVE|STILL|SCREEN/)) {
 			sourceLabelVariable = `\\n$(${ilabel}:${input.id.replace('LIVE_', 'INPUT_')}label)`
 		}
-		const preparedPreset: CompanionPreset = {
-			label: 'Choose Input ' + input.label + ' for selected '+ layerdescription +' Layer(s)',
+		const preparedPreset: CompanionButtonPresetDefinition = {
+			type: 'button',
+			name: 'Choose Input ' + input.label + ' for selected '+ layerdescription +' Layer(s)',
 			category: 'Layer Source',
-			bank: {
+			style: {
 				text: input.label.replace(/^(\D+\d+)\s.+$/, '$1') + sourceLabelVariable,
-				style: 'text',
 				size: 'auto',
 				color: config.color_bright,
 				bgcolor: config.color_dark,
 			},
-			actions: [
+			steps: [
+{
+down: [
 				{
-					action: 'deviceSelectSource',
+					actionId: 'deviceSelectSource',
 					options: {
 						method: 'sel',
 					},
 				},
 			],
-			release_actions: [],
+			up: [],
+},
+],
 			feedbacks: [
 				{
-					type: 'deviceSourceTally',
+					feedbackId: 'deviceSourceTally',
 					options: {
 						screens: ['all'],
 						preset: 'pvw',
@@ -937,7 +1073,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 				{
-					type: 'deviceSourceTally',
+					feedbackId: 'deviceSourceTally',
 					options: {
 						screens: ['all'],
 						preset: 'pgm',
@@ -949,9 +1085,14 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 				},
 			],
 		}
-		layertypes.forEach(layertype => preparedPreset.actions[0].options[layertype] = input.id)
+		Array.of('sourceLayer', 'sourceNative', 'sourceBack', 'sourceFront').forEach(layer => {
+			preparedPreset.steps[0].down[0].options[layer] = 'keep'	
+		})
+		layertypes.forEach(layertype => {	
+			preparedPreset.steps[0].down[0].options[layertype] = input.id
+		})
 		//if (state.platform === 'midra' && layertype === 'sourceLayer' && input.id !== 'COLOR') preparedPreset.actions[0].options['sourceBack'] = input.id
-		presets.push(preparedPreset)
+		presets[preparedPreset.name] = preparedPreset
 	}
 	
 	makeInputSelectionPreset({ id: 'NONE', label: 'None' }, ['sourceLayer', 'sourceNative', 'sourceFront', 'sourceBack'], '')
@@ -981,40 +1122,44 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 
 	// MARK: Toggle Freeze Input ...
 	if (state.platform === 'livepremier') for (const input of getLiveInputArray(state)) {
-		presets.push({
-			label: 'Toggle Freeze ' + input.label,
+		presets['Toggle Freeze ' + input.label] = {
+		type: 'button',
+			name: 'Toggle Freeze ' + input.label,
 			category: 'Input Freeze',
-			bank: {
+			style: {
 				text: 'Freeze\\nIn ' + input.index,
-				style: 'text',
 				size: 'auto',
 				color: config.color_bright,
 				bgcolor: config.color_dark,
 			},
-			actions: [
+			steps: [
+{
+down: [
 				{
-					action: 'deviceInputFreeze',
+					actionId: 'deviceInputFreeze',
 					options: {
 						input: input.id,
 						mode: 2,
 					},
 				},
 			],
-			release_actions: [],
+			up: [],
+},
+],
 			feedbacks: [
 				{
-					type: 'deviceInputFreeze',
+					feedbackId: 'deviceInputFreeze',
 					options: {
 						input: input.id,
 					},
 					style: {
-						bgcolor: instance.rgb(0, 0, 100),
+						bgcolor: combineRgb(0, 0, 100),
 						png64:
 							'iVBORw0KGgoAAAANSUhEUgAAADcAAAA3AQMAAACSFUAFAAABS2lUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS42LWMxMzggNzkuMTU5ODI0LCAyMDE2LzA5LzE0LTAxOjA5OjAxICAgICAgICAiPgogPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIi8+CiA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgo8P3hwYWNrZXQgZW5kPSJyIj8+IEmuOgAAAARnQU1BAACxjwv8YQUAAAABc1JHQgCuzhzpAAAABlBMVEUAAABfXKLsUQDeAAAAAXRSTlMAQObYZgAAAM9JREFUGNONkTEOwjAMRX9UpDC1nIBwEKRyJCMGmNogDsCRyMY1wg26ESTUYLc1sEGWp1h2/vcPABDG84MrWoxXOgxcUycol7tbEFb748Aim4HmKZyXSCZsUFpQwQ1OeIqorsxzQHFnXgCTmT3PtczErD1ZEXCBXJR6RzXXzSNR3wA2NrvkPCpf52gDZnDZw3Oj7Ue/xfObM9gMSL/LgfttbHPH8+bRb+U9tIla0XVx1FP9yY/6U7/qX/fR/XRf3f+Th+Yz5aX5vfPUfP/6jxdhImTMvNrBOgAAAABJRU5ErkJggg==',
 					},
 				},
 			],
-		})
+		}
 	}
 
 	// MARK: Multiviewer Memories
@@ -1024,60 +1169,68 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 		for (const memory of getMultiviewerMemoryArray(state)) {
 			const bgcolor = parseInt(state.get(['REMOTE', 'banks', 'monitoring', 'items', memory.id, 'color'])?.slice(1), 16)
 			const color =
-				(instance.rgbRev(bgcolor).r + instance.rgbRev(bgcolor).g + instance.rgbRev(bgcolor).b) / 3 > 127
+				(splitRgb(bgcolor).r + splitRgb(bgcolor).g + splitRgb(bgcolor).b) / 3 > 127
 					? config.color_dark
 					: config.color_bright
 
-			presets.push({
-				label: 'Load VM' + memory.id + multimulti ? ' on Multiviewer ' + multiviewer : '',
+			presets['Load VM' + memory.id + multimulti ? ' on Multiviewer ' + multiviewer : ''] = {
+		type: 'button',
+				name: 'Load VM' + memory.id + multimulti ? ' on Multiviewer ' + multiviewer : '',
 				category: 'Multiviewer Memories',
-				bank: {
+				style: {
 					text: (multimulti ? `MV${multiviewer} `: '') +  `VM${memory.id}\\n$(${ilabel}:multiviewerMemory${memory.id}label)`,
-					style: 'text',
 					size: 'auto',
 					color,
 					bgcolor,
 				},
-				actions: [
+				steps: [
+{
+down: [
 					{
-						action: 'deviceMultiviewerMemory',
+						actionId: 'deviceMultiviewerMemory',
 						options: {
 							memory: memory.id,
 							multiviewer,
 						},
 					},
 				],
-				release_actions: [],
+				up: [],
+},
+],
 				feedbacks: [],
-			})
+			}
 		}
 	}
 
 	// MARK: Select Widget
 	for (const widget of getWidgetChoices(state)) {
-		presets.push({
-			label: 'Select ' + widget.label,
+		presets['Select ' + widget.label] = {
+		type: 'button',
+			name: 'Select ' + widget.label,
 			category: 'Select Widgets',
-			bank: {
+			style: {
 				text: 'Select ' + widget.label.replace(/Multiviewer /, 'MV').replace(/Widget /, 'W'),
-				style: 'text',
 				size: '14',
 				color: config.color_bright,
 				bgcolor: config.color_dark,
 			},
-			actions: [
+			steps: [
+{
+down: [
 				{
-					action: 'remoteMultiviewerSelectWidget',
+					actionId: 'remoteMultiviewerSelectWidget',
 					options: {
 						widget: widget.id,
 						sel: 'selectExclusive',
 					},
 				},
 			],
-			release_actions: [],
+			up: [],
+},
+],
 			feedbacks: [
 				{
-					type: 'remoteWidgetSelection',
+					feedbackId: 'remoteWidgetSelection',
 					options: {
 						widget: widget.id,
 					},
@@ -1086,34 +1239,38 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 			],
-		})
+		}
 	}
 
 	// MARK: Toggle Widget Selection
 	for (const widget of getWidgetChoices(state)) {
-		presets.push({
-			label: 'Toggle Selection of ' + widget.label,
+		presets['Toggle Selection of ' + widget.label] = {
+		type: 'button',
+			name: 'Toggle Selection of ' + widget.label,
 			category: 'Select Widgets',
-			bank: {
+			style: {
 				text: 'Toggle ' + widget.label.replace(/Multiviewer /, 'MV').replace(/Widget /, 'W'),
-				style: 'text',
 				size: '14',
 				color: config.color_bright,
 				bgcolor: config.color_dark,
 			},
-			actions: [
+			steps: [
+{
+down: [
 				{
-					action: 'remoteMultiviewerSelectWidget',
+					actionId: 'remoteMultiviewerSelectWidget',
 					options: {
 						widget: widget.id,
 						sel: 'toggle',
 					},
 				},
 			],
-			release_actions: [],
+			up: [],
+},
+],
 			feedbacks: [
 				{
-					type: 'remoteWidgetSelection',
+					feedbackId: 'remoteWidgetSelection',
 					options: {
 						widget: widget.id,
 					},
@@ -1122,60 +1279,68 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 			],
-		})
+		}
 	}
 
 	// MARK: Select Widget Source
 	for (const source of getWidgetSourceChoices(state)) {
-		presets.push({
-			label: 'Select Widget Source' + source.label,
+		presets['Select Widget Source' + source.label] = {
+		type: 'button',
+			name: 'Select Widget Source' + source.label,
 			category: 'Wultiviewer Source',
-			bank: {
+			style: {
 				text: 'MV ' + source.label.replace(/ - /, '\\n'),
-				style: 'text',
 				size: 'auto',
 				color: config.color_bright,
 				bgcolor: config.color_dark,
 			},
-			actions: [
+			steps: [
+{
+down: [
 				{
-					action: 'deviceMultiviewerSource',
+					actionId: 'deviceMultiviewerSource',
 					options: {
 						widget: 'sel',
 						source: source.id,
 					},
 				},
 			],
-			release_actions: [],
+			up: [],
+},
+],
 			feedbacks: [],
-		})
+		}
 	}
 
 	// MARK: Timers
 	for (const timer of getTimerChoices(state)) {
-		presets.push({
-			label: 'Play/Pause ' + timer.label,
+		presets['Play/Pause ' + timer.label] = {
+		type: 'button',
+			name: 'Play/Pause ' + timer.label,
 			category: 'Timer',
-			bank: {
+			style: {
 				text: timer.label.replace(/\D/g, '') + '⏯',
-				style: 'text',
 				size: '44',
 				color: config.color_bright,
 				bgcolor: config.color_dark,
 			},
-			actions: [
+			steps: [
+{
+down: [
 				{
-					action: 'deviceTimerTransport',
+					actionId: 'deviceTimerTransport',
 					options: {
 						timer: timer.id,
 						cmd: 'tgl_start_pause',
 					},
 				},
 			],
-			release_actions: [],
+			up: [],
+},
+],
 			feedbacks: [
 				{
-					type: 'timerState',
+					feedbackId: 'timerState',
 					options: {
 						timer: timer.id,
 						state: 'RUNNING'
@@ -1186,7 +1351,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 				{
-					type: 'timerState',
+					feedbackId: 'timerState',
 					options: {
 						timer: timer.id,
 						state: 'PAUSED'
@@ -1197,7 +1362,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 				{
-					type: 'timerState',
+					feedbackId: 'timerState',
 					options: {
 						timer: timer.id,
 						state: 'IDLE'
@@ -1208,7 +1373,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 				{
-					type: 'timerState',
+					feedbackId: 'timerState',
 					options: {
 						timer: timer.id,
 						state: 'ELAPSED'
@@ -1224,26 +1389,29 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 		{
 			label: 'Stop ' + timer.label,
 			category: 'Timer',
-			bank: {
+			style: {
 				text: timer.label.replace(/\D/g, '') + ' ⏹',
-				style: 'text',
 				size: '44',
 				color: config.color_bright,
 				bgcolor: config.color_dark,
 			},
-			actions: [
+			steps: [
+{
+down: [
 				{
-					action: 'deviceTimerTransport',
+					actionId: 'deviceTimerTransport',
 					options: {
 						timer: timer.id,
 						cmd: 'stop',
 					},
 				},
 			],
-			release_actions: [],
+			up: [],
+},
+],
 			feedbacks: [
 				{
-					type: 'timerState',
+					feedbackId: 'timerState',
 					options: {
 						timer: timer.id,
 						state: 'RUNNING'
@@ -1254,7 +1422,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 				{
-					type: 'timerState',
+					feedbackId: 'timerState',
 					options: {
 						timer: timer.id,
 						state: 'PAUSED'
@@ -1264,7 +1432,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 				{
-					type: 'timerState',
+					feedbackId: 'timerState',
 					options: {
 						timer: timer.id,
 						state: 'IDLE'
@@ -1275,7 +1443,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 				{
-					type: 'timerState',
+					feedbackId: 'timerState',
 					options: {
 						timer: timer.id,
 						state: 'ELAPSED'
@@ -1286,32 +1454,36 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 			],
-		})
+		}
 	}
 
 	// MARK: Stream
-	if (state.platform === 'midra') presets.push({
-		label: 'Start/Stop Streaming ',
+	if (state.platform === 'midra') presets['Start/Stop Streaming '] = {
+		type: 'button',
+		name: 'Start/Stop Streaming ',
 			category: 'Streaming',
-			bank: {
+			style: {
 				text: 'Start Stream',
-				style: 'text',
 				size: 'auto',
 				color: config.color_bright,
 				bgcolor: config.color_dark,
 			},
-			actions: [
+			steps: [
+{
+down: [
 				{
-					action: 'deviceStreamControl',
+					actionId: 'deviceStreamControl',
 					options: {
 						stream: 'toggle',
 					},
 				},
 			],
-			release_actions: [],
+			up: [],
+},
+],
 			feedbacks: [
 				{
-					type: 'deviceStreaming',
+					feedbackId: 'deviceStreaming',
 					options: {
 						state: 'LIVE'
 					},
@@ -1321,7 +1493,7 @@ export function getPresets(instance: AWJinstance): CompanionPreset[] {
 					},
 				},
 			],
-		})
+		}
 
 	return presets
 }

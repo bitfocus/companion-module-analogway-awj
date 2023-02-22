@@ -1,8 +1,4 @@
-import AWJinstance from './index'
-import {
-	CompanionSystem
-} from '../../../instance_skel_types'
-//import { DeviceType } from '../types/Device'
+import { AWJinstance } from './index'
 import dgram = require("dgram")
 import net = require('net')
 import URI = require('urijs')
@@ -11,12 +7,12 @@ import { WebSocket } from 'ws'
 import { State } from './state'
 import { checkSubscriptions, updateSubscriptions } from './subscriptions'
 import { mapOut, updateMappings } from './mappings'
+import { InstanceStatus } from '@companion-module/base'
 
 
 class AWJdevice {
 	instance: AWJinstance
 	public state: State
-	system: CompanionSystem
 	tcpsocket: net.Socket | undefined
 	websocket: WebSocket | undefined | null
 	wsTimeout: NodeJS.Timeout | undefined
@@ -33,10 +29,9 @@ class AWJdevice {
 	shouldBeConnected: boolean
 	hadError: boolean
 
-	constructor(instance: AWJinstance, system: CompanionSystem) {
+	constructor(instance: AWJinstance) {
 		this.instance = instance
 		this.state = instance.state
-		this.system = system
 		//this.tcpsocket = new net.Socket()
 		this.hadError = false
 		this.shouldBeConnected = false
@@ -44,13 +39,13 @@ class AWJdevice {
 		//this.tcpsocket.setKeepAlive(true, 2500)
 		//this.tcpsocket.setEncoding('utf8')
 		//this.tcpsocket.on('ready', () => {
-		//	this.instance.status(this.instance.STATUS_OK)
+		//	this.instance.updateStatus(this.instance.STATUS_OK)
 		//})
 
 		// this.tcpsocket.on('close', () => {
 		// 	console.log('AWJ Client closed')
 		// 	if (this.shouldBeConnected) {
-		// 		this.instance.status(this.instance.STATUS_ERROR)
+		// 		this.instance.updateStatus(this.instance.STATUS_ERROR)
 		// 		console.log('Retry AWJ connection in 2s')
 		// 		// setTimeout(() => this.connect(this.host, this.port), 2000)
 		// 	}
@@ -143,7 +138,7 @@ class AWJdevice {
 				}
 				if (this.state.getUnmapped('DEVICE/device/system/pp/dev')) {
 					if (this.state.getUnmapped('DEVICE/device/system/pp/dev').substring(0, 3) === 'NLC') {
-						this.instance.status(this.instance.STATUS_OK)
+						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
 							'info',
 							'Connected to ' +
@@ -154,56 +149,56 @@ class AWJdevice {
 						)
 						this.state.setUnmapped('LOCAL/platform', 'livepremier')
 					} else if (this.state.getUnmapped('DEVICE/device/system/pp/dev').match(/^EIKOS/)) {
-						this.instance.status(this.instance.STATUS_OK)
+						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
 							'info',
 							'Connected to Eikos 4k' + serialNumber()
 						)
 						this.state.setUnmapped('LOCAL/platform', 'midra')
 					} else if (this.state.getUnmapped('DEVICE/device/system/pp/dev').match(/^PULSE/)) {
-						this.instance.status(this.instance.STATUS_OK)
+						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
 							'info',
 							'Connected to Pulse 4k' + serialNumber()
 						)
 						this.state.setUnmapped('LOCAL/platform', 'midra')
 					} else if (this.state.getUnmapped('DEVICE/device/system/pp/dev').match(/^QMX/)) {
-						this.instance.status(this.instance.STATUS_OK)
+						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
 							'info',
 							'Connected to QuikMatrix 4k' + serialNumber()
 						)
 						this.state.setUnmapped('LOCAL/platform', 'midra')
 					} else if (this.state.getUnmapped('DEVICE/device/system/pp/dev').match(/^QVU/)) {
-						this.instance.status(this.instance.STATUS_OK)
+						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
 							'info',
 							'Connected to QuickVu 4k' + serialNumber()
 						)
 						this.state.setUnmapped('LOCAL/platform', 'midra')
 					} else if (this.state.getUnmapped('DEVICE/device/system/pp/dev').match(/^ZEN100/)) {
-						this.instance.status(this.instance.STATUS_OK)
+						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
 							'info',
 							'Connected to Zenith 100' + serialNumber()
 						)
 						this.state.setUnmapped('LOCAL/platform', 'midra')
 					} else if (this.state.getUnmapped('DEVICE/device/system/pp/dev').match(/^ZEN200/)) {
-						this.instance.status(this.instance.STATUS_OK)
+						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
 							'info',
 							'Connected to Zenith 200' + serialNumber()
 						)
 						this.state.setUnmapped('LOCAL/platform', 'midra')
 					} else if (this.state.getUnmapped('DEVICE/device/system/pp/dev').match(/^DBG/)) {
-						this.instance.status(this.instance.STATUS_OK)
+						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
 							'info',
 							'Connected to MNG_DEBUG' + serialNumber()
 						)
 						this.state.setUnmapped('LOCAL/platform', 'midra')
 					} else {
-						this.instance.status(this.instance.STATUS_ERROR)
+						this.instance.updateStatus(InstanceStatus.ConnectionFailure)
 						this.instance.log('error', 'Connected to an AWJ device but device type is not compatible with this module')
 						return
 					}
@@ -225,7 +220,7 @@ class AWJdevice {
 					this.instance.getMACfromDevice()
 					void this.instance.updateInstance()
 				} else {
-					this.instance.status(this.instance.STATUS_ERROR)
+					this.instance.updateStatus(InstanceStatus.ConnectionFailure)
 					this.instance.log('error', 'Connected to an Analog Way device but device type is not compatible with this module')
 				}
 			} else {
@@ -265,7 +260,7 @@ class AWJdevice {
 										.set('Cookie', this.authcookie)
 										.then(handleAPIresponse)
 										.catch((err) => {
-											this.instance.status(this.instance.STATUS_ERROR)
+											this.instance.updateStatus(InstanceStatus.ConnectionFailure)
 											this.instance.log('error', "Can't retrieve state from device " + err)
 										})
 								})
@@ -278,7 +273,7 @@ class AWJdevice {
 								.get(`${urlObj.protocol()}://${urlObj.host()}/api/stores/device`)
 								.then(handleAPIresponse)
 								.catch((err) => {
-									this.instance.status(this.instance.STATUS_ERROR)
+									this.instance.updateStatus(InstanceStatus.ConnectionFailure)
 									this.instance.log('error', "Can't retrieve state from device " + err)
 								})
 						}
@@ -300,7 +295,7 @@ class AWJdevice {
 		this.websocket.on('close', () => {
 			// console.log('ws closed', ev.toString(), this.shouldBeConnected ? 'should be connected' : 'should not be connected')
 			if (this.shouldBeConnected) {
-				this.instance.status(this.instance.STATUS_ERROR)
+				this.instance.updateStatus(InstanceStatus.Disconnected)
 				this.hadError = true
 				// console.log('ws retry in', this.reconnectinterval)
 				if (this.wsTimeout) clearTimeout(this.wsTimeout)
@@ -314,11 +309,11 @@ class AWJdevice {
 		this.websocket.on('error', (error) => {
 			this.hadError = true
 			console.log('ws error', error.toString())
-			this.instance.status(this.instance.STATUS_ERROR)
+			this.instance.updateStatus(InstanceStatus.ConnectionFailure)
 			if (error.toString().match(/Error: Opening handshake has timed out/)) {
 				this.instance.log(
 					'error',
-					'Connection attempt to device has timed out, will retry in ' + this.reconnectinterval/1000 + 's'
+					'Connection attempt to device has timed out, will retry in ' + Math.round(this.reconnectinterval/100)/10 + 's'
 				)
 			}
 			else if (error.toString().match(/Error: self signed certificate/)) {
@@ -448,7 +443,7 @@ class AWJdevice {
 
 	// 		this.tcpsocket?.on('error', (err: unknown) => {
 	// 			reject(err)
-	// 			this.instance.status(this.instance.STATUS_ERROR)
+	// 			this.instance.updateStatus(this.instance.STATUS_ERROR)
 	// 		})
 	// 	})
 	// }

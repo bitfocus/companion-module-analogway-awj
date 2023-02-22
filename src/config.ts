@@ -1,7 +1,4 @@
-import AWJinstance from './index'
-import { SomeCompanionConfigField } from '../../../instance_skel_types'
-
-export const fadeFpsDefault = 10
+import { combineRgb, SomeCompanionConfigField } from '@companion-module/base'
 
 export interface Config {
 	deviceaddr: string
@@ -18,7 +15,7 @@ export interface Config {
 	color_redgrey: number
 }
 
-export function GetConfigFields(self: AWJinstance): SomeCompanionConfigField[] {
+export function GetConfigFields(): SomeCompanionConfigField[] {
 	return [
 		{
 			id: 'deviceaddr',
@@ -34,7 +31,8 @@ export function GetConfigFields(self: AWJinstance): SomeCompanionConfigField[] {
 			type: 'textinput',
 			label: 'Device MAC Address',
 			tooltip: 'Will be automaticalle filled with the MAC of the last connected Device',
-			regex: '/^([0-9a-fA-F]{2}[,:-_.\\s]){5}[0-9a-fA-F]{2}$/',
+			regex: '/^$|^([0-9a-fA-F]{2}[,:-_.\\s]){5}[0-9a-fA-F]{2}$/',
+			default: '',
 			width: 12,
 		},
 		{
@@ -46,7 +44,7 @@ export function GetConfigFields(self: AWJinstance): SomeCompanionConfigField[] {
 		},
 		{
 			id: 'coltext',
-			type: 'text',
+			type: 'static-text',
 			label: 'Colors',
 			value: 'The colors are used as default colors for presets, actions and feedbacks',
 			width: 12,
@@ -55,63 +53,63 @@ export function GetConfigFields(self: AWJinstance): SomeCompanionConfigField[] {
 			id: 'color_bright',
 			type: 'colorpicker',
 			label: 'Bright',
-			default: self.rgb(255, 255, 255),
+			default: combineRgb(255, 255, 255),
 			width: 4,
 		},
 		{
 			id: 'color_dark',
 			type: 'colorpicker',
 			label: 'Dark',
-			default: self.rgb(34, 42, 49),
+			default: combineRgb(34, 42, 49),
 			width: 4,
 		},
 		{
 			id: 'color_highlight',
 			type: 'colorpicker',
 			label: 'Highlight',
-			default: self.rgb(33, 133, 208),
+			default: combineRgb(33, 133, 208),
 			width: 4,
 		},
 		{
 			id: 'color_green',
 			type: 'colorpicker',
 			label: 'Green',
-			default: self.rgb(0, 220, 19),
+			default: combineRgb(0, 220, 19),
 			width: 4,
 		},
 		{
 			id: 'color_greendark',
 			type: 'colorpicker',
 			label: 'Green-dark',
-			default: self.rgb(0, 160, 11),
+			default: combineRgb(0, 160, 11),
 			width: 4,
 		},
 		{
 			id: 'color_greengrey',
 			type: 'colorpicker',
 			label: 'Green-grey',
-			default: self.rgb(70, 85, 72),
+			default: combineRgb(70, 85, 72),
 			width: 4,
 		},
 		{
 			id: 'color_red',
 			type: 'colorpicker',
 			label: 'Red',
-			default: self.rgb(255, 87, 22),
+			default: combineRgb(255, 87, 22),
 			width: 4,
 		},
 		{
 			id: 'color_reddark',
 			type: 'colorpicker',
 			label: 'Red-dark',
-			default: self.rgb(216, 0, 0),
+			default: combineRgb(216, 0, 0),
 			width: 4,
 		},
 		{
 			id: 'color_redgrey',
 			type: 'colorpicker',
 			label: 'Red-grey',
-			default: self.rgb(85, 70, 70),
+			default: combineRgb(85, 70, 70),
 			width: 4,
 		},
 	]

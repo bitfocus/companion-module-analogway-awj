@@ -1,5 +1,6 @@
+import { InstanceStatus } from '@companion-module/base'
 import { AWJdevice } from './connection'
-import AWJinstance from './index'
+import {AWJinstance} from './index'
 // import { DeviceMap, DeviceMappingFunction } from '../types/DeviceMap';
 
 export type Subscription = {
@@ -58,7 +59,7 @@ const commonSubscriptions: Record<string, Subscription> = {
 		fun: (instance, path, _value) => {
 			if (!path) return false
 			const timer = path.toString().match(/(?<=TIMER_)(\d)\//) || ['0']
-			instance.setVariable('timer' + timer[0] + '_status', instance.state.getUnmapped(path))
+			instance.setVariableValues({['timer' + timer[0] + '_status']:  instance.state.getUnmapped(path)})
 			return false
 		},
 	},
@@ -91,27 +92,23 @@ const commonSubscriptions: Record<string, Subscription> = {
 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
 			if (pres === 'takeUpTime') {
 				const presname = 'B' === instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
-				instance.setVariable(
-					'screen' + screen + 'time' + presname,
-					instance.deciSceondsToString(instance.state.get(path))
-				)
+				instance.setVariableValues({
+					['screen' + screen + 'time' + presname]: instance.deciSceondsToString(instance.state.get(path))
+				})
 			}
 			if (pres === 'takeDownTime') {
 				const presname = 'A' === instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
-				instance.setVariable(
-					'screen' + screen + 'time' + presname,
-					instance.deciSceondsToString(instance.state.get(path))
-				)
+				instance.setVariableValues({
+					['screen' + screen + 'time' + presname]: instance.deciSceondsToString(instance.state.get(path))
+				})
 			}
 			if (pres === 'takeTime') {
-				instance.setVariable(
-					'screen' + screen + 'timePVW',
-					instance.deciSceondsToString(instance.state.get(path))
-				)
-				instance.setVariable(
-					'screen' + screen + 'timePGM',
-					instance.deciSceondsToString(instance.state.get(path))
-				)
+				instance.setVariableValues({
+					['screen' + screen + 'timePVW']: instance.deciSceondsToString(instance.state.get(path))
+				})
+				instance.setVariableValues({
+					['screen' + screen + 'timePGM']: instance.deciSceondsToString(instance.state.get(path))
+				})
 			}
 			
 			
@@ -125,7 +122,7 @@ const commonSubscriptions: Record<string, Subscription> = {
 			if (!path) return false
 			const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
 			const label = memory.toString() !== '0' ? instance.state.get(path) : ''
-			instance.setVariable('screenMemory' + memory + 'label', label)
+			instance.setVariableValues({['screenMemory' + memory + 'label']:  label})
 			const map = {
 				livepremier: { id: ['presetId','status','pp','id']},
 				midra: {id: ['status','pp','memoryId']}
@@ -147,7 +144,7 @@ const commonSubscriptions: Record<string, Subscription> = {
 					...map[instance.state.platform].id
 				])
 				if (memory == pgmmem) {
-					instance.setVariable('screen' + screen + 'memoryLabelPGM', label)
+					instance.setVariableValues({['screen' + screen + 'memoryLabelPGM']:  label})
 				}
 				const pvwmem = instance.state.get([
 					'DEVICE',
@@ -161,7 +158,7 @@ const commonSubscriptions: Record<string, Subscription> = {
 					...map[instance.state.platform].id
 				])
 				if (memory == pvwmem) {
-					instance.setVariable('screen' + screen + 'memoryLabelPVW', label)
+					instance.setVariableValues({['screen' + screen + 'memoryLabelPVW']:  label})
 				}
 			}
 			return true
@@ -177,7 +174,7 @@ const commonSubscriptions: Record<string, Subscription> = {
 		fun: (instance, path, _value) => {
 			if (!path) return false
 			const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-			instance.setVariable('masterMemory' + memory + 'label', instance.state.get(path))
+			instance.setVariableValues({['masterMemory' + memory + 'label']:  instance.state.get(path)})
 			return true
 		},
 	},
@@ -187,7 +184,7 @@ const commonSubscriptions: Record<string, Subscription> = {
 		fun: (instance, path, _value) => {
 			if (!path) return false
 			const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-			instance.setVariable('multiviewerMemory' + memory + 'label', instance.state.get(path))
+			instance.setVariableValues({['multiviewerMemory' + memory + 'label']:  instance.state.get(path)})
 			return true
 		},
 	},
@@ -197,7 +194,7 @@ const commonSubscriptions: Record<string, Subscription> = {
 		fun: (instance, path, _value) => {
 			if (!path) return false
 			const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-			instance.setVariable('layerMemory' + memory + 'label', instance.state.get(path))
+			instance.setVariableValues({['layerMemory' + memory + 'label']:  instance.state.get(path)})
 			return true
 		},
 	},
@@ -207,7 +204,7 @@ const commonSubscriptions: Record<string, Subscription> = {
 		fun: (instance, path, _value) => {
 			if (!path) return false
 			const input = Array.isArray(path) ? path[4] : path.split('/')[4]
-			instance.setVariable('STILL_' + input + 'label', instance.state.get(path))
+			instance.setVariableValues({['STILL_' + input + 'label']:  instance.state.get(path)})
 			return true
 		},
 	},
@@ -223,8 +220,8 @@ const commonSubscriptions: Record<string, Subscription> = {
 		fun: (instance, path, _value) => {
 			if (!path) return false
 			const input = Array.isArray(path) ? path[4] : path.split('/')[4]
-			instance.setVariable(input.replace('S', 'SCREEN_') + 'label', instance.state.get(path))
-			instance.setVariable('screen' + input + 'label', instance.state.get(path))
+			instance.setVariableValues({[input.replace('S', 'SCREEN_') + 'label']:  instance.state.get(path)})
+			instance.setVariableValues({['screen' + input + 'label']:  instance.state.get(path)})
 			return true
 		},
 	},
@@ -234,8 +231,8 @@ const commonSubscriptions: Record<string, Subscription> = {
 		fun: (instance, path, _value) => {
 			if (!path) return false
 			const input = Array.isArray(path) ? path[4] : path.split('/')[4]
-			instance.setVariable(input.replace('A', 'AUXSCREEN_') + 'label', instance.state.getUnmapped(path))
-			instance.setVariable('screen' + input + 'label', instance.state.getUnmapped(path))
+			instance.setVariableValues({[input.replace('A', 'AUXSCREEN_') + 'label']:  instance.state.getUnmapped(path)})
+			instance.setVariableValues({['screen' + input + 'label']:  instance.state.getUnmapped(path)})
 			return true
 		},
 	},
@@ -294,6 +291,10 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 		pat: 'live/screens/screenAuxSelection',
 		fbk: 'liveScreenSelection',
 	},
+	presetToggle: {
+		pat: 'DEVICE/device/screenGroupList/items/S1/control/pp/copyMode',
+		fbk: 'presetToggle'
+	},
 	screenPreset: {
 		pat: 'DEVICE/device/screenGroupList/items/(\\w+?)/status/pp/transition',
 		fbk: 'deviceTake',
@@ -331,14 +332,14 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 					'pp',
 					'isNotModified',
 				])
-				instance.setVariable('screen' + screen + 'memory' + variableSuffix, mem ? 'M' + mem : '')
-				instance.setVariable('screen' + screen + 'memoryModified' + variableSuffix, mem && !unmodified ? '*' : '')
-				instance.setVariable(
-					'screen' + screen + 'memoryLabel' + variableSuffix,
+				instance.setVariableValues({['screen' + screen + 'memory' + variableSuffix]:  mem ? 'M' + mem : ''})
+				instance.setVariableValues({['screen' + screen + 'memoryModified' + variableSuffix]:  mem && !unmodified ? '*' : ''})
+				instance.setVariableValues({
+					['screen' + screen + 'memoryLabel' + variableSuffix]:
 					mem
 						? instance.state.getUnmapped(['DEVICE', 'device', 'presetBank', 'bankList', 'items', mem, 'control', 'pp', 'label'])
 						: ''
-				)
+				})
 			}
 			let patharr: string[]
 			if (typeof path === 'string') {
@@ -356,14 +357,14 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 				preview = 'A'
 				instance.state.setUnmapped(`LOCAL/screens/${screen}/pgm/preset`, program)
 				instance.state.setUnmapped(`LOCAL/screens/${screen}/pvw/preset`, preview)
-				instance.setVariable(
-					'screen' + screen + 'timePGM',
+				instance.setVariableValues({
+					['screen' + screen + 'timePGM']:
 					instance.deciSceondsToString(
 						instance.state.getUnmapped(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
 					)
-				)
-				instance.setVariable(
-					'screen' + screen + 'timePVW',
+				})
+				instance.setVariableValues({
+					['screen' + screen + 'timePVW']:
 					instance.deciSceondsToString(
 						instance.state.getUnmapped([
 							'DEVICE',
@@ -376,7 +377,7 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 							'takeDownTime',
 						])
 					)
-				)
+				})
 				setMemoryVariables(screen, program, 'PGM')
 				setMemoryVariables(screen, preview, 'PVW')
 			}
@@ -385,8 +386,8 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 				preview = 'B'
 				instance.state.setUnmapped(`LOCAL/screens/${screen}/pgm/preset`, program)
 				instance.state.setUnmapped(`LOCAL/screens/${screen}/pvw/preset`, preview)
-				instance.setVariable(
-					'screen' + screen + 'timePGM',
+				instance.setVariableValues({
+					['screen' + screen + 'timePGM']:
 					instance.deciSceondsToString(
 						instance.state.getUnmapped([
 							'DEVICE',
@@ -399,13 +400,13 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 							'takeDownTime',
 						])
 					)
-				)
-				instance.setVariable(
-					'screen' + screen + 'timePVW',
+				})
+				instance.setVariableValues({
+					['screen' + screen + 'timePVW']:
 					instance.deciSceondsToString(
 						instance.state.getUnmapped(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
 					)
-				)
+				})
 				setMemoryVariables(screen, program, 'PGM')
 				setMemoryVariables(screen, preview, 'PVW')
 			}
@@ -422,9 +423,9 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
 			const presname = pres === instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW'
 			const memorystr = instance.state.getUnmapped(path).toString() !== '0' ? 'M' + instance.state.getUnmapped(path) : ''
-			instance.setVariable('screen' + screen + 'memory' + presname, memorystr)
-			instance.setVariable(
-				'screen' + screen + 'memoryLabel' + presname,
+			instance.setVariableValues({['screen' + screen + 'memory' + presname]:  memorystr})
+			instance.setVariableValues({
+				['screen' + screen + 'memoryLabel' + presname]:
 				instance.state.getUnmapped(path).toString() !== '0'
 					? instance.state.getUnmapped([
 							'DEVICE',
@@ -438,7 +439,7 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 							'label',
 						])
 					: ''
-			)
+			})
 			return false
 		},
 	},
@@ -450,14 +451,14 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 			const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
 			const presname = pres === instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW'
-			instance.setVariable(
-				'screen' + screen + 'memoryModified' + presname,
+			instance.setVariableValues({
+				['screen' + screen + 'memoryModified' + presname]:
 				instance.state.getUnmapped(
 					'DEVICE/device/screenList/items/' + screen + '/presetList/items/' + pres + '/presetId/status/pp/id'
 				) && !instance.state.getUnmapped(path)
 					? '*'
 					: ''
-			)
+			})
 			return false
 		},
 	},
@@ -467,7 +468,7 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 		fun: (instance, path, _value) => {
 			if (!path) return false
 			const input = Array.isArray(path) ? path[4] : path.split('/')[4]
-			instance.setVariable(input.replace(/^\w+_/, 'INPUT_') + 'label', instance.state.get(path))
+			instance.setVariableValues({[input.replace(/^\w+_/, 'INPUT_') + 'label']:  instance.state.get(path)})
 			return true
 		},
 	},
@@ -476,7 +477,7 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 		fun: (instance: AWJinstance, _path?: string | string[], value?: string | string[] | number | boolean): boolean => {
 			if (value === 'SHUTDOWN') {
 				instance.log('info', 'Device has been shut down.')
-				instance.status(instance.STATUS_OK, 'Shut down')
+				instance.updateStatus(InstanceStatus.Ok, 'Shut down')
 			}
 			return false
 		},
@@ -484,6 +485,10 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 }
 
 const midraSubscriptions: Record<string, Subscription> = {
+	presetToggle: {
+		pat: 'DEVICE/device/screenGroupList/items/S1/control/pp/enablePresetToggle',
+		fbk: 'presetToggle'
+	},
 	screenPreset: {
 		pat: 'DEVICE/device/transition/screenList/items/(\\w+?)/status/pp/transition',
 		fbk: 'deviceTake',
@@ -519,10 +524,10 @@ const midraSubscriptions: Record<string, Subscription> = {
 					'pp',
 					'isModified',
 				])
-				instance.setVariable('screen' + screen + 'memory' + variableSuffix , mem ? 'M' + mem : '')
-				instance.setVariable('screen' + screen + 'memoryModified' + variableSuffix, mem && modified ? '*' : '')
-				instance.setVariable(
-					'screen' + screen + 'memoryLabel' + variableSuffix,
+				instance.setVariableValues({['screen' + screen + 'memory' + variableSuffix ]:  mem ? 'M' + mem : ''})
+				instance.setVariableValues({['screen' + screen + 'memoryModified' + variableSuffix]:  mem && modified ? '*' : ''})
+				instance.setVariableValues({
+					['screen' + screen + 'memoryLabel' + variableSuffix]:
 					mem
 						? instance.state.get([
 								'DEVICE',
@@ -537,7 +542,7 @@ const midraSubscriptions: Record<string, Subscription> = {
 								'label',
 							])
 						: ''
-				)
+				})
 			}
 			let patharr: string[]
 			if (typeof path === 'string') {
@@ -585,9 +590,9 @@ const midraSubscriptions: Record<string, Subscription> = {
 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
 			const presname = pres === instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW'
 			const memorystr = instance.state.get(path).toString() !== '0' ? 'M' + instance.state.get(path) : ''
-			instance.setVariable('screen' + screen + 'memory' + presname, memorystr)
-			instance.setVariable(
-				'screen' + screen + 'memoryLabel' + presname,
+			instance.setVariableValues({['screen' + screen + 'memory' + presname]:  memorystr})
+			instance.setVariableValues({
+				['screen' + screen + 'memoryLabel' + presname]:
 				instance.state.get(path).toString() !== '0'
 					? instance.state.getUnmapped([
 							'DEVICE',
@@ -602,7 +607,7 @@ const midraSubscriptions: Record<string, Subscription> = {
 							'label',
 						])
 					: ''
-			)
+			})
 			return false
 		},
 	},
@@ -614,14 +619,14 @@ const midraSubscriptions: Record<string, Subscription> = {
 			const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
 			const presname = pres === instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW'
-			instance.setVariable(
-				'screen' + screen + 'memoryModified' + presname,
+			instance.setVariableValues({
+				['screen' + screen + 'memoryModified' + presname]:
 				instance.state.get(
 					'DEVICE/device/screenList/items/' + screen + '/presetList/items/' + pres + '/status/pp/memoryId'
 				) && instance.state.get(path)
 					? '*'
 					: ''
-			)
+			})
 			return false
 		},
 	},
@@ -632,7 +637,7 @@ const midraSubscriptions: Record<string, Subscription> = {
 			if (!path) return false
 			const memory = Array.isArray(path) ? path[6] : path.split('/')[6]
 			const label = memory.toString() !== '0' ? instance.state.get(path) : ''
-			instance.setVariable('auxMemory' + memory + 'label', label)
+			instance.setVariableValues({['auxMemory' + memory + 'label']:  label})
 			for (const screen of instance.state.getChosenAuxes('all')) {
 				const pgmmem = instance.state.get([
 					'DEVICE',
@@ -648,7 +653,7 @@ const midraSubscriptions: Record<string, Subscription> = {
 					'memoryId',
 				])
 				if (memory == pgmmem) {
-					instance.setVariable('screen' + screen + 'memoryLabelPGM', label)
+					instance.setVariableValues({['screen' + screen + 'memoryLabelPGM']:  label})
 				}
 				const pvwmem = instance.state.get([
 					'DEVICE',
@@ -664,7 +669,7 @@ const midraSubscriptions: Record<string, Subscription> = {
 					'memoryId',
 				])
 				if (memory == pvwmem) {
-					instance.setVariable('screen' + screen + 'memoryLabelPVW', label)
+					instance.setVariableValues({['screen' + screen + 'memoryLabelPVW']: label})
 				}
 			}
 			return true
@@ -676,12 +681,14 @@ const midraSubscriptions: Record<string, Subscription> = {
 		fun: (instance, path, _value) => {
 			if (!path) return false
 			const input = Array.isArray(path) ? path[4] : path.split('/')[4]
-			instance.setVariable(input.replace(/^\w+_/, 'INPUT_') + 'label',
+			instance.setVariableValues({
+				[input.replace(/^\w+_/, 'INPUT_') + 'label']:
 				instance.state.get([
 					'DEVICE', 'device', 'inputList', 'items', input,
 					'plugList', 'items', instance.state.get(path),
 					'control', 'pp', 'label'
-				]))
+				])
+			})
 			return true
 		} 
 	},
@@ -694,8 +701,10 @@ const midraSubscriptions: Record<string, Subscription> = {
 			if (instance.state.get([
 				'DEVICE', 'device', 'inputList', 'items', input, 'status', 'pp', 'plug'
 			]) == plug) {
-				instance.setVariable(input.replace(/^\w+_/, 'INPUT_') + 'label',
-					instance.state.get(path))
+				instance.setVariableValues({
+					[input.replace(/^\w+_/, 'INPUT_') + 'label']:
+						instance.state.get(path)
+				})
 				return true
 			} else {
 				return false
@@ -717,7 +726,7 @@ const midraSubscriptions: Record<string, Subscription> = {
 		fun: (instance, _path, value) => {
 			if (value === 'STANDBY') {
 				instance.log('info', 'Device going to standby.')
-				instance.status(instance.STATUS_OK, 'Standby')
+				instance.updateStatus(InstanceStatus.Ok, 'Standby')
 			}
 			return false
 		},
@@ -727,7 +736,7 @@ const midraSubscriptions: Record<string, Subscription> = {
 		fun: (instance: AWJinstance, _path?: string | string[], value?: string | string[] | number | boolean): boolean => {
 			if (value === 'SWITCH_OFF') {
 				instance.log('info', 'Device has been shut down.')
-				instance.status(instance.STATUS_OK, 'Shut down')
+				instance.updateStatus(InstanceStatus.Ok, 'Shut down')
 			}
 			return false
 		},

@@ -1,48 +1,52 @@
-import instance_skel = require('../../../instance_skel')
 import {
-	CompanionActions,
-	CompanionConfigField,
-	CompanionSystem,
-	CompanionVariable,
-} from '../../../instance_skel_types'
+	combineRgb,
+	CompanionActionDefinitions,
+	CompanionVariableDefinition,
+	InstanceBase,
+	InstanceStatus,
+	runEntrypoint,
+	SomeCompanionConfigField,
+} from '@companion-module/base'
 import { getActions } from './actions'
 import { Config, GetConfigFields } from './config'
 import { AWJdevice } from './connection'
 import { State } from './state'
 import { getFeedbacks } from './feedback'
 import { getPresets } from './presets'
-import {
-	initVariables,
-} from './variables'
+import { initVariables } from './variables'
 
 
 /**
  * Companion instance class for the Analog Way AWJ API products.
  */
-class AWJinstance extends instance_skel<Config> {
-	//class AWJinstance extends AWJinst<Config> {
+export class AWJinstance extends InstanceBase<Config> {
 	/**
 	 * Create an instance of an AWJ module.
 	 */
-	public state: State
-	public device: AWJdevice
-	private variables: (CompanionVariable & {id?: string})[]
+	public state!: State
+	public device!: AWJdevice
+	private variables!: (CompanionVariableDefinition & { id?: string })[]
+	public config!: Config
+	private oldlabel = ''
 
-	constructor(system: CompanionSystem, id: string, config: Config) {
-		super(system, id, config)
-		this.system = system
-		this.config = config
-		this.variables = []
-		this.state = new State(this)
-		this.device = new AWJdevice(this, system)
+	constructor(system: unknown) {
+		super(system)
+		this.instanceOptions.disableVariableValidation = true
 	}
 
 	/**
 	 * Main initialization function called once the module
 	 * is OK to start doing things.
 	 */
-	public init(): void {
-		this.status(this.STATUS_UNKNOWN)
+	public async init(config: Config): Promise<void> {
+		this.updateStatus(InstanceStatus.Disconnected) //(this.STATUS_UNKNOWN)
+
+		this.config = config
+		this.variables = []
+		this.state = new State(this)
+		this.device = new AWJdevice(this)
+		this.oldlabel = this.label
+
 		if (this.config.deviceaddr === undefined) {
 			// config never been set?
 			console.log('brand new config')
@@ -51,18 +55,19 @@ class AWJinstance extends instance_skel<Config> {
 			this.config.sync = true
 			this.config.color_bright = 16777215
 			this.config.color_dark = 2239025
-			this.config.color_highlight = this.rgb(24,111,173)
-			this.config.color_green = this.rgb(0,203,56)
-			this.config.color_greendark = this.rgb(0,115,27)
-			this.config.color_greengrey = this.rgb(45,79,49)
-			this.config.color_red = this.rgb(213,0,0)
-			this.config.color_reddark = this.rgb(82,0,0)
-			this.config.color_redgrey = this.rgb(79,31,31)
-			this.saveConfig()
+			this.config.color_highlight = combineRgb(24,111,173)
+			this.config.color_green = combineRgb(0,203,56)
+			this.config.color_greendark = combineRgb(0,115,27)
+			this.config.color_greengrey = combineRgb(45,79,49)
+			this.config.color_red = combineRgb(213,0,0)
+			this.config.color_reddark = combineRgb(82,0,0)
+			this.config.color_redgrey = combineRgb(79,31,31)		
+			this.saveConfig(this.config)
 		}
 		this.setFeedbackDefinitions(getFeedbacks(this, this.state)) 
 		this.variables = initVariables(this)
 		this.setVariableDefinitions(this.variables)
+		this.setVariableValues({connectionLabel: this.label})
 		this.subscribeFeedbacks()
 		this.device.connect(this.config.deviceaddr)
 
@@ -72,45 +77,49 @@ class AWJinstance extends instance_skel<Config> {
 	/**
 	 * Clean up the instance before it is destroyed.
 	 */
-	public destroy(): void {
+	public async destroy(): Promise<void> {
 		this.device.destroy()
 
-		this.debug('destroy', this.id)
+		this.log('debug' ,'destroy '+this.id)
 	}
 
 	/**
 	 * Creates the configuration fields for instance config.
 	 */
-	public config_fields(): CompanionConfigField[] {
-		return GetConfigFields(this)
+	public getConfigFields(): SomeCompanionConfigField[] {
+		return GetConfigFields()
 	}
 
 	/**
 	 * Process an updated configuration array.
 	 */
-	public updateConfig(config: Config): void {
-		const oldconfig = { config: { ...this.config }, label: this.label }
+	public async configUpdated(config: Config): Promise<void> {
+		console.log('Config Update called', this.oldlabel, this.label)
+		const oldconfig = {  ...this.config }
 		this.config = config
 
-		if (this.config.deviceaddr !== oldconfig.config.deviceaddr) {
+		if (this.config.deviceaddr !== oldconfig.deviceaddr) {
 			// new address, reconnect
-			this.status(this.STATUS_UNKNOWN)
+			this.updateStatus(InstanceStatus.Connecting)
 			this.device.disconnect()
 			this.device.connect(this.config.deviceaddr)
-		} else if (
-			this.label !== oldconfig.label ||
-			this.config.color_bright !== oldconfig.config.color_bright || 
-			this.config.color_dark !== oldconfig.config.color_dark || 
-			this.config.color_green !== oldconfig.config.color_green || 
-			this.config.color_greendark !== oldconfig.config.color_greendark || 
-			this.config.color_greengrey !== oldconfig.config.color_greengrey|| 
-			this.config.color_red !== oldconfig.config.color_red || 
-			this.config.color_reddark !== oldconfig.config.color_reddark || 
-			this.config.color_redgrey !== oldconfig.config.color_redgrey|| 
-			this.config.color_highlight !== oldconfig.config.color_highlight
+		}
+		if (
+			this.label !== this.oldlabel ||
+			this.config.color_bright !== oldconfig.color_bright || 
+			this.config.color_dark !== oldconfig.color_dark || 
+			this.config.color_green !== oldconfig.color_green || 
+			this.config.color_greendark !== oldconfig.color_greendark || 
+			this.config.color_greengrey !== oldconfig.color_greengrey|| 
+			this.config.color_red !== oldconfig.color_red || 
+			this.config.color_reddark !== oldconfig.color_reddark || 
+			this.config.color_redgrey !== oldconfig.color_redgrey|| 
+			this.config.color_highlight !== oldconfig.color_highlight
 			) {
-				void this.updateInstance()
-		} 
+				await this.updateInstance()
+		}
+		this.oldlabel = this.label
+
 	}
 
 	/**
@@ -126,7 +135,7 @@ class AWJinstance extends instance_skel<Config> {
 		const configMacaddr = this.config.macaddress.split(/[,:-_.\s]/).join(':')
 		if (configMacaddr !== deviceMacaddr) {
 			this.config.macaddress = deviceMacaddr
-			this.saveConfig()
+			this.saveConfig(this.config)
 		}
 	}
 
@@ -136,8 +145,9 @@ class AWJinstance extends instance_skel<Config> {
 	public async updateInstance(): Promise<void> {
 
 		this.setFeedbackDefinitions(getFeedbacks(this, this.state))
-		this.setActions(getActions(this) as CompanionActions)
+		this.setActionDefinitions(getActions(this) as CompanionActionDefinitions)
 		this.setPresetDefinitions(getPresets(this))
+		this.setVariableValues({connectionLabel: this.label})
 	}
 
 	public sendRaw(_message: string): void {
@@ -149,16 +159,16 @@ class AWJinstance extends instance_skel<Config> {
 		this.device.connect(address)
 	}
 
-	public addVariable(newVariable: (CompanionVariable & { id?: string })): void {
+	public addVariable(newVariable: (CompanionVariableDefinition & { id?: string })): void {
 		this.variables.push(newVariable)
-		if (this.variables.some(variable => (variable.name === newVariable.name && variable.id !== newVariable.id))) { // the variable already exists from another id
+		if (this.variables.some(variable => (variable.variableId === newVariable.variableId && variable.id !== newVariable.id))) { // the variable already exists from another id
 			return
 		} else {
-			const varnames = new Set(this.variables.map(variable => variable.name))
-			const vars: CompanionVariable[] = []
+			const varnames = new Set(this.variables.map(variable => variable.variableId))
+			const vars: CompanionVariableDefinition[] = []
 			varnames.forEach(varname => {
 				vars.push(
-					this.variables.map(vari => { return { label: vari.label, name: vari.name } }).find(vari => vari.name === varname) || { label: '', name: '' }
+					this.variables.map(vari => { return { name: vari.name, variableId: vari.variableId } }).find(vari => vari.variableId === varname) || { name: '', variableId: '' }
 				)
 			})
 			this.setVariableDefinitions(this.variables)
@@ -166,15 +176,15 @@ class AWJinstance extends instance_skel<Config> {
 	}
 
 	public removeVariable(id: string, remVariable: string): void {
-		if (this.variables.filter(vari => vari.name === remVariable).length > 1 && this.variables.findIndex(vari => vari.name === remVariable && vari.id === id) != -1) {
-			this.variables.splice(this.variables.findIndex(vari => vari.name === remVariable && vari.id === id), 1)
-		} else if (this.variables.filter(vari => vari.name === remVariable).length === 1 && this.variables.findIndex(vari => vari.name === remVariable && vari.id === id) != -1) {
-			this.variables.splice(this.variables.findIndex(vari => vari.name === remVariable && vari.id === id), 1)
-			const varnames = new Set(this.variables.map(variable => variable.name))
-			const vars: CompanionVariable[] = []
+		if (this.variables.filter(vari => vari.variableId === remVariable).length > 1 && this.variables.findIndex(vari => vari.variableId === remVariable && vari.id === id) != -1) {
+			this.variables.splice(this.variables.findIndex(vari => vari.variableId === remVariable && vari.id === id), 1)
+		} else if (this.variables.filter(vari => vari.variableId === remVariable).length === 1 && this.variables.findIndex(vari => vari.variableId === remVariable && vari.id === id) != -1) {
+			this.variables.splice(this.variables.findIndex(vari => vari.variableId === remVariable && vari.id === id), 1)
+			const varnames = new Set(this.variables.map(variable => variable.variableId))
+			const vars: CompanionVariableDefinition[] = []
 			varnames.forEach(varname => {
 				vars.push(
-					this.variables.map(vari => { return { label: vari.label, name: vari.name } }).find(vari => vari.name === varname) || { label: '', name: '' }
+					this.variables.map(vari => { return { name: vari.name, variableId: vari.variableId } }).find(vari => vari.variableId === varname) || { name: '', variableId: '' }
 				)
 			})
 			this.setVariableDefinitions(this.variables)
@@ -267,4 +277,4 @@ class AWJinstance extends instance_skel<Config> {
 	}
 }
 
-export = AWJinstance
+runEntrypoint(AWJinstance, [])

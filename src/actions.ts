@@ -1,4 +1,4 @@
-import AWJinstance from './index'
+import {AWJinstance} from './index'
 import { State } from './state'
 
 import {
@@ -33,38 +33,43 @@ import {
 	getWidgetSourceChoices,
 } from './choices'
 import {
-	CompanionActionEventInfo,
+	CompanionActionEvent,
 	CompanionInputFieldDropdown,
-	ConfigValue,
 	DropdownChoice,
-	SomeCompanionInputField
-} from '../../../instance_skel_types'
+	DropdownChoiceId,
+	SomeCompanionActionInputField,
+} from '@companion-module/base'
 import { Config } from './config'
 import { AWJdevice } from './connection'
+import { InstanceStatus, splitRgb } from '@companion-module/base'
 
 /**
  * T = Object like {option1id: type, option2id: type}
  */
 type AWJaction<T> = {
-	label: string
+	name: string
 	description?: string
 	tooltip?: string,
-	options: SomeCompanionInputField[]
-	callback?: (action: ActionEvent<T>, info: CompanionActionEventInfo | null) => void
+	options: SomeAWJactionInputfield<T>[]
+	callback?: (action: ActionEvent<T>) => void
 	subscribe?: (action: ActionEvent<T>) => void
 	unsubscribe?: (action: ActionEvent<T>) => void
 	learn?: (
 		action: ActionEvent<T>
-	) => OptionValues<T> | undefined | Promise<OptionValues<T> | undefined>
+	) => AWJoptionValues<T> | undefined | Promise<AWJoptionValues<T> | undefined>
 }
 
-type ActionEvent<T> = {
-	id: string
-	action: string
-	options: OptionValues<T>
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
+
+type SomeAWJactionInputfield<T> = { isVisible?: ((options: AWJoptionValues<T>) => boolean) }
+	& DistributiveOmit<SomeCompanionActionInputField, 'isVisible'>
+
+type ActionEvent<T> = Omit<CompanionActionEvent, 'options'> & {
+	options: AWJoptionValues<T>
 }
 
-type OptionValues<T> = T
+type AWJoptionValues<T> = T
+type AWJoptionValuesExtended<T> = T
 
 type Dropdown<t> = {id: t, label: string}
 
@@ -180,14 +185,13 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type DeviceScreenAuxMemory = { screens: string[], preset: string, memory: string, selectScreens: boolean}
 	const deviceScreenMemory_livepremier: AWJaction<DeviceScreenAuxMemory> = {
-		label: 'Recall Screen Memory',
+		name: 'Recall Screen Memory',
 		options: [
 			{
 				id: 'screens',
-				type: 'dropdown',
+				type: 'multidropdown',
 				label: 'Screen',
 				choices: [{ id: 'sel', label: 'Selected' }, ...getScreenAuxChoices(state)],
-				multiple: true,
 				default: ['sel'],
 			},
 			{
@@ -275,14 +279,13 @@ export function getActions(instance: AWJinstance): any {
 		},
 	}
 	const deviceScreenMemory_midra: AWJaction<DeviceScreenAuxMemory> = {
-		label: 'Recall Screen Memory',
+		name: 'Recall Screen Memory',
 		options: [
 			{
 				id: 'screens',
-				type: 'dropdown',
+				type: 'multidropdown',
 				label: 'Screen',
 				choices: [{ id: 'sel', label: 'Selected' }, ...getScreenChoices(state)],
-				multiple: true,
 				default: ['sel'],
 			},
 			{
@@ -371,14 +374,13 @@ export function getActions(instance: AWJinstance): any {
 	
 	// MARK: recall Aux memory
 	const deviceAuxMemory_midra: AWJaction<DeviceScreenAuxMemory> = {
-		label: 'Recall Aux Memory',
+		name: 'Recall Aux Memory',
 		options: [
 			{
 				id: 'screens',
-				type: 'dropdown',
+				type: 'multidropdown',
 				label: 'Auxscreen',
 				choices: [{ id: 'sel', label: 'Selected' }, ...getAuxChoices(state)],
-				multiple: true,
 				default: ['sel'],
 			},
 			{
@@ -470,7 +472,7 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type DeviceMasterMemory = {preset: string, memory: string, selectScreens: boolean}
 	actions['deviceMasterMemory'] = {
-		label: 'Recall Master Memory',
+		name: 'Recall Master Memory',
 		options: [
 			{
 				id: 'preset',
@@ -590,9 +592,9 @@ export function getActions(instance: AWJinstance): any {
 	/**
 	 * MARK: Recall Layer Memory
 	 */
-	type DeviceLayerMemory = {method: string, screen: string[], preset: string, layer: string[], memory: string}
+	type DeviceLayerMemory = { method: string, screen: string[], preset: string, layer: string[], memory: string }
 	const deviceLayerMemory_livepremier: AWJaction<DeviceLayerMemory> = {
-		label: 'Recall Layer Memory',
+		name: 'Recall Layer Memory',
 		options: [
 			{
 				id: 'method',
@@ -606,13 +608,12 @@ export function getActions(instance: AWJinstance): any {
 			},
 			{
 				id: 'screen',
-				type: 'dropdown',
+				type: 'multidropdown',
 				label: 'Screen / Aux',
 				choices: getScreenAuxChoices(state),
 				default: [getScreenAuxChoices(state)[0]?.id],
-				multiple: true,
-				isVisible: (action: ActionEvent<DeviceLayerMemory>) => {
-					return action.options.method === 'spec'
+				isVisible: (options) => {
+					return options.method === 'spec'
 				},
 			},
 			{
@@ -621,19 +622,18 @@ export function getActions(instance: AWJinstance): any {
 				label: 'Preset',
 				choices: [{ id: 'sel', label: 'Selected' }, ...choicesPreset],
 				default: 'pvw',
-				isVisible: (action: ActionEvent<DeviceLayerMemory>) => {
-					return action.options.method === 'spec'
+				isVisible: (options) => {
+					return options.method === 'spec'
 				},
 			},
 			{
 				id: 'layer',
-				type: 'dropdown',
+				type: 'multidropdown',
 				label: 'Layer',
 				choices: getLayerChoices(state, 48, true),
 				default: ['1'],
-				multiple: true,
-				isVisible: (action: ActionEvent<DeviceLayerMemory>) => {
-					return action.options.method === 'spec'
+				isVisible: (options) => {
+					return options.method === 'spec'
 				},
 			},
 			{
@@ -717,7 +717,7 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type DeviceMultiviewerMemory = {memory: string, multiviewer: string[]}
 	actions['deviceMultiviewerMemory'] = {
-		label: 'Recall Multiviewer Memory',
+		name: 'Recall Multiviewer Memory',
 		options: [
 			{
 				id: 'memory',
@@ -770,9 +770,8 @@ export function getActions(instance: AWJinstance): any {
 		actions['deviceMultiviewerMemory'].options.push(
 			{
 				id: 'multiviewer',
-				type: 'dropdown',
+				type: 'multidropdown',
 				label: 'Multiviewer',
-				multiple: true,
 				choices: getMultiviewerChoices(state),
 				default: [getMultiviewerArray(state)?.[0]],
 			},
@@ -781,9 +780,8 @@ export function getActions(instance: AWJinstance): any {
 		actions['deviceMultiviewerMemory'].options.push(
 			{
 				id: 'multiviewer',
-				type: 'dropdown',
+				type: 'multidropdown',
 				label: 'Multiviewer',
-				multiple: true,
 				choices: [{id: '1', label: 'Multiviewer 1'}],
 				default: ['1'],
 				isVisible: () => false
@@ -796,14 +794,13 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type DeviceTakeScreen = {screens: string[]}
 	actions['deviceTakeScreen'] = {
-		label: 'Take Screen',
+		name: 'Take Screen',
 		options: [
 			{
 				id: 'screens',
-				type: 'dropdown',
+				type: 'multidropdown',
 				label: 'Screens / Auxscreens',
 				choices: [{ id: 'all', label: 'All' }, { id: 'sel', label: 'Selected Screens' }, ...getScreenAuxChoices(state)],
-				multiple: true,
 				default: ['sel'],
 			},
 		],
@@ -826,14 +823,13 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type DeviceCutScreen = {screens: string[]}
 	actions['deviceCutScreen'] = {
-		label: 'Cut Screen',
+		name: 'Cut Screen',
 		options: [
 			{
 				id: 'screens',
-				type: 'dropdown',
+				type: 'multidropdown',
 				label: 'Screens / Auxscreens',
 				choices: [{ id: 'all', label: 'All' }, { id: 'sel', label: 'Selected Screens' }, ...getScreenAuxChoices(state)],
-				multiple: true,
 				default: ['sel'],
 			},
 		],
@@ -849,14 +845,13 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type DeviceTakeTime = {screens: string[], preset: string, time: number}
 	const deviceTakeTime_livepremier: AWJaction<DeviceTakeTime> = {
-		label: 'Set Transition Time',
+		name: 'Set Transition Time',
 		options: [
 			{
 				id: 'screens',
-				type: 'dropdown',
+				type: 'multidropdown',
 				label: 'Screens / Auxscreens',
 				choices: [{ id: 'all', label: 'All' }, { id: 'sel', label: 'Selected Screens' }, ...getScreenAuxChoices(state)],
-				multiple: true,
 				default: ['all'],
 			},
 			{
@@ -899,14 +894,13 @@ export function getActions(instance: AWJinstance): any {
 		},
 	}
 	const deviceTakeTime_midra: AWJaction<DeviceTakeTime> = {
-		label: 'Set Transition Time',
+		name: 'Set Transition Time',
 		options: [
 			{
 				id: 'screens',
-				type: 'dropdown',
+				type: 'multidropdown',
 				label: 'Screens / Auxscreens',
 				choices: [{ id: 'all', label: 'All' }, { id: 'sel', label: 'Selected Screens' }, ...getScreenAuxChoices(state)],
-				multiple: true,
 				default: ['all'],
 			},
 			{
@@ -945,7 +939,7 @@ export function getActions(instance: AWJinstance): any {
 	type DeviceSelectSource = {method: string, screen: string[], preset: string}
 	if (state.platform === 'livepremier') {
 		const deviceSelectSource_livepremier: AWJaction<DeviceSelectSource> = {
-			label: 'Select Layer Source',
+			name: 'Select Layer Source',
 			options: [
 				{
 					id: 'method',
@@ -959,13 +953,12 @@ export function getActions(instance: AWJinstance): any {
 				},
 				{
 					id: 'screen',
-					type: 'dropdown',
+					type: 'multidropdown',
 					label: 'Screen / Aux',
 					choices: getScreenAuxChoices(state),
 					default: [getScreenAuxChoices(state)[0]?.id],
-					multiple: true,
-					isVisible: (action: any) => {
-						return action.options.method === 'spec'
+					isVisible: (options:  DeviceSelectSource) => {
+						return options.method === 'spec'
 					},
 				},
 				{
@@ -974,8 +967,8 @@ export function getActions(instance: AWJinstance): any {
 					label: 'Preset',
 					choices: choicesPreset,
 					default: 'pvw',
-					isVisible: (action: any) => {
-						return action.options.method === 'spec'
+					isVisible: (options:  AWJoptionValuesExtended<DeviceSelectSource>) => {
+						return options.method === 'spec'
 					},
 				},
 			],
@@ -1037,24 +1030,23 @@ export function getActions(instance: AWJinstance): any {
 		screens.forEach((screen) => {
 			const isScreen = screen.id.startsWith('S')
 			// eslint-disable-next-line @typescript-eslint/ban-types
-			let visFn = (_action: ActionEvent<DeviceSelectSource>): boolean => {
+			let visFn = (_action: DeviceSelectSource): boolean => {
 				return true
 			}
 			// make the code more injection proof
 			if (screen.id.match(/^S|A\d{1,3}$/)) {
 				// eslint-disable-next-line @typescript-eslint/no-implied-eval
 				visFn = new Function(
-					'thisAction',
-					`return thisAction.options.method === 'spec' && thisAction.options.screen.includes('${screen.id}')`
-				) as (arg0: ActionEvent<DeviceSelectSource>) => boolean
+					'thisOptions',
+					`return thisOptions.method === 'spec' && thisOptions.screen.includes('${screen.id}')`
+				) as (arg0: DeviceSelectSource) => boolean
 			}
 			deviceSelectSource_livepremier.options.push({
 				id: `layer${screen.id}`,
-				type: 'dropdown',
+				type: 'multidropdown',
 				label: 'Layer ' + screen.id,
 				choices: getLayerChoices(state, screen.id, isScreen),
 				default: ['1'],
-				multiple: true,
 				isVisible: visFn,
 			})
 		})
@@ -1065,11 +1057,11 @@ export function getActions(instance: AWJinstance): any {
 				label: 'Screen Layer Source',
 				choices: [{ id: 'keep', label: "Don't change source"}, ...getSourceChoices(state)],
 				default: 'keep',
-				isVisible: (action: ActionEvent<DeviceSelectSource>) => {
-					if (action.options.method === 'sel') return true
-					if (action.options.method === 'spec') {
-						for (const screen of action.options.screen.filter((screen) => screen.startsWith('S'))) {
-							if (action.options[`layer${screen}`].find((elem: string) => elem.match(/^\d+$/))) return true
+				isVisible: (options:  AWJoptionValuesExtended<DeviceSelectSource>) => {
+					if (options.method === 'sel') return true
+					if (options.method === 'spec') {
+						for (const screen of options.screen.filter((screen) => screen.startsWith('S'))) {
+							if (options[`layer${screen}`].find((elem: string) => elem.match(/^\d+$/))) return true
 						}
 					}
 					return false
@@ -1081,11 +1073,11 @@ export function getActions(instance: AWJinstance): any {
 				label: 'Screen Background Source',
 				choices: [{ id: 'keep', label: "Don't change source"}, ...choicesBackgroundSourcesPlusNone],
 				default: 'keep',
-				isVisible: (action: ActionEvent<DeviceSelectSource>) => {
-					if (action.options.method === 'sel') return true
-					if (action.options.method === 'spec') {
-						for (const screen of action.options.screen.filter((screen) => screen.startsWith('S'))) {
-							if (action.options[`layer${screen}`].find((elem: string) => elem === 'NATIVE')) return true
+				isVisible: (options:  AWJoptionValuesExtended<DeviceSelectSource>) => {
+					if (options.method === 'sel') return true
+					if (options.method === 'spec') {
+						for (const screen of options.screen.filter((screen) => screen.startsWith('S'))) {
+							if (options[`layer${screen}`].find((elem: string) => elem === 'NATIVE')) return true
 						}
 					}
 					return false
@@ -1097,11 +1089,11 @@ export function getActions(instance: AWJinstance): any {
 				label: 'Aux Layer Source',
 				choices: [{ id: 'keep', label: "Don't change source"}, ...getAuxSourceChoices(state)],
 				default: 'keep',
-				isVisible: (action: ActionEvent<DeviceSelectSource>) => {
-					if (action.options.method === 'sel') return true
-					if (action.options.method === 'spec') {
-						for (const screen of action.options.screen.filter((screen) => screen.startsWith('A'))) {
-							if (action.options[`layer${screen}`].find((elem: string) => elem.match(/^\d+$/))) return true
+				isVisible: (options:  AWJoptionValuesExtended<DeviceSelectSource>) => {
+					if (options.method === 'sel') return true
+					if (options.method === 'spec') {
+						for (const screen of options.screen.filter((screen) => screen.startsWith('A'))) {
+							if (options[`layer${screen}`].find((elem: string) => elem.match(/^\d+$/))) return true
 						}
 					}
 					return false
@@ -1113,7 +1105,7 @@ export function getActions(instance: AWJinstance): any {
 	// MARK: Select the source in a layer midra
 	else if (state.platform === 'midra') {
 		const deviceSelectSource_midra: AWJaction<DeviceSelectSource> = {
-			label: 'Select Layer Source',
+			name: 'Select Layer Source',
 			options: [
 				{
 					id: 'method',
@@ -1127,13 +1119,12 @@ export function getActions(instance: AWJinstance): any {
 				},
 				{
 					id: 'screen',
-					type: 'dropdown',
+					type: 'multidropdown',
 					label: 'Screen / Aux',
 					choices: getScreenAuxChoices(state),
 					default: [getScreenAuxChoices(state)[0]?.id],
-					multiple: true,
-					isVisible: (action) => {
-						return action.options.method === 'spec'
+					isVisible: (options) => {
+						return options.method === 'spec'
 					},
 				},
 				{
@@ -1142,8 +1133,8 @@ export function getActions(instance: AWJinstance): any {
 					label: 'Preset',
 					choices: choicesPreset,
 					default: 'pvw',
-					isVisible: (action) => {
-						return action.options.method === 'spec'
+					isVisible: (options) => {
+						return options.method === 'spec'
 					}
 				},
 			],
@@ -1197,18 +1188,17 @@ export function getActions(instance: AWJinstance): any {
 			if (screen.id.match(/^S|A\d{1,3}$/)) {
 				// eslint-disable-next-line @typescript-eslint/no-implied-eval
 				visFn = new Function(
-					'thisAction',
-					`return thisAction.options.method === 'spec' && thisAction.options.screen.includes('${screen.id}')`
+					'thisOptions',
+					`return thisOptions.method === 'spec' && thisOptions.screen.includes('${screen.id}')`
 				) as (arg0: any) => boolean
 			}
 			
 			deviceSelectSource_midra.options.push({
 				id: `layer${screen.id}`,
-				type: 'dropdown',
+				type: 'multidropdown',
 				label: 'Layer ' + screen.id,
 				choices: getLayerChoices(state, screen.id),
 				default: ['1'],
-				multiple: true,
 				isVisible: visFn,
 			})
 		})
@@ -1219,11 +1209,11 @@ export function getActions(instance: AWJinstance): any {
 				label: 'Screen Background Source',
 				choices: [{ id: 'keep', label: "Don't change source"}, ...choicesBackgroundSourcesPlusNone],
 				default: 'keep',
-				isVisible: (action: ActionEvent<DeviceSelectSource>) => {
-					if (action.options.method === 'sel') return true
-					if (action.options.method === 'spec') {
-						for (const screen of action.options.screen.filter((screen) => screen.startsWith('S'))) {
-							if (action.options[`layer${screen}`].find((elem: string) => elem === 'NATIVE')) return true
+				isVisible: (options:  AWJoptionValuesExtended<DeviceSelectSource>) => {
+					if (options.method === 'sel') return true
+					if (options.method === 'spec') {
+						for (const screen of options.screen.filter((screen) => screen.startsWith('S'))) {
+							if (options[`layer${screen}`].find((elem: string) => elem === 'NATIVE')) return true
 						}
 					}
 					return false
@@ -1235,11 +1225,11 @@ export function getActions(instance: AWJinstance): any {
 				label: 'Screen Layer Source',
 				choices: [{ id: 'keep', label: "Don't change source"}, ...getSourceChoices(state)],
 				default: 'keep',
-				isVisible: (action: ActionEvent<DeviceSelectSource>) => {
-					if (action.options.method === 'sel') return true
-					for (const screen of action.options.screen) {
+				isVisible: (options:  AWJoptionValuesExtended<DeviceSelectSource>) => {
+					if (options.method === 'sel') return true
+					for (const screen of options.screen) {
 						if (
-							action.options[`layer${screen}`]?.find((layer: string) => {
+							options[`layer${screen}`]?.find((layer: string) => {
 								return layer.match(/^\d+$/)
 							})
 						) return true
@@ -1253,11 +1243,11 @@ export function getActions(instance: AWJinstance): any {
 				label: 'Screen Foreground Source',
 				choices: [{ id: 'keep', label: "Don't change source"}, ...choicesForegroundImagesSource],
 				default: 'keep',
-				isVisible: (action: ActionEvent<DeviceSelectSource>) => {
-					if (action.options.method === 'sel') return true
-					if (action.options.method === 'spec') {
-						for (const screen of action.options.screen.filter((screen) => screen.startsWith('S'))) {
-							if (action.options[`layer${screen}`].find((elem: string) => elem === 'TOP')) return true
+				isVisible: (options:  AWJoptionValuesExtended<DeviceSelectSource>) => {
+					if (options.method === 'sel') return true
+					if (options.method === 'spec') {
+						for (const screen of options.screen.filter((screen) => screen.startsWith('S'))) {
+							if (options[`layer${screen}`].find((elem: string) => elem === 'TOP')) return true
 						}
 					}
 					return false
@@ -1269,11 +1259,11 @@ export function getActions(instance: AWJinstance): any {
 				label: 'Aux Background Source',
 				choices: [{ id: 'keep', label: "Don't change source"}, ...getAuxBackgroundChoices(state)],
 				default: 'keep',
-				isVisible: (action: ActionEvent<DeviceSelectSource>) => {
-					if (action.options.method === 'sel') return true
-					if (action.options.method === 'spec') {
-						for (const screen of action.options.screen.filter((screen) => screen.startsWith('A'))) {
-							if (action.options[`layer${screen}`].find((elem: string) => elem === 'BKG')) return true
+				isVisible: (options:  AWJoptionValuesExtended<DeviceSelectSource>) => {
+					if (options.method === 'sel') return true
+					if (options.method === 'spec') {
+						for (const screen of options.screen.filter((screen) => screen.startsWith('A'))) {
+							if (options[`layer${screen}`].find((elem: string) => elem === 'BKG')) return true
 						}
 					}
 					return false
@@ -1287,7 +1277,7 @@ export function getActions(instance: AWJinstance): any {
 	type DeviceInputPlug = Record<string,string>
 	if (state.platform == 'midra') {
 		actions['deviceInputPlug'] = {
-			label: 'Set Input Plug',
+			name: 'Set Input Plug',
 			options: [],
 			callback: (action) => {
 				device.sendWSmessage([
@@ -1320,16 +1310,16 @@ export function getActions(instance: AWJinstance): any {
 		inputoptions.choices.forEach(
 			(input: Dropdown<string>) => {
 				// eslint-disable-next-line @typescript-eslint/ban-types
-				let visFn = (_action: ActionEvent<DeviceInputPlug>): boolean => {
+				let visFn = (_action: DeviceInputPlug): boolean => {
 					return true
 				}
 				// make the code more injection proof
 				if (input.id.match(/^IN(PUT)?_\d{1,3}$/)) {
 					// eslint-disable-next-line @typescript-eslint/no-implied-eval
 					visFn = new Function(
-						'thisAction',
-						`return thisAction.options.input.includes('${input.id}')`
-					) as (arg0: ActionEvent<DeviceInputPlug>) => boolean
+						'thisOptions',
+						`return thisOptions.input.includes('${input.id}')`
+					) as (arg0: DeviceInputPlug) => boolean
 				}
 				const plugs = getPlugChoices(state, input.id)
 				actions['deviceInputPlug']?.options.push({
@@ -1349,7 +1339,7 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type DeviceInputKeying = {input: string, mode: string}
 	actions['deviceInputKeying'] = {
-		label: 'Set Input Keying',
+		name: 'Set Input Keying',
 		options: [
 			{
 				id: 'input',
@@ -1397,7 +1387,7 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type DeviceInputFreeze = {input: string, mode: number}
 	actions['deviceInputFreeze'] = {
-		label: 'Set Input Freeze',
+		name: 'Set Input Freeze',
 		options: [
 			{
 				id: 'input',
@@ -1436,7 +1426,7 @@ export function getActions(instance: AWJinstance): any {
 	type DevicePositionSize = {screen: string, preset: string, parameters: string, x: number, y: number, w: number, h: number} & Record<string, string> 
 	if (state.platform === 'livepremier') {
 		actions['devicePositionSize'] = {
-			label: 'Set Position and Size',
+			name: 'Set Position and Size',
 			options: [
 				{
 					id: 'screen',
@@ -1549,7 +1539,7 @@ export function getActions(instance: AWJinstance): any {
 			// make the code more injection proof
 			if (screen.id.match(/^S|A\d{1,3}$/)) {
 				// eslint-disable-next-line @typescript-eslint/no-implied-eval
-				visFn = new Function('thisAction', `return thisAction.options.screen === '${screen.id}'`) as (arg0: any) => boolean
+				visFn = new Function('thisOptions', `return thisOptions.screen === '${screen.id}'`) as (arg0: any) => boolean
 			}
 			actions['devicePositionSize']?.options.push({
 				id: `layer${screen.id}`,
@@ -1564,7 +1554,7 @@ export function getActions(instance: AWJinstance): any {
 		actions['devicePositionSize'].options.push(
 			{
 				id: 'parameters',
-				type: 'dropdown',
+				type: 'multidropdown',
 				label: 'Act on',
 				choices: [
 					{ id: 'x', label: 'X Position' },
@@ -1572,7 +1562,6 @@ export function getActions(instance: AWJinstance): any {
 					{ id: 'w', label: 'Width' },
 					{ id: 'h', label: 'Height' },
 				],
-				multiple: true,
 				default: ['x', 'y', 'w', 'h'],
 			},
 			{
@@ -1582,8 +1571,8 @@ export function getActions(instance: AWJinstance): any {
 				default: 0,
 				min: -16383,
 				max: 16383,
-				isVisible: (action) => {
-					return action.options.parameters.includes('x')
+				isVisible: (options) => {
+					return options.parameters.includes('x')
 				},
 			},
 			{
@@ -1593,8 +1582,8 @@ export function getActions(instance: AWJinstance): any {
 				default: 0,
 				min: -16383,
 				max: 16383,
-				isVisible: (action) => {
-					return action.options.parameters.includes('y')
+				isVisible: (options) => {
+					return options.parameters.includes('y')
 				},
 			},
 			{
@@ -1604,8 +1593,8 @@ export function getActions(instance: AWJinstance): any {
 				default: 0,
 				min: -16383,
 				max: 16383,
-				isVisible: (action) => {
-					return action.options.parameters.includes('w')
+				isVisible: (options) => {
+					return options.parameters.includes('w')
 				},
 			},
 			{
@@ -1615,8 +1604,8 @@ export function getActions(instance: AWJinstance): any {
 				default: 0,
 				min: -16383,
 				max: 16383,
-				isVisible: (action) => {
-					return action.options.parameters.includes('h')
+				isVisible: (options) => {
+					return options.parameters.includes('h')
 				},
 			}
 		)
@@ -1627,14 +1616,13 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type DeviceCopyProgram = {screens: string[]}
 	actions['deviceCopyProgram'] = {
-		label: 'Copy Program to Preview',
+		name: 'Copy Program to Preview',
 		options: [
 			{
 				id: 'screens',
-				type: 'dropdown',
+				type: 'multidropdown',
 				label: 'Screens / Auxscreens',
 				choices: [{ id: 'all', label: 'All' }, { id: 'sel', label: 'Selected Screens' }, ...getScreenAuxChoices(state)],
-				multiple: true,
 				default: ['sel'],
 			},
 		],
@@ -1656,7 +1644,7 @@ export function getActions(instance: AWJinstance): any {
 	// MARK: Set Preset Toggle
 	type DevicePresetToggle = {action: string}
 	actions['devicePresetToggle'] = {
-		label: 'Set Preset Toggle',
+		name: 'Set Preset Toggle',
 		options: [
 			{
 				type: 'dropdown',
@@ -1675,16 +1663,20 @@ export function getActions(instance: AWJinstance): any {
 			// device/transition/screenList/items/1/control/pp/enablePresetToggle
 			// device/screenGroupList/items/S1/control/pp/copyMode
 			let property = 'copyMode'
-			if (state.platform === 'midra') property = 'enablePresetToggle'
+			let invert = true
+			if (state.platform === 'midra') {
+				property = 'enablePresetToggle'
+				invert = false
+			}
 			let action = act.options.action
 			if (action === 'toggle') {
-				if (state.get('DEVICE/device/screenGroupList/items/S1/control/pp/'+ property)) action = 'off'
+				if (state.get('DEVICE/device/screenGroupList/items/S1/control/pp/'+ property) === !invert) action = 'off'
 				else action = 'on'
 			}
 			if (action === 'on') allscreens.forEach((screen: string) =>
-				device.sendWSmessage('device/screenGroupList/items/' + screen + '/control/pp/' + property, true))
+				device.sendWSmessage('device/screenGroupList/items/' + screen + '/control/pp/' + property, invert ? false : true))
 			if (action === 'off') allscreens.forEach((screen: string) =>
-				device.sendWSmessage('device/screenGroupList/items/' + screen + '/control/pp/' + property, false))
+				device.sendWSmessage('device/screenGroupList/items/' + screen + '/control/pp/' + property, invert ? true : false))
 		}
 	} as AWJaction<DevicePresetToggle>
 
@@ -1693,7 +1685,7 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type RemoteMultiviewerSelectWidget = {widget: string, sel: string}
 	actions['remoteMultiviewerSelectWidget'] = {
-		label: 'Multiviewer Widget Selection',
+		name: 'Multiviewer Widget Selection',
 		options: [
 			{
 				id: 'widget',
@@ -1764,7 +1756,7 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type DeviceMultiviewerSource = {widget: string, source: string}
 	actions['deviceMultiviewerSource'] = {
-		label: 'Select Source in Multiviewer Widget',
+		name: 'Select Source in Multiviewer Widget',
 		options: [
 			{
 				id: 'widget',
@@ -1823,7 +1815,7 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type SelectScreen = {screen: string, sel: number}
 	actions['selectScreen'] = {
-		label: 'Screen Selection',
+		name: 'Screen Selection',
 		options: [
 			{
 				id: 'screen',
@@ -1869,24 +1861,27 @@ export function getActions(instance: AWJinstance): any {
 				default: 2,
 			},
 		],
-		callback: (action, info: CompanionActionEventInfo | null) => {
+		callback: (action: ActionEvent<SelectScreen>) => {
+			console.log('action obj', action)
 			let sel = action.options.sel
-			if (sel === 6 || (sel === 5 && info === null)) {
+			const surface = action.surfaceId ? action.surfaceId : ''
+			const id = surface + action.controlId
+			if (sel === 6 || (sel === 5 && !id.length )) {
 				state.setUnmapped('LOCAL/intelligent/screenSelectionRunning', undefined)
 				return
-			} else if (sel === 4 && info != null) {
+			} else if (sel === 4 && id.length) {
 				if (state.getUnmapped('LOCAL/intelligent/screenSelectionRunning')) {
 					sel = 3
 				} else {
-					state.setUnmapped('LOCAL/intelligent/screenSelectionRunning', info.page.toString() + '_' + info.bank.toString())
+					state.setUnmapped('LOCAL/intelligent/screenSelectionRunning', id)
 					sel = 2
 				}
-			} else if (sel === 5 && info != null) {
-				if (state.getUnmapped('LOCAL/intelligent/screenSelectionRunning') === info.page.toString() + '_' + info.bank.toString()) {
+			} else if (sel === 5 && id.length) {
+				if (state.getUnmapped('LOCAL/intelligent/screenSelectionRunning') === id) {
 					state.setUnmapped('LOCAL/intelligent/screenSelectionRunning', undefined)
 				}
 				return
-			} else if (sel === 4 && info === null) {
+			} else if (sel === 4 && !id.length) {
 				sel = 2
 			}
 			const screen = action.options.screen as string
@@ -1940,13 +1935,12 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type LockScreen = {screens: string[], preset: string, lock: string}
 	actions['lockScreen'] = {
-		label: 'Lock Screen',
+		name: 'Lock Screen',
 		options: [
 			{
 				id: 'screens',
 				label: 'Screen',
-				type: 'dropdown',
-				multiple: true,
+				type: 'multidropdown',
 				choices: [{ id: 'all', label: 'ALL' }, { id: 'sel', label: 'Selected' }, ...getScreenAuxChoices(state)],
 				default: ['all'],
 				tooltip:
@@ -2065,7 +2059,7 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type SelectPreset = {mode: string}
 	actions['selectPreset'] = {
-		label: 'Select Preset',
+		name: 'Select Preset',
 		options: [
 			{
 				id: 'mode',
@@ -2125,7 +2119,7 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type SelectLayer = {method: string, screen: string[], layersel: string[]}
 	actions['selectLayer'] = {
-		label: 'Select Layer',
+		name: 'Select Layer',
 				options: [
 			{
 				id: 'method',
@@ -2141,26 +2135,24 @@ export function getActions(instance: AWJinstance): any {
 			},
 			{
 				id: 'screen',
-				type: 'dropdown',
+				type: 'multidropdown',
 				label: 'Screen / Aux',
 				choices: getScreenAuxChoices(state),
 				default: [getScreenAuxChoices(state)[0]?.id],
-				multiple: true,
-				isVisible: (action) => {
-					return action.options.method.startsWith('spec')
+				isVisible: (options) => {
+					return options.method.startsWith('spec')
 				},
 			},
 			{
 				id: `layersel`,
-				type: 'dropdown',
+				type: 'multidropdown',
 				label: 'Layer',
 				tooltip:
 					'Choose all the layers you want to be selected, every other layer on any screen will be deselected. This action does not change the preset, if you want a specific preset, add the according action.',
 				choices: getLayerChoices(state, 48, true),
 				default: ['1'],
-				multiple: true,
-				isVisible: (action) => {
-					return action.options.method.startsWith('sel')
+				isVisible: (options) => {
+					return options.method.startsWith('sel')
 				},
 			},
 		],
@@ -2222,22 +2214,21 @@ export function getActions(instance: AWJinstance): any {
 		if (screen.id.match(/^(S|A)\d{1,3}$/)) {
 			// eslint-disable-next-line @typescript-eslint/no-implied-eval
 			visFn = new Function(
-				'thisAction',
-				`return thisAction.options.method.startsWith('spec') && thisAction.options.screen.includes('${screen.id}')`
+				'thisOptions',
+				`return thisOptions.method.startsWith('spec') && thisOptions.screen.includes('${screen.id}')`
 			) as (options: any) => boolean
 		}
 		const layerChoices = getLayerChoices(state, screen.id, true)
-		let defaultChoice: ConfigValue
+		let defaultChoice: DropdownChoiceId
 		if (layerChoices.find((choice: DropdownChoice) => choice.id === '1')) defaultChoice = '1'
 		else defaultChoice = layerChoices[0].id
 
 		actions['selectLayer']?.options.push({
 			id: `layer${screen.id}`,
-			type: 'dropdown',
+			type: 'multidropdown',
 			label: 'Layer ' + screen.id,
 			choices: layerChoices,
 			default: [defaultChoice],
-			multiple: true,
 			isVisible: visFn,
 		})
 	}
@@ -2247,7 +2238,7 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type RemoteSync = {sync: number}
 	actions['remoteSync'] = {
-		label: 'Sync selection',
+		name: 'Sync selection',
 		options: [
 			{
 				label: 'Sync',
@@ -2307,7 +2298,7 @@ export function getActions(instance: AWJinstance): any {
 	// MARK: Stream Control
 	type DeviceStreamControl = {stream: string}
 	if (state.platform === 'midra') actions['deviceStreamControl'] = {
-		label: 'Stream Control',
+		name: 'Stream Control',
 		options: [
 			{
 				type: 'dropdown',
@@ -2343,7 +2334,7 @@ export function getActions(instance: AWJinstance): any {
 	// MARK: Stream Audio Mute
 	type DeviceStreamAudioMute = {stream: string}
 	if (state.platform === 'midra') actions['deviceStreamAudioMute'] = {
-		label: 'Stream Audio Mute',
+		name: 'Stream Audio Mute',
 		options: [
 			{
 				type: 'dropdown',
@@ -2378,7 +2369,7 @@ export function getActions(instance: AWJinstance): any {
 	if (state.platform === 'midra') audioOutputChoices = getAudioCustomBlockChoices()
 
 	actions['deviceAudioRouteBlock'] = {
-		label: 'Route Audio (Block)',
+		name: 'Route Audio (Block)',
 		options: [
 			{
 				type: 'dropdown',
@@ -2487,7 +2478,7 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type DeviceAudioRouteChannels = {out: string, in: string[]}
 	actions['deviceAudioRouteChannels'] = {
-		label: 'Route Audio (Channels)',
+		name: 'Route Audio (Channels)',
 		options: [
 			{
 				type: 'dropdown',
@@ -2498,13 +2489,12 @@ export function getActions(instance: AWJinstance): any {
 				minChoicesForSearch: 0,
 			},
 			{
-				type: 'dropdown',
+				type: 'multidropdown',
 				label: 'input channel(s)',
 				id: 'in',
 				choices: audioInputChoices,
 				default: ['NONE'],
 				minChoicesForSearch: 0,
-				multiple: true,
 				minSelection: 0,
 			},
 		],
@@ -2596,7 +2586,7 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type DeviceTimerSetup = {timer: string, type: string, currentTimeMode: string, unitMode: string, fg_color: number, bg_color: number}
 	actions['deviceTimerSetup'] = {
-		label: 'Timer Setup',
+		name: 'Timer Setup',
 		options: [
 			{
 				id: 'timer',
@@ -2625,8 +2615,8 @@ export function getActions(instance: AWJinstance): any {
 					{ id: '12H_AM_PM', label: '12 hours' },
 				],
 				default: '24H',
-				isVisible: (action) => {
-					return action.options.type === 'CURRENTTIME'
+				isVisible: (options) => {
+					return options.type === 'CURRENTTIME'
 				},
 			},
 			{
@@ -2639,8 +2629,8 @@ export function getActions(instance: AWJinstance): any {
 					{ id: 'IN_HOURS', label: 'In hours' },
 				],
 				default: 'IN_MINUTES',
-				isVisible: (action) => {
-					return action.options.type != 'CURRENTTIME'
+				isVisible: (options) => {
+					return options.type != 'CURRENTTIME'
 				},
 			},
 			{
@@ -2675,27 +2665,27 @@ export function getActions(instance: AWJinstance): any {
 			if (state.platform === 'midra') return
 			device.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'background', 'color', 'pp', 'red'],
-				instance.rgbRev(action.options.bg_color).r
+				splitRgb(action.options.bg_color).r
 			)
 			device.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'background', 'color', 'pp', 'green'],
-				instance.rgbRev(action.options.bg_color).g
+				splitRgb(action.options.bg_color).g
 			)
 			device.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'background', 'color', 'pp', 'blue'],
-				instance.rgbRev(action.options.bg_color).b
+				splitRgb(action.options.bg_color).b
 			)
 			device.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'text', 'color', 'pp', 'red'],
-				instance.rgbRev(action.options.fg_color).r
+				splitRgb(action.options.fg_color).r
 			)
 			device.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'text', 'color', 'pp', 'green'],
-				instance.rgbRev(action.options.fg_color).g
+				splitRgb(action.options.fg_color).g
 			)
 			device.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'text', 'color', 'pp', 'blue'],
-				instance.rgbRev(action.options.fg_color).b
+				splitRgb(action.options.fg_color).b
 			)
 		},
 	} as AWJaction<DeviceTimerSetup>
@@ -2710,7 +2700,7 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type DeviceTimerAdjust = {timer: string, action: string, time: string}
 	actions['deviceTimerAdjust'] = {
-		label: 'Timer Adjust Time',
+		name: 'Timer Adjust Time',
 		options: [
 			{
 				id: 'timer',
@@ -2765,7 +2755,7 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type DeviceTimerTransport = {timer: string, cmd: string}
 	actions['deviceTimerTransport'] = {
-		label: 'Timer Transport',
+		name: 'Timer Transport',
 		options: [
 			{
 				id: 'timer',
@@ -2859,8 +2849,8 @@ export function getActions(instance: AWJinstance): any {
 				label: 'Screen',
 				choices: getScreenAuxChoices(state),
 				default: getScreenAuxChoices(state)[0]?.id,
-				isVisible: (action) => {
-					return action.options.group === 'screenList'
+				isVisible: (options) => {
+					return options.group === 'screenList'
 				},
 			},
 			{
@@ -2869,8 +2859,8 @@ export function getActions(instance: AWJinstance): any {
 				label: 'Output',
 				choices: getOutputChoices(state),
 				default: getOutputChoices(state)[0]?.id,
-				isVisible: (action) => {
-					return action.options.group === 'outputList'
+				isVisible: (options) => {
+					return options.group === 'outputList'
 				},
 			},
 			{
@@ -2879,8 +2869,8 @@ export function getActions(instance: AWJinstance): any {
 				label: 'Input',
 				choices: getLiveInputChoices(state),
 				default: getLiveInputChoices(state)[0]?.id,
-				isVisible: (action) => {
-					return action.options.group === 'inputList'
+				isVisible: (options) => {
+					return options.group === 'inputList'
 				},
 			},
 			{
@@ -2889,8 +2879,8 @@ export function getActions(instance: AWJinstance): any {
 				label: 'Pattern',
 				choices: [{ id: '0', label: 'Off' }],
 				default: '0',
-				isVisible: (action) => {
-					return action.options.group === 'all'
+				isVisible: (options) => {
+					return options.group === 'all'
 				},
 			},
 			{
@@ -2913,8 +2903,8 @@ export function getActions(instance: AWJinstance): any {
 					{ id: 'CHECKERBOARD', label: 'Checkerboard' },
 				],
 				default: 'NONE',
-				isVisible: (action) => {
-					return action.options.group === 'screenList'
+				isVisible: (options) => {
+					return options.group === 'screenList'
 				},
 			},
 			{
@@ -2942,8 +2932,8 @@ export function getActions(instance: AWJinstance): any {
 					{ id: 'ID', label: 'ID' },
 				],
 				default: 'NO_PATTERN',
-				isVisible: (action) => {
-					return action.options.group === 'inputList'
+				isVisible: (options) => {
+					return options.group === 'inputList'
 				},
 			},
 			{
@@ -2973,8 +2963,8 @@ export function getActions(instance: AWJinstance): any {
 					{ id: 'SOFTEDGE', label: 'Softedge' },
 				],
 				default: 'NO_PATTERN',
-				isVisible: (action) => {
-					return action.options.group === 'outputList'
+				isVisible: (options) => {
+					return options.group === 'outputList'
 				},
 			},
 	)
@@ -2997,8 +2987,8 @@ export function getActions(instance: AWJinstance): any {
 			label: 'Screen',
 			choices: getScreenChoices(state),
 			default: getScreenChoices(state)[0]?.id,
-			isVisible: (action) => {
-				return action.options.group === 'screenList'
+			isVisible: (options) => {
+				return options.group === 'screenList'
 			},
 		},
 		{
@@ -3007,8 +2997,8 @@ export function getActions(instance: AWJinstance): any {
 			label: 'Output',
 			choices: getOutputChoices(state),
 			default: getOutputChoices(state)[0]?.id,
-			isVisible: (action) => {
-				return action.options.group === 'outputList'
+			isVisible: (options) => {
+				return options.group === 'outputList'
 			},
 		},
 		{
@@ -3017,8 +3007,8 @@ export function getActions(instance: AWJinstance): any {
 			label: 'Pattern',
 			choices: [{ id: '0', label: 'Off' }],
 			default: '0',
-			isVisible: (action) => {
-				return action.options.group === 'all'
+			isVisible: (options) => {
+				return options.group === 'all'
 			},
 		},
 		{
@@ -3041,8 +3031,8 @@ export function getActions(instance: AWJinstance): any {
 				{ id: 'SOFTEDGE', label: 'Covering' },
 			],
 			default: 'NONE',
-			isVisible: (action) => {
-				return action.options.group === 'screenList'
+			isVisible: (options) => {
+				return options.group === 'screenList'
 			},
 		},
 		{
@@ -3068,13 +3058,13 @@ export function getActions(instance: AWJinstance): any {
 				{ id: 'SOFTEDGE', label: 'Covering' },
 			],
 			default: 'NO_PATTERN',
-			isVisible: (action) => {
-				return action.options.group === 'outputList'
+			isVisible: (options) => {
+				return options.group === 'outputList'
 			},
 		},
 	)
 	actions['deviceTestpatterns'] = {
-		label: 'Set Testpattern',
+		name: 'Set Testpattern',
 		options: deviceTestpatternsOptions,
 		callback: (action) => {
 			if (action.options.group === 'all') {
@@ -3135,7 +3125,7 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type Cstawjcmd = {path: string, valuetype: string, textValue: string, numericValue: number, booleanValue: boolean, objectValue: string, xUpdate: boolean}
 	actions['cstawjcmd'] = {
-		label: 'Send custom AWJ replace command',
+		name: 'Send custom AWJ replace command',
 		tooltip:
 			'The "op" parameter is always replace. Paths and values are not validated, make sure to use only correct syntax! For your convenience you can use PGM and PVW aditionally to A and B to denote a preset',
 		options: [
@@ -3160,13 +3150,13 @@ export function getActions(instance: AWJinstance): any {
 				type: 'textinput',
 				id: 'textValue',
 				label: 'value',
-				isVisible: (thisAction: any) => thisAction.options.valuetype === '1',
+				isVisible: (options) => options.valuetype === '1',
 			},
 			{
 				type: 'number',
 				id: 'numericValue',
 				label: 'value',
-				isVisible: (thisAction: any) => thisAction.options.valuetype === '2',
+				isVisible: (options) => options.valuetype === '2',
 				default: 0,
 				min: -32768,
 				max: 32768,
@@ -3175,14 +3165,14 @@ export function getActions(instance: AWJinstance): any {
 				type: 'checkbox',
 				id: 'booleanValue',
 				label: 'value',
-				isVisible: (thisAction: any) => thisAction.options.valuetype === '3',
+				isVisible: (options) => options.valuetype === '3',
 				default: false
 			},
 			{
 				type: 'textinput',
 				id: 'objectValue',
 				label: 'value',
-				isVisible: (thisAction: any) => thisAction.options.valuetype === '4',
+				isVisible: (options) => options.valuetype === '4',
 			},
 			{
 				type: 'checkbox',
@@ -3257,7 +3247,7 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	type DeviceGPO = {gpo: number, action: number}
 	if (state.platform === 'livepremier') actions['deviceGPO'] = {
-		label: 'Set GPO',
+		name: 'Set GPO',
 		options: [
 			{
 				id: 'gpo',
@@ -3321,7 +3311,7 @@ export function getActions(instance: AWJinstance): any {
 		{ id: 'reboot', label: 'Reboot' },
 	)
 	actions['devicePower'] = {
-		label: 'Device Power',
+		name: 'Device Power',
 		options: [
 			{
 				id: 'action',
@@ -3346,7 +3336,7 @@ export function getActions(instance: AWJinstance): any {
 			}
 			if (action.options.action === 'standby' && state.platform === 'midra') {
 				device.sendWSmessage(path, 'STANDBY')
-				instance.status(instance.STATUS_OK, 'Standby')
+				instance.updateStatus(InstanceStatus.Ok, 'Standby')
 			}
 			if (action.options.action === 'off' && state.platform === 'livepremier') {
 				// device.sendWSmessage(path + 'pp/wakeOnLan', true)

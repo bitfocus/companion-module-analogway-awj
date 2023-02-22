@@ -280,6 +280,11 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 	If selection syncronization is off you will see the selected preset of Companion, if selection syncronization is on you will see the selected preset of the device.  
 	If you want to work with the same preset on Companion and WebRCS you have to turn on selection syncronizstion on both clients.
 
+- Preset Toggle
+
+	Available at: LivePremier, Alta 4K, Midra 4K  
+	Shows if Preset Toggle is turned on or off at the device.
+
 - Layer Selection
 
 	Available at: LivePremier, Alta 4K, Midra 4K  
@@ -321,6 +326,7 @@ In the following table often there are variables with a 1, usually the ...1 is o
 
 Variable|	Description
 ----------------|----------------
+connectionLabel | how you labelled the Connection in Companion
 masterMemory1label | the label of the Master Memory
 screenMemory1label | the label of the Screen Memory
 auxMemory1label | the label of the AuxMemory

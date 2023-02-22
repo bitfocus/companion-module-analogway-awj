@@ -1,9 +1,4 @@
-import AWJinstance from './index'
-import {
-	CompanionFeedbacks,
-	CompanionFeedbackEvent,
-} from '../../../instance_skel_types'
-// import { CompanionFeedback } from '../../../instance_skel_types'
+import {AWJinstance} from './index'
 import { State } from './state'
 import {
 	choicesBackgroundSources,
@@ -20,21 +15,23 @@ import {
 	getTimerChoices,
 	getWidgetChoices,
 } from './choices'
+import { combineRgb, CompanionFeedbackBooleanEvent, CompanionFeedbackDefinitions } from '@companion-module/base'
 
-export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeedbacks {
+export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeedbackDefinitions {
 	const feedbacks = {}
 	const config = instance.config
 
 	// MARK: syncselection
 	feedbacks['syncselection'] = {
 		type: 'boolean',
-		label: 'Synchronization of the selection',
+		name: 'Synchronization of the selection',
 		description: 'Shows wether this client synchronizes its selection to the device',
-		style: {
+		defaultStyle: {
 			color: config.color_dark,
 			bgcolor: config.color_highlight,
 		},
-		callback: (_feedback: CompanionFeedbackEvent) => {
+		options: [],
+		callback: (_feedback) => {
 			const clients = state.getUnmapped('REMOTE/system/network/websocketServer/clients')
 			if (clients === undefined || Array.isArray(clients) === false) return false
 			const myid: string = state.getUnmapped('LOCAL/socketId')
@@ -53,12 +50,33 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 		},
 	}
 
+	// MARK: preset toggle
+	feedbacks['presetToggle'] = {
+		type: 'boolean',
+		name: 'Preset Toggle',
+		description: 'Shows wether preset toggle is on or off',
+		defaultStyle: {
+			color: config.color_dark,
+			bgcolor: config.color_highlight,
+		},
+		options: [],
+		callback: (_feedback) => {
+			let property = 'copyMode'
+			let invert = true
+			if (state.platform === 'midra') {
+				property = 'enablePresetToggle'
+				invert = false
+			}
+			return state.get('DEVICE/device/screenGroupList/items/S1/control/pp/'+ property) === !invert
+		},
+	}
+
 	// MARK: Master Memory
 	feedbacks['deviceMasterMemory'] = {
 		type: 'boolean',
-		label: 'Master Memory',
+		name: 'Master Memory',
 		description: 'Indicates the last used master memory',
-		style: {
+		defaultStyle: {
 			color: config.color_dark,
 			bgcolor: config.color_highlight,
 		},
@@ -78,7 +96,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 'all',
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent) => {
+		callback: (feedback) => {
 			if (
 				(feedback.options.preset === 'all' || feedback.options.preset === 'pgm') &&
 				state.get('DEVICE/device/masterPresetBank/status/lastUsed/presetModeList/items/PROGRAM/pp/memoryId') == feedback.options.memory
@@ -94,9 +112,9 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 	// MARK: Screen Memory
 	feedbacks['deviceScreenMemory'] = {
 		type: 'boolean',
-		label: 'Screen Memory',
+		name: 'Screen Memory',
 		description: 'Shows wether a screen Memory is loaded on a screen',
-		style: {
+		defaultStyle: {
 			color: config.color_dark,
 			bgcolor: config.color_highlight,
 		},
@@ -127,7 +145,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 2,
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent & {options: {screens: string[], preset: string, memory: string, unmodified: number}}) => {
+		callback: (feedback: CompanionFeedbackBooleanEvent & {options: {screens: string[], preset: string, memory: string, unmodified: number}}) => {
 			const screens = state.platform === 'midra' ? state.getChosenScreens(feedback.options.screens) : state.getChosenScreenAuxes(feedback.options.screens)
 			const presets = feedback.options.preset === 'all' ? ['pgm', 'pvw'] : [feedback.options.preset]
 			const map = {
@@ -196,9 +214,9 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 // MARK: Aux Memory
 	if (state.platform === 'midra') feedbacks['deviceAuxMemory'] = {
 		type: 'boolean',
-		label: 'Aux Memory',
+		name: 'Aux Memory',
 		description: 'Shows wether a Aux Memory is loaded on a auxscreen',
-		style: {
+		defaultStyle: {
 			color: config.color_dark,
 			bgcolor: config.color_highlight,
 		},
@@ -239,7 +257,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 2,
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent & {options:{screens: string[], preset: string, memory: string, unmodified: number}}) => {
+		callback: (feedback: CompanionFeedbackBooleanEvent & {options:{screens: string[], preset: string, memory: string, unmodified: number}}) => {
 			const screens = state.getChosenAuxes(feedback.options.screens)
 			const presets = feedback.options.preset === 'all' ? ['pgm', 'pvw'] : [feedback.options.preset]
 			const map = {
@@ -286,9 +304,9 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 	// MARK: deviceSourceTally
 	feedbacks['deviceSourceTally'] = {
 		type: 'boolean',
-		label: 'Source Tally',
+		name: 'Source Tally',
 		description: 'Shows wether a source is visible on program or preview in a screen',
-		style: {
+		defaultStyle: {
 			color: config.color_dark,
 			bgcolor: config.color_highlight,
 		},
@@ -318,7 +336,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 'NONE',
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent & { options: { screens: string[], preset: string, source: string } }) => {  
+		callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screens: string[], preset: string, source: string } }) => {  
 			const checkTally = (): boolean => {
 				// go thru the screens
 				for (const screen of state.getChosenScreenAuxes(feedback.options.screens)) {
@@ -402,21 +420,21 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 			} else {
 				varValue = '0'
 			}
-			instance.getVariable(varName, (value: string) => {
-				if (value != varValue) instance.setVariable(varName, varValue)
-			})
+			if (varValue != instance.getVariableValue(varName)) {
+				instance.setVariableValues({ [varName]: varValue })
+			}
 			return tally
 		},
-		subscribe: (feedback: CompanionFeedbackEvent & { options: { screens: string[], preset: string, source: string } }) => {
+		subscribe: (feedback: CompanionFeedbackBooleanEvent & { options: { screens: string[], preset: string, source: string } }) => {
 			const sortedScreens = [...feedback.options.screens].sort()
 			const varName = `tally_${sortedScreens.join('-')}_${feedback.options.preset}_${feedback.options.source}`
 			instance.addVariable({
 				id: feedback.id,
-				label: `Tally for ${feedback.options.source} at screens ${sortedScreens.join(', ')}, preset ${feedback.options.preset}`,
-				name: varName
+				variableId: varName,
+				name: `Tally for ${feedback.options.source} at screens ${sortedScreens.join(', ')}, preset ${feedback.options.preset}`,
 			})
 		},
-		unsubscribe: (feedback: CompanionFeedbackEvent & { options: { screens: string[], preset: string, source: string } }) => {
+		unsubscribe: (feedback: CompanionFeedbackBooleanEvent & { options: { screens: string[], preset: string, source: string } }) => {
 			const sortedScreens = [...feedback.options.screens].sort()
 			const varName = `tally_${sortedScreens.join('-')}_${feedback.options.preset}_${feedback.options.source}`
 			instance.removeVariable(feedback.id, varName)
@@ -426,9 +444,9 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 	// MARK: deviceTake
 	feedbacks['deviceTake'] = {
 		type: 'boolean',
-		label: 'Transition active',
+		name: 'Transition active',
 		description: 'Shows wether a screen is currently in a take/fade transition',
-		style: {
+		defaultStyle: {
 			color: config.color_dark,
 			bgcolor: config.color_highlight,
 		},
@@ -444,7 +462,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 'all',
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent & {options: {screens: string}}) => {
+		callback: (feedback: CompanionFeedbackBooleanEvent & {options: {screens: string}}) => {
 			if (state.platform === 'livepremier' && state.getChosenScreenAuxes(feedback.options.screens)
 				.find((screen: string) => {
 					return state.get(`DEVICE/device/screenGroupList/items/${screen}/status/pp/transition`).match(/FROM/)
@@ -462,9 +480,9 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 	// MARK: liveScreenSelection
 	feedbacks['liveScreenSelection'] = {
 		type: 'boolean',
-		label: 'Screen Selection',
+		name: 'Screen Selection',
 		description: 'Shows wether a screen is currently selected',
-		style: {
+		defaultStyle: {
 			color: config.color_dark,
 			bgcolor: config.color_highlight,
 		},
@@ -476,7 +494,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				choices: getScreenAuxChoices(instance.state),
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent & {options: {screen: string}}) => {
+		callback: (feedback: CompanionFeedbackBooleanEvent & {options: {screen: string}}) => {
 			return state.getSelectedScreens()?.includes(feedback.options.screen)
 		},
 	}
@@ -484,9 +502,9 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 	// MARK: liveScreenLock
 	feedbacks['liveScreenLock'] = {
 		type: 'boolean',
-		label: 'Screen Lock',
+		name: 'Screen Lock',
 		description: 'Shows wether a screen currently is locked',
-		style: {
+		defaultStyle: {
 			png64:
 				'iVBORw0KGgoAAAANSUhEUgAAADcAAAA3CAYAAACo29JGAAABSklEQVRoge2a2w7DIAhAZdl3N60/zp5MjBNLBdwknKe19cIZLdVlKTkGrCc4jgOpazln0/lNBh8JUViIqg44I9WiKaky0J0UwHgaxO/uAADXdYnieol6J7lYacNp9xSxHMVMwHV77KXzaQySzlTWmiB5gRB9JM+geuZKkIjIFivt2zHEscx27GWtFmvOd+fp3Xq9MWazp565JgNAiZXr2vPXqMm1cXIDb9uVL0fD26xa/gMhtyshtyshtyshtyshtyuu5YarU40ffKwZbYdcZ+7NbWi89WKBiAkA2Dt815kLuV1hP3NSzvOE6vOSKrwkc7VY79gKczlKZIWgqdydgLWg64IScrPcVUXrqrmioHQFVrwOVr0KcHRsRbzndiXkJLhdofyakJsl1paGuJYz3YmvWolQuM6cazn2banwPzMVnsThOnOu5VzzARnBeIM8tq0ZAAAAAElFTkSuQmCC',
 		},
@@ -510,7 +528,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 'PROGRAM',
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent & {options: {screen: string, preset: string}}) => {
+		callback: (feedback: CompanionFeedbackBooleanEvent & {options: {screen: string, preset: string}}) => {
 			return state.isLocked(feedback.options.screen, feedback.options.preset)
 		},
 	}
@@ -518,9 +536,9 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 	// MARK: livePresetSelection
 	feedbacks['livePresetSelection'] = {
 		type: 'boolean',
-		label: 'Preset Selection',
+		name: 'Preset Selection',
 		description: 'Shows wether program or preview is currently selected',
-		style: {
+		defaultStyle: {
 			color: config.color_dark,
 			bgcolor: config.color_highlight,
 		},
@@ -535,7 +553,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				],
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent) => {
+		callback: (feedback) => {
 			let preset: string,
 				vartext = 'PGM'
 			if (state.syncSelection) {
@@ -546,7 +564,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 			if (preset === 'PREVIEW') {
 				vartext = 'PVW'
 			}
-			instance.setVariable('selectedPreset', vartext)
+			instance.setVariableValues({ selectedPreset: vartext })
 			return preset === feedback.options.preset
 		},
 	}
@@ -554,9 +572,9 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 	// MARK: remoteLayerSelection
 	feedbacks['remoteLayerSelection'] = {
 		type: 'boolean',
-		label: 'Layer Selection',
+		name: 'Layer Selection',
 		description: 'Shows wether a layer is currently selected',
-		style: {
+		defaultStyle: {
 			color: config.color_dark,
 			bgcolor: config.color_highlight,
 		},
@@ -587,7 +605,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 'all',
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent) => {
+		callback: (feedback) => {
 			let pst = true
 			if (feedback.options.preset != 'all') {
 				let preset: string
@@ -619,9 +637,9 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 	// MARK: remoteWidgetSelection
 	feedbacks['remoteWidgetSelection'] = {
 		type: 'boolean',
-		label: 'Widget Selection',
+		name: 'Widget Selection',
 		description: 'Shows wether a multiviewer widget is currently selected',
-		style: {
+		defaultStyle: {
 			color: config.color_dark,
 			bgcolor: config.color_highlight,
 		},
@@ -634,7 +652,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: getWidgetChoices(state)[0]?.id,
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent) => {
+		callback: (feedback) => {
 			const mvw = feedback.options.widget?.toString().split(':')[0] ?? '1'
 			const widget = feedback.options.widget?.toString().split(':')[1] ?? '0'
 			let widgetSelection: {widgetKey: string, multiviewerKey: string}[] = []
@@ -650,11 +668,11 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 	// MARK: deviceInputFreeze
 	if (state.platform === 'livepremier') feedbacks['deviceInputFreeze'] = {
 		type: 'boolean',
-		label: 'Input Freeze',
+		name: 'Input Freeze',
 		description: 'Shows wether an input currently is frozen',
-		style: {
+		defaultStyle: {
 			color: config.color_bright,
-			bgcolor: instance.rgb(0, 0, 100),
+			bgcolor: combineRgb(0, 0, 100),
 			png64:
 				'iVBORw0KGgoAAAANSUhEUgAAADcAAAA3AQMAAACSFUAFAAABS2lUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS42LWMxMzggNzkuMTU5ODI0LCAyMDE2LzA5LzE0LTAxOjA5OjAxICAgICAgICAiPgogPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIi8+CiA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgo8P3hwYWNrZXQgZW5kPSJyIj8+IEmuOgAAAARnQU1BAACxjwv8YQUAAAABc1JHQgCuzhzpAAAABlBMVEUAAABfXKLsUQDeAAAAAXRSTlMAQObYZgAAAM9JREFUGNONkTEOwjAMRX9UpDC1nIBwEKRyJCMGmNogDsCRyMY1wg26ESTUYLc1sEGWp1h2/vcPABDG84MrWoxXOgxcUycol7tbEFb748Aim4HmKZyXSCZsUFpQwQ1OeIqorsxzQHFnXgCTmT3PtczErD1ZEXCBXJR6RzXXzSNR3wA2NrvkPCpf52gDZnDZw3Oj7Ue/xfObM9gMSL/LgfttbHPH8+bRb+U9tIla0XVx1FP9yY/6U7/qX/fR/XRf3f+Th+Yz5aX5vfPUfP/6jxdhImTMvNrBOgAAAABJRU5ErkJggg==',
 		},
@@ -667,13 +685,13 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: getLiveInputChoices(state)[0]?.id,
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent) => {
+		callback: (feedback) => {
 			const input = feedback.options.input?.toString().replace('LIVE', 'IN') || ''
 			const freeze = state.get('DEVICE/device/inputList/items/' + input + '/control/pp/freeze')
 			if (freeze) {
-				instance.setVariable('frozen_' + input, '*')
+				instance.setVariableValues({ ['frozen_' + input]: '*'})
 			} else {
-				instance.setVariable('frozen_' + input, ' ')
+				instance.setVariableValues({ ['frozen_' + input]: ' '})
 			}
 			return freeze
 		},
@@ -682,9 +700,9 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 	// MARK: timerState
 	feedbacks['timerState'] = {
 		type: 'boolean',
-		label: 'Timer State',
+		name: 'Timer State',
 		description: 'Shows wether a timer is currently stopped or running',
-		style: {
+		defaultStyle: {
 			color: config.color_dark,
 			bgcolor: config.color_highlight,
 		},
@@ -709,7 +727,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 'RUNNING',
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent) => {
+		callback: (feedback) => {
 			return (
 				state.get('DEVICE/device/timerList/items/' + feedback.options.timer + '/status/pp/state') ===
 				feedback.options.state
@@ -720,9 +738,9 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 	// MARK: deviceGpioOut
 	if (state.platform === 'livepremier') feedbacks['deviceGpioOut'] = {
 		type: 'boolean',
-		label: 'GPO State',
+		name: 'GPO State',
 		description: 'Shows wether a general purpose output is currently active',
-		style: {
+		defaultStyle: {
 			color: config.color_dark,
 			bgcolor: config.color_highlight,
 		},
@@ -747,7 +765,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 1,
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent) => {
+		callback: (feedback) => {
 			const val = feedback.options.state === 1 ? true : false
 			return (
 				state.get([
@@ -768,9 +786,9 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 	// MARK: deviceGpioIn
 	if (state.platform === 'livepremier') feedbacks['deviceGpioIn'] = {
 		type: 'boolean',
-		label: 'GPI State',
+		name: 'GPI State',
 		description: 'Shows wether a general purpose input is currently active',
-		style: {
+		defaultStyle: {
 			color: config.color_dark,
 			bgcolor: config.color_highlight,
 		},
@@ -795,7 +813,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 1,
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent) => {
+		callback: (feedback) => {
 			const val = feedback.options.state === 1 ? true : false
 			return (
 				state.get([
@@ -816,9 +834,9 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 	// MARK: deviceStreaming
 	if (state.platform === 'midra') feedbacks['deviceStreaming'] = {
 		type: 'boolean',
-		label: 'Stream Runnning State',
+		name: 'Stream Runnning State',
 		description: 'Shows status of streaming',
-		style: {
+		defaultStyle: {
 			color: config.color_dark,
 			bgcolor: config.color_highlight,
 		},
@@ -834,7 +852,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 'LIVE',
 			},
 		],
-		callback: (feedback: CompanionFeedbackEvent) => {
+		callback: (feedback) => {
 			return (
 				state.getUnmapped([
 					'DEVICE',

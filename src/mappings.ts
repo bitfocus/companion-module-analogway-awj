@@ -1,4 +1,4 @@
-import AWJinstance from '{{PACKAGE-NAME}}'
+import {AWJinstance} from './index'
 import { State } from './state'
 
 

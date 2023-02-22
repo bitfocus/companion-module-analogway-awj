@@ -1,4 +1,4 @@
-import AWJinstance from './index'
+import {AWJinstance} from './index'
 import { checkForAction, Subscription } from './subscriptions'
 import { mapIn, mapOut, MapItem } from './mappings'
 //import { InputValue } from './../../../instance_skel_types'
@@ -312,7 +312,7 @@ class State {
 			} else {
 				delete obj[first]
 			}
-			console.log('\nstate update', JSON.stringify(this.stateobj).substring(0, 500))
+			// console.log('\nstate update', JSON.stringify(this.stateobj).substring(0, 500))
 		} else {
 			// if we are at an non existing branch -> nothing to delete
 			if (obj[first] == undefined) {
