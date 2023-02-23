@@ -2096,15 +2096,19 @@ export function getActions(instance: AWJinstance): any {
 				switch (action.options.mode) {
 					case 'pgm':
 						state.set('LOCAL/presetMode', 'PROGRAM')
+						instance.setVariableValues({ selectedPreset: 'PGM' })
 						break
 					case 'pvw':
 						state.set('LOCAL/presetMode', 'PREVIEW')
+						instance.setVariableValues({ selectedPreset: 'PVW' })
 						break
 					case 'tgl':
 						if (state.get('LOCAL/presetMode') === 'PREVIEW') {
 							state.set('LOCAL/presetMode', 'PROGRAM')
+							instance.setVariableValues({ selectedPreset: 'PGM' })
 						} else {
 							state.set('LOCAL/presetMode', 'PREVIEW')
+							instance.setVariableValues({ selectedPreset: 'PVW' })
 						}
 						break
 				}
@@ -2292,6 +2296,19 @@ export function getActions(instance: AWJinstance): any {
 				'liveScreenLock',
 				'remoteWidgetSelection'
 			)
+			
+			let preset: string,
+				vartext = 'PGM'
+			if (syncstate) {
+				preset = state.get('REMOTE/live/screens/presetModeSelection/presetMode')
+			} else {
+				preset = state.get('LOCAL/presetMode')
+			}
+			if (preset === 'PREVIEW') {
+				vartext = 'PVW'
+			}
+			instance.setVariableValues({ selectedPreset: vartext })
+			
 		},
 	} as AWJaction<RemoteSync>
 

@@ -147,7 +147,18 @@ export class AWJinstance extends InstanceBase<Config> {
 		this.setFeedbackDefinitions(getFeedbacks(this, this.state))
 		this.setActionDefinitions(getActions(this) as CompanionActionDefinitions)
 		this.setPresetDefinitions(getPresets(this))
-		this.setVariableValues({connectionLabel: this.label})
+		this.setVariableValues({ connectionLabel: this.label })
+		let preset: string,
+				vartext = 'PGM'
+		if (this.state.syncSelection) {
+			preset = this.state.get('REMOTE/live/screens/presetModeSelection/presetMode')
+		} else {
+			preset = this.state.get('LOCAL/presetMode')
+		}
+		if (preset === 'PREVIEW') {
+			vartext = 'PVW'
+		}
+		this.setVariableValues({ selectedPreset: vartext })
 	}
 
 	public sendRaw(_message: string): void {

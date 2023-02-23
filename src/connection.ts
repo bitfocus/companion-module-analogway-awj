@@ -7,7 +7,7 @@ import * as net from 'net'
 import URI from 'urijs'
 //import superagent = require('superagent')
 import * as superagent from 'superagent'
-import { WebSocket } from 'ws'
+import WebSocket from 'ws'
 import { State } from './state'
 import { checkSubscriptions, updateSubscriptions } from './subscriptions'
 import { mapOut, updateMappings } from './mappings'

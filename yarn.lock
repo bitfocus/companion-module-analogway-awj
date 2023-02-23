@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@companion-module/base@~1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@companion-module/base/-/base-1.2.0.tgz#2c5fd4e3af5a4d57cb06f4a9893beff36dd850e8"
-  integrity sha512-aqZdfVn+LlqrI04B5uamQZpFcmbd2dAKz6XwkCX9TXSPPnqbgAkDwcHa3pJQEpj19Wc1yKdth/p0EXxkKKbkaw==
+"@companion-module/base@~1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@companion-module/base/-/base-1.2.1.tgz#f935f99c8b0e935939f9a21b81331fd8453485a3"
+  integrity sha512-6cJJl4oVheMIdF55UrmfoJ6+MCyaRo9uKeCRcfKq3lq0knNj1xkNgiiys/M9Ymm4BLLQ0iKIhwHsyEYMKB7bhA==
   dependencies:
     "@sentry/node" "^7.36.0"
     "@sentry/tracing" "^7.36.0"
@@ -18,10 +18,10 @@
     p-timeout "^4.1.0"
     tslib "^2.5.0"
 
-"@companion-module/tools@^1.0.2":
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/@companion-module/tools/-/tools-1.0.2.tgz#2e5124b75a5af05e8aac95898f1b08e84bd3c4a9"
-  integrity sha512-c80sNQ+mmUVQjTPpRrgJcXoOROgbdnl+awO1Ww2JErqj+NBJLSzWAggUgNA5LinCjuWHUdgRRYwYgsuN+nn7GQ==
+"@companion-module/tools@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@companion-module/tools/-/tools-1.1.0.tgz#3e4e24051b6cbf6a3192f0b85ffa7dea77372233"
+  integrity sha512-YX218Z6WXNGHdeFlBcCteyEC14IBgIoaM+V5H8PLE3ijn7NO+ARet62QajU83T2NLONyXybPa/PHqE+Y9ERIDQ==
   dependencies:
     "@typescript-eslint/eslint-plugin" "^5.50.0"
     "@typescript-eslint/parser" "^5.50.0"
@@ -277,6 +277,13 @@
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/@types/which/-/which-2.0.1.tgz#27ecd67f915b7c3d6ba552135bb1eecd66e63501"
   integrity sha512-Jjakcv8Roqtio6w1gr0D7y6twbhx6gGgFGF5BLwajPpnOIOxFkakFhCq+LmyyeAz7BX6ULrjBOxdKaCDy+4+dQ==
+
+"@types/ws@^8.5.4":
+  version "8.5.4"
+  resolved "https://registry.yarnpkg.com/@types/ws/-/ws-8.5.4.tgz#bb10e36116d6e570dd943735f86c933c1587b8a5"
+  integrity sha512-zdQDHKUgcX/zBc4GrwsE/7dVdAD8JR4EuiAXiiUhhfyIJXXb2+PrGshFyeXWQPMmmZ2XxgaqclgpIC7eTXc1mg==
+  dependencies:
+    "@types/node" "*"
 
 "@typescript-eslint/eslint-plugin@^5.50.0", "@typescript-eslint/eslint-plugin@^5.53.0":
   version "5.53.0"

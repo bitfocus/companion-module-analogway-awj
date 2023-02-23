@@ -47,6 +47,14 @@ const commonSubscriptions: Record<string, Subscription> = {
 	selectedPreset: {
 		pat: '/live/screens/presetModeSelection/presetMode',
 		fbk: ['livePresetSelection', 'remoteLayerSelection'],
+		fun: (instance, path, _value) => {
+			if (instance.state.syncSelection) {
+				instance.setVariableValues({
+					selectedPreset: instance.state.getUnmapped(path) === 'PREVIEW' ? 'PVW' : 'PGM'
+				})
+			}
+			return false
+		},
 	},
 	inputFreeze: {
 		pat: 'device/inputList/items/(\\w+?)/control/pp/freeze',

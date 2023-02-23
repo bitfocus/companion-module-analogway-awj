@@ -33,7 +33,7 @@
 		"node": "^18"
 	},
 	"dependencies": {
-		"@companion-module/base": "~1.2.0",
+		"@companion-module/base": "~1.2.1",
 		"@tsconfig/node18": "^1.0.1",
 		"dgram": "^1.0.1",
 		"superagent": "^8.0.3",
@@ -41,10 +41,11 @@
 		"ws": "^8.8.1"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^1.0.2",
+		"@companion-module/tools": "^1.1.0",
 		"@types/node": "^18.14.0",
 		"@types/superagent": "4.1.16",
 		"@types/urijs": "1.19.19",
+		"@types/ws": "^8.5.4",
 		"@typescript-eslint/eslint-plugin": "^5.53.0",
 		"@typescript-eslint/parser": "^5.53.0",
 		"eslint": "^8.34.0",
