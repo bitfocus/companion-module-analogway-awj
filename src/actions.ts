@@ -841,6 +841,64 @@ export function getActions(instance: AWJinstance): any {
 	} as AWJaction<DeviceCutScreen>
 
 	/**
+	 * MARK: Set T-Bar Position
+	 */
+	type DeviceTbar = {screens: string[], position: string, maximum: string}
+	actions['deviceTbar'] = {
+		name: 'Set T-Bar Position',
+		options: [
+			{
+				id: 'info',
+				type: 'static-text',
+				label: 'Beware: in WebRCS you always set the T-Bar Position for ALL screens. T-Bar position is never syncronized.'
+			},
+			{
+				id: 'screens',
+				type: 'multidropdown',
+				label: 'Screens / Auxscreens',
+				choices: [{ id: 'all', label: 'All' }, { id: 'sel', label: 'Selected Screens' }, ...getScreenAuxChoices(state)],
+				default: ['all'],
+			},
+			{
+				id: 'position',
+				type: 'textinput',
+				label: 'Position',
+				default: '0',
+				regex: '^\\d+(\\.\\d+)?$|^\\$\\(\\w+:\\w+\\)$',
+				useVariables: true,
+				tooltip: 'Enter position as a numeric string. Can be floating point or integer number. Variables can be used. 100% is in relation to maximum value.'
+			},
+			{
+				id: 'maximum',
+				type: 'textinput',
+				label: 'Maximum value',
+				default: '100',
+				regex: '^\\d+(\\.\\d+)?$|^\\$\\(\\w+:\\w+\\)$',
+				useVariables: true,
+				tooltip: 'Enter maximum as a numeric string. Can be floating point or integer number. Variables can be used.'
+			}
+		],
+		callback: async (action: any) => {
+			const position = parseFloat(await instance.parseVariablesInString(action.options.position))
+			const maximum = parseFloat(await instance.parseVariablesInString(action.options.maximum))
+			const tbarmax = 65535
+			if (typeof position === 'number' && typeof maximum === 'number' && position >= 0 && maximum >= 0) {
+				let value = 0.0
+				if (position >= maximum) {
+					value = 1.0
+				} else if (maximum > 0) {
+					value = position / maximum
+				}
+				const tbarint = Math.round(value * tbarmax)
+				for (const screen of state.getChosenScreenAuxes(action.options.screens)) {
+					device.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'tbarPosition'], tbarint)
+				}
+			}
+		},
+	} as AWJaction<DeviceTbar>
+
+
+	/**
 	 * MARK: Change the transition time of a preset per screen
 	 */
 	type DeviceTakeTime = {screens: string[], preset: string, time: number}
@@ -2741,22 +2799,24 @@ export function getActions(instance: AWJinstance): any {
 				id: 'time',
 				type: 'textinput',
 				label: 'Time',
-				default: ''
+				default: '',
+				useVariables: true,
 			},
 		],
-		callback: (action) => {
+		callback: async (action) => {
 			let timetype = 'countdownDuration'
 			const type = state.get(['DEVICE', 'device', 'timerList', 'items', action.options.timer, 'control', 'pp', 'type'])
 			if (type === 'CURRENTTIME') {
 				timetype = 'timeOffset'
 			}
 			let time = state.get(['DEVICE', 'device', 'timerList', 'items', action.options.timer, 'control', 'pp', timetype])
+			const inputvalue = await instance.parseVariablesInString(action.options.time)
 			if (action.options.action === 'add') {
-				time += instance.timeToSeconds(action.options.time)
+				time += instance.timeToSeconds(inputvalue)
 			} else if (action.options.action === 'sub') {
-				time -= instance.timeToSeconds(action.options.time)
+				time -= instance.timeToSeconds(inputvalue)
 			} else if (action.options.action === 'set') {
-				time = instance.timeToSeconds(action.options.time)
+				time = instance.timeToSeconds(inputvalue)
 			} else {
 				time = 0
 			}
@@ -3150,6 +3210,7 @@ export function getActions(instance: AWJinstance): any {
 				type: 'textinput',
 				id: 'path',
 				label: 'path',
+				useVariables: true,
 			},
 			{
 				type: 'dropdown',
@@ -3167,6 +3228,7 @@ export function getActions(instance: AWJinstance): any {
 				type: 'textinput',
 				id: 'textValue',
 				label: 'value',
+				useVariables: true,
 				isVisible: (options) => options.valuetype === '1',
 			},
 			{
@@ -3189,6 +3251,7 @@ export function getActions(instance: AWJinstance): any {
 				type: 'textinput',
 				id: 'objectValue',
 				label: 'value',
+				useVariables: true,
 				isVisible: (options) => options.valuetype === '4',
 			},
 			{
@@ -3198,10 +3261,10 @@ export function getActions(instance: AWJinstance): any {
 				default: false,
 			},
 		],
-		callback: (action) => {
+		callback: async (action) => {
 			let value = ''
-			if (action.options.valuetype === '1') {
-				value = `"${action.options.textValue}"`
+			if (action.options.valuetype === '1') {	
+				value = await instance.parseVariablesInString(`"${action.options.textValue}"`)
 			} else if (action.options.valuetype === '2') {
 				value = action.options.numericValue.toString()
 			} else if (action.options.valuetype === '3') {
@@ -3211,12 +3274,13 @@ export function getActions(instance: AWJinstance): any {
 					value = 'false'
 				}
 			} else if (action.options.valuetype === '4') {
-				value = action.options.objectValue 
+				value = await instance.parseVariablesInString(action.options.objectValue)
 			}
 			try {
 				//const obj = JSON.parse(action.options.command) // check if the data is a valid json TODO: further validation
+				const path = AWJtoJsonPath( await instance.parseVariablesInString(action.options.path), state)
 				device.sendRawWSmessage(
-					`{"channel":"DEVICE","data":{"path":${AWJtoJsonPath(action.options.path, state)},"value":${value}}}`
+					`{"channel":"DEVICE","data":{"path":${path},"value":${value}}}`
 				)
 				if (action.options.xUpdate) {
 					device.sendXupdate()

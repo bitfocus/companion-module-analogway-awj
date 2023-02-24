@@ -84,6 +84,13 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 	Available at: LivePremier, Alta 4K, Midra 4K 
 	Same as Take Screen but without effects. The transition time is always zero.
 
+- Set T-Bar Position
+
+	Available at: LivePremier, Alta 4K, Midra 4K 
+	You can set the T-Bar position. Beware that T-Bar position is not syncronized live between clients, you will not see the position change in WebRCS.   
+	You can use any numbers in floating point or integer format to enter the position and maximum level. E.g. the following inputs all lead to a position exactly half way: 50 / 100, 50% / 100, 0.5 / 1, 127 / 255, 13.4 / 26.8   
+	The input in text format has been chosen to make the action compatible with variables, most notably the internal:t-bar variable. You can use Companion with a X-Keys keyboard with T-Bar, the internal:t-bar variable will hold the value from the T-Bar (0-255). Just program a trigger to run the action whenever the variable changes.
+
 - Set Transition Time
 
 	Available at: LivePremier, Alta 4K, Midra 4K  
@@ -204,6 +211,7 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 	With Timer Setup you can adjust the general parameters of the timer like the mode or colors. With Timer Adjust Time you set the time and with Timer Transport you can start and stop the timer. 
 	For your convenience there are two options which toggle the running state: start/pause and start/stop.
 	Note, that Timer Transport doesn't work on Midra Simulator but it works on the real device.
+	Times for the Adjust Time command can be entered in the action or any variable with a matching content can be used.
 
 - Set Testpattern
 
@@ -215,11 +223,13 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 	Available at: LivePremier, Alta 4K, Midra 4K  
 	This is a very powerful action. You can send any AWJ command to your device and automate almost everything.  
 	You can download the AWJ programmers guide for your device from Analog Way's website, there you find a lot of information and documentation of the AWJ protocol. To sum it up AWJ uses a path which is a little bit like a url or a file directory path to point to a parameter and then sets this parameter to a value. With this action you can set any available parameter at any path to any value.  
+	Additionally the parameters can be taken from existing variables or user variables further enhancing the flexibility.
 	There are a few special mechanisms in this module, which will greatly ease the work with AWJ.
 	1. There is a "Learn" button at the action. If you push the Learn button, the path and value from your last manipulation will be automatically transfered to the input fields. Let's say your last action in WebRCS has been renaming a memory. If you push Learn, you will get the path and value which was used to do the rename. Now just change the value in Companion and run your action. Voilà, you're able to rename memories from Companion. If you have a look at the path, you'll also find that the memory number is in the path. You can just edit it and rename a different memory. Just use the Learn button to get you started and then tweak the path and value to your liking.  
   There is a caveat too: sometimes one user action in WebRCS internally sends more than one command or if one command is executed more than one thing changes (e.g. if you recall a memory many layers will change). Every change sends its status and only the last one will be available with the Learn button. Also sometimes the path needed to change something is different from the path to read the value. In all of those cases the Learn button will not work and you have to use the programmers guide to get the right command.
-	2. Internally the device works with image scalers and processors which are arranged in presets. Each time you hit Take the preset shown on program and on preview change. When working with AWJ often you can't address program and preview, but you have to address the hardware preset. Companion will take that burdon from you. Whenever you actually would have to enter "A" or "B" or "UP" or "DOWN" you can just use "pvw" or "pgm" in the path and the action will replace it at execution time with the correct address.
-	3. Many commands just set parameters which will be reflected in the GUI but the visual output won't change. These commands need to be followed by a so called xUpdate command to tell the processors to use the new parameters. The action offers a convenient checkbox to append such a xUpdate command to your custom command. If you're in doubt whether you need it or not, just first try without xUpdate.
+	1. Internally the device works with image scalers and processors which are arranged in presets. Each time you hit Take the preset shown on program and on preview change. When working with AWJ often you can't address program and preview, but you have to address the hardware preset. Companion will take that burdon from you. Whenever you actually would have to enter "A" or "B" or "UP" or "DOWN" you can just use "pvw" or "pgm" in the path and the action will replace it at execution time with the correct address.
+	2. Many commands just set parameters which will be reflected in the GUI but the visual output won't change. These commands need to be followed by a so called xUpdate command to tell the processors to use the new parameters. The action offers a convenient checkbox to append such a xUpdate command to your custom command. If you're in doubt whether you need it or not, just first try without xUpdate.
+	3. The texinputs for path, text value and object value allow parsing variables. If you want to set e.g. the name of an input to the value of a custom variable you can use the custom variable in the text value field. If you want to set boolean or numeric values by a variable, you have to use the object value instead and make sure that you have data in the correct format.
 
 - Set GPO
 

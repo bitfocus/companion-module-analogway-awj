@@ -592,18 +592,18 @@ down: [
 			bgcolor: config.color_dark,
 		},
 		steps: [
-{
-down: [
 			{
-				actionId: 'devicePresetToggle',
-				options: {
-					action: 'toggle',
-				},
+				down: [
+					{
+						actionId: 'devicePresetToggle',
+						options: {
+							action: 'toggle',
+						},
+					},
+				],
+				up: [],
 			},
 		],
-		up: [],
-},
-],
 		feedbacks: [
 			{
 				feedbackId: 'presetToggle',
@@ -628,18 +628,18 @@ down: [
 			bgcolor: config.color_dark,
 		},
 		steps: [
-{
-down: [
 			{
-				actionId: 'deviceCopyProgram',
-				options: {
-					screens: ['sel'],
-				},
+				down: [
+					{
+						actionId: 'deviceCopyProgram',
+						options: {
+							screens: ['sel'],
+						},
+					},
+				],
+				up: [],
 			},
 		],
-		up: [],
-},
-],
 		feedbacks: [],
 	}
 
