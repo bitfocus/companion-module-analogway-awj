@@ -28,6 +28,7 @@ export class AWJinstance extends InstanceBase<Config> {
 	private variables!: (CompanionVariableDefinition & { id?: string })[]
 	public config!: Config
 	private oldlabel = ''
+	public isRecording = false
 
 	constructor(system: unknown) {
 		super(system)
@@ -170,6 +171,10 @@ export class AWJinstance extends InstanceBase<Config> {
 		this.device.connect(address)
 	}
 
+	handleStartStopRecordActions(isRecording: boolean): void {
+		this.isRecording = isRecording
+	}
+
 	public addVariable(newVariable: (CompanionVariableDefinition & { id?: string })): void {
 		this.variables.push(newVariable)
 		if (this.variables.some(variable => (variable.variableId === newVariable.variableId && variable.id !== newVariable.id))) { // the variable already exists from another id
@@ -285,6 +290,95 @@ export class AWJinstance extends InstanceBase<Config> {
 		this.device.sendRawWSmessage(
 			`{"channel":"REMOTE","data":{"name":"enableRemoteSelection","path":"/system/network/websocketServer/clients/${myindex}","args":[${syncstate}]}}`
 		)
+	}
+
+	/**
+	 * AWJ paths have some differences to JSON paths and the internal object, this function converts AWJ to JSON path.
+	 * Additionally it converts PGM and PVW to the actual preset which is on program or preview (A or B)
+	 * @param awjPath the AWJ path as a string
+	 * @returns a stringified array containing the path components of a JSON path
+	 */
+	AWJtoJsonPath(awjPath: string): string {
+		const parts = awjPath.split('/')
+		for (let i = 0; i < parts.length; i += 1) {
+			parts[i] = parts[i].replace(/^\$(\w+)/, '$1List')
+			parts[i] = parts[i].replace(/^@props$/, 'pp')
+			parts[i] = parts[i].replace(/^@items$/, 'items')
+			parts[i] = parts[i].replace(/^DeviceObject$/, 'device')
+		}
+		if (
+			parts[1] === 'screenList' &&
+			parts[2] === 'items' &&
+			parts[4] === 'presetList' &&
+			parts[5] === 'items' &&
+			parts[6].toLowerCase() === 'pgm'
+		) {
+			if (this.state.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pgm/preset`)) {
+				parts[6] = this.state.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pgm/preset`)
+				if (this.state.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
+			}
+		} else if (
+			parts[1] === 'screenList' &&
+			parts[2] === 'items' &&
+			parts[4] === 'presetList' &&
+			parts[5] === 'items' &&
+			parts[6].toLowerCase() === 'pvw'
+		) {
+			if (this.state.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pvw/preset`)) {
+				parts[6] = this.state.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pvw/preset`)
+				if (this.state.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
+			}
+		} else if (
+			parts[1] === 'auxiliaryScreenList' &&
+			parts[2] === 'items' &&
+			parts[4] === 'presetList' &&
+			parts[5] === 'items' &&
+			parts[6].toLowerCase() === 'pgm'
+		) {
+			if (this.state.get(`LOCAL/screens/A${parts[3].replace(/\D/g, '')}/pgm/preset`)) {
+				parts[6] = this.state.get(`LOCAL/screens/A${parts[3].replace(/\D/g, '')}/pgm/preset`)
+				if (this.state.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
+			}
+		} else if (
+			parts[1] === 'auxiliaryScreenList' &&
+			parts[2] === 'items' &&
+			parts[4] === 'presetList' &&
+			parts[5] === 'items' &&
+			parts[6].toLowerCase() === 'pvw'
+		) {
+			if (this.state.get(`LOCAL/screens/A${parts[3].replace(/\D/g, '')}/pvw/preset`)) {
+				parts[6] = this.state.get(`LOCAL/screens/A${parts[3].replace(/\D/g, '')}/pvw/preset`)
+				if (this.state.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
+			}
+		}
+		return `["${parts.join('","')}"]`
+	}
+
+	/**
+	 * AWJ paths have some differences to JSON paths and the internal object, this function converts JSON to AWJ path.
+	 * Additionally it converts A and B presets to pgm or pvw (program or preview)
+	 * @param jsonPath the json path
+	 * @returns a string with the AWJ path
+	 */
+	jsonToAWJpath(jsonPath: string | string[]): string {
+		let tpath: string
+		if (Array.isArray(jsonPath)) {
+			tpath = jsonPath.join('/')
+		} else {
+			tpath = jsonPath
+		}
+		tpath = tpath.replace(/\/(\w+)List\/items\//g, '/$$$1/@items/')
+		tpath = tpath.replace(/\/pp\//g, '/@props/')
+		tpath = tpath.replace(/^device\//, 'DeviceObject/')
+		const apath = tpath.split('/')
+		if (apath[1] === '$screen' && apath[2] === '@items' && apath[4] === '$preset' && apath[5] === '@items') {
+			if (this.state.get(`LOCAL/screens/${apath[3]}/pgm/preset`) === apath[6]) {
+				apath[6] = 'pgm'
+			} else {
+				apath[6] = 'pvw'
+			}
+		}
+		return apath.join('/')
 	}
 }
 

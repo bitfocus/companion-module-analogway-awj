@@ -4,7 +4,7 @@
 **[Beware of selection synchronization!](#sync)**  
 **There are many presets but much more actions and feedbacks, presets are a good starting point though.**
 
-This module works with all Analog Way devices which support the AWJ protocol. As of now this are the devices of the LivePremier, Alta 4K and Midra 4K series. Although all these devices share the same protocol, they have quite different capabilities and workflows. Companion tries to hide this as much as possible from you and make this module as generic as possible. Basically all the available features are retrieved from the device and only available features are presented to you in dropdowns and so on. E.g. you will only get selections for the inputs built into your device or you get only presets for memories which hold data. That also means you have to be connected to a device to get any selections at all. If you want to preprogram your show, you need to use one of the Analog Way simulators which you can download for free from https://analogway.com If you have programmed a show with one device and exchange it to a different device later, all your programmed values will stay in the actions and feedbacks but of course they won't work if your new device doesn't support that features, e.g. if you have programmed Aux 6 with LivePremier this action won't work on a Midra 4K device. Or if you have programmed an input plug selection at Midra the action won't work on LivePremier. Most of the actions and feedbacks will work on all devices the same, e.g. transitioning screen 2 will do this on any device if you have activated screen 2.
+This module works with all Analog Way devices which support the AWJ protocol. As of now this are the devices of the LivePremier, Alta 4K and Midra 4K series. Although all these devices share the same protocol, they have quite different capabilities and workflows. Companion tries to hide this as much as possible from you and make this module as generic as possible. Basically all the available features are retrieved from the device and only available features are presented to you in dropdowns and so on. E.g. you will only get selections for the inputs built into your device or you get only presets for memories which hold data. That also means you have to be connected to a device to get any selections at all. If you want to preprogram your show, you need to use one of the Analog Way simulators which you can download for free from [https://analogway.com](https://analogway.com) If you have programmed a show with one device and exchange it to a different device later, all your programmed values will stay in the actions and feedbacks but of course they won't work if your new device doesn't support that features, e.g. if you have programmed Aux 6 with LivePremier this action won't work on a Midra 4K device. Or if you have programmed an input plug selection at Midra the action won't work on LivePremier. Most of the actions and feedbacks will work on all devices the same, e.g. transitioning screen 2 will do this on any device if you have activated screen 2.
 
 Not every option of every action or feedback is explained in this manual, most of them are self explanatory. Here you find only general hints and explanations of options which have differences to Analog Way's WebRCS.  
 Because of space restrictions on our small Stream Deck buttons, some things are abbreviated on the buttons:
@@ -54,7 +54,7 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 
 - Recall Aux Memory
 
-	Available at: Alta 4K, Midra 4K	 
+	Available at: Alta 4K, Midra 4K	  
 	You can choose one or more auxscreens to load an aux memory to.  
 	If you choose selected screens or selected preset this action will work on all auxscreens which are currently selected, i.e. exactly the same behaviour as if you would press a load aux memory button on WebRCS.  
 	Additionally you can choose to select the chosen auxscreens, if you tick that box all auxscreens included in the action will be selected and all other screens will be deselected. If you use this action multiple times in one button, the last selection wins. Then you should prefer a dedicated action for selection.
@@ -81,12 +81,12 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 
 - Cut Screen
 
-	Available at: LivePremier, Alta 4K, Midra 4K 
+	Available at: LivePremier, Alta 4K, Midra 4K  
 	Same as Take Screen but without effects. The transition time is always zero.
 
 - Set T-Bar Position
 
-	Available at: LivePremier, Alta 4K, Midra 4K 
+	Available at: LivePremier, Alta 4K, Midra 4K  
 	You can set the T-Bar position. Beware that T-Bar position is not syncronized live between clients, you will not see the position change in WebRCS.   
 	You can use any numbers in floating point or integer format to enter the position and maximum level. E.g. the following inputs all lead to a position exactly half way: 50 / 100, 50% / 100, 0.5 / 1, 127 / 255, 13.4 / 26.8   
 	The input in text format has been chosen to make the action compatible with variables, most notably the internal:t-bar variable. You can use Companion with a X-Keys keyboard with T-Bar, the internal:t-bar variable will hold the value from the T-Bar (0-255). Just program a trigger to run the action whenever the variable changes.
@@ -115,7 +115,7 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 
 - Set Input Freeze
 
-	Available at: LivePremier 
+	Available at: LivePremier  
 	Remember that freeze is not a functionality done in the layer but in the input. If you change freeze it will immediately impact all occurences of that input in any layer on preview and program.
 	
 - Set Position and Size
@@ -222,11 +222,11 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 
 	Available at: LivePremier, Alta 4K, Midra 4K  
 	This is a very powerful action. You can send any AWJ command to your device and automate almost everything.  
-	You can download the AWJ programmers guide for your device from Analog Way's website, there you find a lot of information and documentation of the AWJ protocol. To sum it up AWJ uses a path which is a little bit like a url or a file directory path to point to a parameter and then sets this parameter to a value. With this action you can set any available parameter at any path to any value.  
+	You can download the AWJ programmers guide for your device from Analog Way's website, there you find a lot of information and documentation of the AWJ protocol. To sum it up AWJ uses a path which is a little bit like a url or a file directory path to point to a parameter and then sets this parameter to a value. With this action you can set any available parameter at any path to any value. But you can use only commands supported by the AWJ protocol, e.g. everything selection related is not supported by the AWJ protocol and can only be used with the dedicated actions, not with the AWJ replace command.  
 	Additionally the parameters can be taken from existing variables or user variables further enhancing the flexibility.
 	There are a few special mechanisms in this module, which will greatly ease the work with AWJ.
 	1. There is a "Learn" button at the action. If you push the Learn button, the path and value from your last manipulation will be automatically transfered to the input fields. Let's say your last action in WebRCS has been renaming a memory. If you push Learn, you will get the path and value which was used to do the rename. Now just change the value in Companion and run your action. Voilà, you're able to rename memories from Companion. If you have a look at the path, you'll also find that the memory number is in the path. You can just edit it and rename a different memory. Just use the Learn button to get you started and then tweak the path and value to your liking.  
-  There is a caveat too: sometimes one user action in WebRCS internally sends more than one command or if one command is executed more than one thing changes (e.g. if you recall a memory many layers will change). Every change sends its status and only the last one will be available with the Learn button. Also sometimes the path needed to change something is different from the path to read the value. In all of those cases the Learn button will not work and you have to use the programmers guide to get the right command.
+  There is a caveat too: sometimes one user action in WebRCS internally sends more than one command or if one command is executed more than one thing changes (e.g. if you recall a memory many layers will change). Every change sends its status and only the last one will be available with the Learn button (you can record multiple status changes with the Action Recorder though). Also sometimes the path needed to change something is different from the path to read the value. In all of those cases the Learn button will not work and you have to use the programmers guide to get the right command.
 	1. Internally the device works with image scalers and processors which are arranged in presets. Each time you hit Take the preset shown on program and on preview change. When working with AWJ often you can't address program and preview, but you have to address the hardware preset. Companion will take that burdon from you. Whenever you actually would have to enter "A" or "B" or "UP" or "DOWN" you can just use "pvw" or "pgm" in the path and the action will replace it at execution time with the correct address.
 	2. Many commands just set parameters which will be reflected in the GUI but the visual output won't change. These commands need to be followed by a so called xUpdate command to tell the processors to use the new parameters. The action offers a convenient checkbox to append such a xUpdate command to your custom command. If you're in doubt whether you need it or not, just first try without xUpdate.
 	3. The texinputs for path, text value and object value allow parsing variables. If you want to set e.g. the name of an input to the value of a custom variable you can use the custom variable in the text value field. If you want to set boolean or numeric values by a variable, you have to use the object value instead and make sure that you have data in the correct format.
@@ -241,6 +241,12 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 	Available at: LivePremier, Alta 4K, Midra 4K
 	Depending on your platform this action will have different options because LivePremier can handle wake on LAN and has no standby mode and Alta and Midra have standby but can't wake on LAN
 
+## Action Recorder
+
+You can use the Action Recorder with this module to record actions as you do some changes on the device. The Action Recorder only records custom AWJ replace command, even if you do a change where a dedicated action would be available. Additionally received global updates will not be included in the recorded custom AWJ replace command for a value change but in a separate command which holds only the global update.  
+You will see that depending on what type of values you change your device sends a lot of global updates, you are advised to review your recording and see if there are any global updates and if there are some, delete all but the last one.  
+Also depending on what type of values you change you will record status messages. Most of them are only sent by the device but not meant to be set by a third party application. You are advised to delete status messages as well.
+If you want to record changes for e.g. positions or any other values with a range, it is better to enter the final value in WebRCS numerically. If you drag around a layer you will record every single position along your way.
 
 ## Feedbacks
 
@@ -264,7 +270,7 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 
 - Source Tally
   
-  Available at: LivePremier, Alta 4K, Midra 4K
+  Available at: LivePremier, Alta 4K, Midra 4K  
 	This feedback will show you wether a source can be seen on screen. It is more enhanced than the tally indicators of WebRCS or the device because it tracks the real visibility. A tally will not light if the source is in the layer but the layer is outside of the screen or if the layer has no area or is masked totally or is completely transparent. At Alta and Midra 4K also visibility of inputs in background sets will be shown.  
 	There is no calculation if a layer completely covers another layer.
 
@@ -379,4 +385,4 @@ All presets also have color information. In the config you can set up your prefe
 
 ## Version History
 
-You can find the version History of this module at the readme page of the source repository
+You can find the version History of this module at the [readme page](https://github.com/bitfocus/companion-module-analogway-awj#readme) of the source repository

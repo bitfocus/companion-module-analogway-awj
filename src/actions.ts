@@ -76,96 +76,6 @@ type Dropdown<t> = {id: t, label: string}
 // const XUPDATE = '{"channel":"DEVICE","data":{"path":"device/screenGroupList/control/pp/xUpdate","value":true}}'
 // const XUPDATEmidra = '{"channel":"DEVICE","data":{"path":"device/preset/control/pp/xUpdate","value":true}}'
 
-/**
- * AWJ paths have some differences to JSON paths and the internal object, this function converts AWJ to JSON path.
- * Additionally it converts PGM and PVW to the actual preset which is on program or preview (A or B)
- * @param awjPath the AWJ path as a string
- * @param state the state object to look for keys
- * @returns a stringified array containing the path components of a JSON path
- */
-function AWJtoJsonPath(awjPath: string, state: State): string {
-	const parts = awjPath.split('/')
-	for (let i = 0; i < parts.length; i += 1) {
-		parts[i] = parts[i].replace(/^\$(\w+)/, '$1List')
-		parts[i] = parts[i].replace(/^@props$/, 'pp')
-		parts[i] = parts[i].replace(/^@items$/, 'items')
-		parts[i] = parts[i].replace(/^DeviceObject$/, 'device')
-	}
-	if (
-		parts[1] === 'screenList' &&
-		parts[2] === 'items' &&
-		parts[4] === 'presetList' &&
-		parts[5] === 'items' &&
-		parts[6].toLowerCase() === 'pgm'
-	) {
-		if (state.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pgm/preset`)) {
-			parts[6] = state.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pgm/preset`)
-			if (state.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
-		}
-	} else if (
-		parts[1] === 'screenList' &&
-		parts[2] === 'items' &&
-		parts[4] === 'presetList' &&
-		parts[5] === 'items' &&
-		parts[6].toLowerCase() === 'pvw'
-	) {
-		if (state.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pvw/preset`)) {
-			parts[6] = state.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pvw/preset`)
-			if (state.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
-		}
-	} else if (
-		parts[1] === 'auxiliaryScreenList' &&
-		parts[2] === 'items' &&
-		parts[4] === 'presetList' &&
-		parts[5] === 'items' &&
-		parts[6].toLowerCase() === 'pgm'
-	) {
-		if (state.get(`LOCAL/screens/A${parts[3].replace(/\D/g, '')}/pgm/preset`)) {
-			parts[6] = state.get(`LOCAL/screens/A${parts[3].replace(/\D/g, '')}/pgm/preset`)
-			if (state.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
-		}
-	} else if (
-		parts[1] === 'auxiliaryScreenList' &&
-		parts[2] === 'items' &&
-		parts[4] === 'presetList' &&
-		parts[5] === 'items' &&
-		parts[6].toLowerCase() === 'pvw'
-	) {
-		if (state.get(`LOCAL/screens/A${parts[3].replace(/\D/g, '')}/pvw/preset`)) {
-			parts[6] = state.get(`LOCAL/screens/A${parts[3].replace(/\D/g, '')}/pvw/preset`)
-			if (state.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
-		}
-	}
-	return `["${parts.join('","')}"]`
-}
-
-/**
- * AWJ paths have some differences to JSON paths and the internal object, this function converts JSON to AWJ path.
- * Additionally it converts A and B presets to pgm or pvw (program or preview)
- * @param jsonPath the json path
- * @param state the state object to look for keys
- * @returns a string with the AWJ path
- */
-function jsonToAWJpath(jsonPath: string | string[], state: State): string {
-	let tpath: string
-	if (Array.isArray(jsonPath)) {
-		tpath = jsonPath.join('/')
-	} else {
-		tpath = jsonPath
-	}
-	tpath = tpath.replace(/\/(\w+)List\/items\//g, '/$$$1/@items/')
-	tpath = tpath.replace(/\/pp\//g, '/@props/')
-	tpath = tpath.replace(/^device\//, 'DeviceObject/')
-	const apath = tpath.split('/')
-	if (apath[1] === '$screen' && apath[2] === '@items' && apath[4] === '$preset' && apath[5] === '@items') {
-		if (state.get(`LOCAL/screens/${apath[3]}/pgm/preset`) === apath[6]) {
-			apath[6] = 'pgm'
-		} else {
-			apath[6] = 'pvw'
-		}
-	}
-	return apath.join('/')
-}
 
 // MARK: getActions
 /**
@@ -3278,10 +3188,12 @@ export function getActions(instance: AWJinstance): any {
 			}
 			try {
 				//const obj = JSON.parse(action.options.command) // check if the data is a valid json TODO: further validation
-				const path = AWJtoJsonPath( await instance.parseVariablesInString(action.options.path), state)
-				device.sendRawWSmessage(
+				const path = instance.AWJtoJsonPath( await instance.parseVariablesInString(action.options.path))
+				if (path.length){
+					device.sendRawWSmessage(
 					`{"channel":"DEVICE","data":{"path":${path},"value":${value}}}`
-				)
+					)
+				}
 				if (action.options.xUpdate) {
 					device.sendXupdate()
 				}
@@ -3297,7 +3209,7 @@ export function getActions(instance: AWJinstance): any {
 			if (JSON.stringify(value).length > 132) {
 				return undefined
 			}
-			newoptions['path'] = jsonToAWJpath(path, state)
+			newoptions['path'] = instance.jsonToAWJpath(path)
 			switch (typeof value) {
 				case 'string':
 					newoptions['valuetype'] = '1'

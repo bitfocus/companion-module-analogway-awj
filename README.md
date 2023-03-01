@@ -11,6 +11,7 @@ This module uses many features Companion provides:
 - dynamic options
 - variables in options
 - Learn function
+- Action Recorder
 
 For a complete explanation see [HELP](HELP.md)
 
@@ -21,6 +22,7 @@ For a complete explanation see [HELP](HELP.md)
 * Feature: new action for setting T-Bar position (works also with X-Keys T-Bar)
 * Feature: timer value can be set by variables
 * Feature: custom replace command can use variables for path, text entry and object entry
+* Feature: Action Recorder is now available with this module
 * Feature: added feedback and preset for Preset Toggle functionality  
 * Feature: added variable for connection name
 * Bugfix: Preset for Layer Source should use "don't change" for layer types where the input is not assignable			

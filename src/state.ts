@@ -195,9 +195,48 @@ class State {
 			this.setUnmapped(data.path, data.value, this.stateobj[channel])
 			const mapped = mapIn(this.stateobj.LOCAL.mappings, this.concat(channel, data.path), data.value)
 			feedbacks = checkForAction(this.instance, mapped.path, mapped.value)
-			if (channel === 'DEVICE' && !data.path.toString().endsWith(',control,pp,xUpdate')) {
+			if (channel === 'DEVICE' && !data.path.toString().endsWith(',control,pp,xUpdate') && !data.path.toString().startsWith('device,tallies,')) {
 				this.setUnmapped('LOCAL/lastMsg', { path: data.path, value: data.value }) // TODO: what about mappings
+				if (this.instance.isRecording && JSON.stringify(data.value).length <= 132) {
+					const newoptions = { xUpdate: false}
+					newoptions['path'] = this.instance.jsonToAWJpath(data.path)
+					switch (typeof data.value) {
+						case 'string':
+							newoptions['valuetype'] = '1'
+							newoptions['textValue'] = data.value
+							break
+						case 'number':
+							newoptions['valuetype'] = '2'
+							newoptions['numericValue'] = data.value
+							break
+						case 'boolean':
+							newoptions['valuetype'] = '3'
+							newoptions['booleanValue'] = data.value
+							break
+						case 'object':
+							newoptions['valuetype'] = '4'
+							newoptions['objectValue'] = JSON.stringify(data.value)
+					}
+					this.instance.recordAction({
+						actionId: 'cstawjcmd',
+						options: newoptions
+					})
+				}
 			}
+			if (this.instance.isRecording && channel === 'DEVICE' && data.path.toString().endsWith(',control,pp,xUpdate') && data.value === true) {
+				this.instance.recordAction({
+					actionId: 'cstawjcmd',
+					options: {
+						path: '',
+						valuetype: '1',
+						textValue: 'global update only',
+						numericValue: 0,
+						booleanValue: false,
+						objectValue: '',
+						xUpdate: true
+					}
+				})
+			} 
 		} else if (data?.channel === 'PATCH' && data.patch) {
 			const mapped = mapIn(this.stateobj.LOCAL.mappings, this.concat(channel, data.patch.path), data.patch.value)
 			if (data.patch.op === 'replace') {
