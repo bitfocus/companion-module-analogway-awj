@@ -9,7 +9,7 @@ import URI from 'urijs'
 import * as superagent from 'superagent'
 import WebSocket from 'ws'
 import { State } from './state'
-import { checkSubscriptions, updateSubscriptions } from './subscriptions'
+import { checkSubscriptions, initSubscriptions } from './subscriptions'
 import { mapOut, updateMappings } from './mappings'
 import { InstanceStatus } from '@companion-module/base'
 
@@ -207,7 +207,7 @@ class AWJdevice {
 						return
 					}
 					updateMappings(this.instance)
-					updateSubscriptions(this)
+					initSubscriptions(this)
 
 					if (this.instance.config.sync === true && this.hadError === false) {
 						console.log('switching sync on because of config')

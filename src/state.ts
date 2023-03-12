@@ -195,7 +195,7 @@ class State {
 			this.setUnmapped(data.path, data.value, this.stateobj[channel])
 			const mapped = mapIn(this.stateobj.LOCAL.mappings, this.concat(channel, data.path), data.value)
 			feedbacks = checkForAction(this.instance, mapped.path, mapped.value)
-			if (channel === 'DEVICE' && !data.path.toString().endsWith(',control,pp,xUpdate') && !data.path.toString().startsWith('device,tallies,')) {
+			if (channel === 'DEVICE' && !data.path.toString().endsWith(',pp,xUpdate') && !data.path.toString().match(/,status,/)) {
 				this.setUnmapped('LOCAL/lastMsg', { path: data.path, value: data.value }) // TODO: what about mappings
 				if (this.instance.isRecording && JSON.stringify(data.value).length <= 132) {
 					const newoptions = { xUpdate: false}
@@ -223,7 +223,7 @@ class State {
 					})
 				}
 			}
-			if (this.instance.isRecording && channel === 'DEVICE' && data.path.toString().endsWith(',control,pp,xUpdate') && data.value === true) {
+			if (this.instance.isRecording && channel === 'DEVICE' && data.path.toString().endsWith(',pp,xUpdate') && data.value === true) {
 				this.instance.recordAction({
 					actionId: 'cstawjcmd',
 					options: {
@@ -274,10 +274,20 @@ class State {
 		}
 		if (feedbacks && typeof feedbacks === 'string') {
 			// console.log('checking feedback from external msg', feedbacks)
-			this.instance.checkFeedbacks(feedbacks)
+			if (feedbacks.startsWith('id:')) {
+				this.instance.checkFeedbacksById(feedbacks.substring(3))
+			} else {
+				this.instance.checkFeedbacks(feedbacks)
+			}
 		} else if (feedbacks && Array.isArray(feedbacks)) {
 			// console.log('checking feedbacks from external msg', feedbacks)
-			feedbacks.forEach((fb) => this.instance.checkFeedbacks(fb))
+			feedbacks.forEach((fb) => {
+				if (fb.startsWith('id:')) {
+					this.instance.checkFeedbacksById(fb.substring(3))
+				} else {
+					this.instance.checkFeedbacks(fb)
+				}
+			})
 		}
 	}
 

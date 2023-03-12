@@ -20,6 +20,7 @@ For a complete explanation see [HELP](HELP.md)
 ### 2.0.0
 * Major: Rewrite for Companion 3.0 compatibility
 * Feature: new action for setting T-Bar position (works also with X-Keys T-Bar)
+* Feature: new feedback for customizable AWJ path, will also provide variable
 * Feature: timer value can be set by variables
 * Feature: custom replace command can use variables for path, text entry and object entry
 * Feature: Action Recorder is now available with this module

@@ -14,7 +14,9 @@ import { State } from './state'
 import { getFeedbacks } from './feedback'
 import { getPresets } from './presets'
 import { initVariables } from './variables'
+import { Subscription } from './subscriptions'
 
+export const regexAWJpath = '^DeviceObject(?:\\/(@items|@props|\\$?[A-Za-z0-9]+))+$'
 
 /**
  * Companion instance class for the Analog Way AWJ API products.
@@ -67,7 +69,7 @@ export class AWJinstance extends InstanceBase<Config> {
 		}
 		this.setFeedbackDefinitions(getFeedbacks(this, this.state)) 
 		this.variables = initVariables(this)
-		this.setVariableDefinitions(this.variables)
+		this.updateVariableDefinitions(this.variables)
 		this.setVariableValues({connectionLabel: this.label})
 		this.subscribeFeedbacks()
 		this.device.connect(this.config.deviceaddr)
@@ -175,36 +177,69 @@ export class AWJinstance extends InstanceBase<Config> {
 		this.isRecording = isRecording
 	}
 
+	/**
+	 * updates the variable definitions of this instance with the values of this.variables or the optional parameter
+	 * @param variables 
+	 */
+	public updateVariableDefinitions(variables = this.variables) {
+		// make set with unique variableIds
+		const varIds = new Set(variables.map(variable => variable.variableId))
+		const vars: CompanionVariableDefinition[] = []
+		varIds.forEach(varId => {
+			vars.push(
+				variables.map(vari => { return { name: vari.name, variableId: vari.variableId } }).find(vari => vari.variableId === varId) || { name: '', variableId: '' }
+			)
+		})
+		this.setVariableDefinitions(vars)
+	}
+
+	/**
+	 * Adds a custom variable to the internal list of variables from this instance  
+	 * the same variableId can be added by multiple Id, it will be exposed only once and only removed when the last Id removes it
+	 * @param {Object} newVariable - Object with the new variable
+	 * @param {string} newVariable.id - ID of the variable, e.g. the ID of the feedback generating it, not exposed to user.
+	 * @param {string} newVariable.variableId - unique to the instance ID of the variable with which the user can reference it.
+	 * @param {string} newVariable.name - human readable description of the variable's content.
+	 * @returns 
+	 */
 	public addVariable(newVariable: (CompanionVariableDefinition & { id?: string })): void {
 		this.variables.push(newVariable)
 		if (this.variables.some(variable => (variable.variableId === newVariable.variableId && variable.id !== newVariable.id))) { // the variable already exists from another id
 			return
 		} else {
-			const varnames = new Set(this.variables.map(variable => variable.variableId))
-			const vars: CompanionVariableDefinition[] = []
-			varnames.forEach(varname => {
-				vars.push(
-					this.variables.map(vari => { return { name: vari.name, variableId: vari.variableId } }).find(vari => vari.variableId === varname) || { name: '', variableId: '' }
-				)
-			})
-			this.setVariableDefinitions(this.variables)
+			this.updateVariableDefinitions()
 		}
 	}
 
-	public removeVariable(id: string, remVariable: string): void {
-		if (this.variables.filter(vari => vari.variableId === remVariable).length > 1 && this.variables.findIndex(vari => vari.variableId === remVariable && vari.id === id) != -1) {
-			this.variables.splice(this.variables.findIndex(vari => vari.variableId === remVariable && vari.id === id), 1)
-		} else if (this.variables.filter(vari => vari.variableId === remVariable).length === 1 && this.variables.findIndex(vari => vari.variableId === remVariable && vari.id === id) != -1) {
-			this.variables.splice(this.variables.findIndex(vari => vari.variableId === remVariable && vari.id === id), 1)
-			const varnames = new Set(this.variables.map(variable => variable.variableId))
-			const vars: CompanionVariableDefinition[] = []
-			varnames.forEach(varname => {
-				vars.push(
-					this.variables.map(vari => { return { name: vari.name, variableId: vari.variableId } }).find(vari => vari.variableId === varname) || { name: '', variableId: '' }
-				)
-			})
-			this.setVariableDefinitions(this.variables)
+	/**
+	 * Removes a custom variable from the internal list of variables from this instance
+	 * @param id internal ID of the variable to remove
+	 * @param remVariable variableId of the variable to remove, if undefined remove all variables from that ID
+	 */
+	public removeVariable(id: string, remVariable?: string): void {
+		if (remVariable === undefined && this.variables.findIndex(vari => vari.id === id) != -1) {
+			const newvars = this.variables.filter(vari => vari.id !== id)
+			this.variables = newvars
+			this.updateVariableDefinitions()
+		} else if (this.variables.findIndex(vari => (vari.id === id && vari.variableId === remVariable)) != -1) {
+			const newvars = this.variables.filter(vari => !(vari.id === id && vari.variableId === remVariable))
+			this.variables = newvars
+			this.updateVariableDefinitions()
 		}
+	}
+
+	/**
+	 * Adds one or more subscriptions to the active subscriptions
+	 * @param {Object} subscriptions Object containing one or more subscriptions 
+	 */
+	public addSubscriptions(subscriptions: Record<string, Subscription>): void {
+		Object.keys(subscriptions).forEach(subscription => {
+			this.state.subscriptions[subscription] = subscriptions[subscription]
+		})
+	}
+
+	public removeSubscription(subscriptionId: string): void {
+		delete this.state.subscriptions[subscriptionId]
 	}
 
 	public timeToSeconds(timestring: string): number {
@@ -296,9 +331,12 @@ export class AWJinstance extends InstanceBase<Config> {
 	 * AWJ paths have some differences to JSON paths and the internal object, this function converts AWJ to JSON path.
 	 * Additionally it converts PGM and PVW to the actual preset which is on program or preview (A or B)
 	 * @param awjPath the AWJ path as a string
-	 * @returns a stringified array containing the path components of a JSON path
+	 * @returns an array containing the path components of a JSON path
 	 */
-	AWJtoJsonPath(awjPath: string): string {
+	AWJtoJsonPath(awjPath: string): string[] {
+		if (awjPath.match(new RegExp(regexAWJpath)) === null) {
+			return []
+		}
 		const parts = awjPath.split('/')
 		for (let i = 0; i < parts.length; i += 1) {
 			parts[i] = parts[i].replace(/^\$(\w+)/, '$1List')
@@ -351,7 +389,7 @@ export class AWJinstance extends InstanceBase<Config> {
 				if (this.state.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
 			}
 		}
-		return `["${parts.join('","')}"]`
+		return parts
 	}
 
 	/**

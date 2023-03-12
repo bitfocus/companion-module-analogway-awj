@@ -1,4 +1,4 @@
-import {AWJinstance} from './index'
+import {AWJinstance, regexAWJpath} from './index'
 import { State } from './state'
 import {
 	choicesBackgroundSources,
@@ -867,87 +867,276 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 	}
 
 	// MARK: deviceCustom
-	// feedbacks['deviceCustom'] = {
-	// 	type: 'boolean',
-	// 	label: 'custom feedback',
-	// 	choices: [
-	// 		{
-	// 			type: 'textinput',
-	// 			id: 'path',
-	// 			label: 'path',
-	// 		},
-	// 		{
-	// 			type: 'dropdown',
-	// 			id: 'valuetype',
-	// 			label: 'Evaluate value as type',
-	// 			choices: [
-	// 				{ id: '1', label: 'Text' },
-	// 				{ id: '2', label: 'Number' },
-	// 				{ id: '3', label: 'Boolean' },
-	// 				{ id: '4', label: 'Object' },
-	// 			],
-	// 			default: '1',
-	// 		},
-	// 		{
-	// 			type: 'dropdown',
-	// 			id: 'actions1',
-	// 			label: 'Check',
-	// 			choices: [
-	// 				{ id: '1', label: 'Text equals' },
-	// 				{ id: '2', label: 'Text containes' },
-	// 				{ id: '3', label: 'Text length' },
-	// 				{ id: '4', label: 'Text matches regular expression' },
-	// 			],
-	// 			default: '1',
-	// 			isVisible: (thisAction: any) => thisAction.options.valuetype === '1',
-	// 		},
-	// 		{
-	// 			type: 'textinput',
-	// 			id: 'textValue',
-	// 			label: 'value',
-	// 			default: '',
-	// 			isVisible: (thisAction: any) => thisAction.options.valuetype === '1',
-	// 		},
-	// 		{
-	// 			type: 'dropdown',
-	// 			id: 'actions2',
-	// 			label: 'Check',
-	// 			choices: [
-	// 				{ id: '1', label: 'Number equals' },
-	// 				{ id: '2', label: 'Number is greater than' },
-	// 				{ id: '3', label: 'Number is in range between value and value2' },
-	// 				{ id: '4', label: 'Number modulo value is value2' },
-	// 			],
-	// 			default: '1',
-	// 			isVisible: (thisAction: any) => thisAction.options.valuetype === '2',
-	// 		},
-	// 		{
-	// 			type: 'number',
-	// 			id: 'numericValue',
-	// 			label: 'value1',
-	// 			default: 0,
-	// 			isVisible: (thisAction: any) => thisAction.options.valuetype === '2',
-	// 		},
-	// 		{
-	// 			type: 'number',
-	// 			id: 'numericValue2',
-	// 			label: 'value 2',
-	// 			default: 0,
-	// 			isVisible: (thisAction: any) => thisAction.options.valuetype === '2' && thisAction.options.actions2 === '3',
-	// 		},
-	// 		{
-	// 			type: 'checkbox',
-	// 			id: 'invert',
-	// 			label: 'Invert result',
-	// 			default: false,
-	// 		},
-	// 	],
-	// 	callback: (feedback: CompanionFeedbackEvent) => {
-	// 		const ret = false
-	// 		// TODO: implement
-	// 		return feedback.options.invert ? !ret : ret
-	// 	},
-	// }
+	type FeedbackDeviceCustomOptions = {
+			path: string,
+			valuetype: string,
+			actionst: string,
+			textValue: string,
+			actionsn: string,
+			numericValue: number,
+			numericValue2: number,
+			invert: boolean,
+			variable: string
+	}
+	feedbacks['deviceCustom'] = {
+		type: 'boolean',
+		name: 'Custom Feedback',
+		description: 'Generates feedback and a variable from a custom AWJ path',
+		options: [
+			{
+				type: 'textinput',
+				id: 'path',
+				label: 'path',
+				default: '',
+				regex: `/${regexAWJpath}/`,
+				tooltip: 'AWJ path of property to watch for, enter a path to exactly one property with no wildcards.\nPGM/PVW can be used for the presets and will be replaced dynamically.'
+			},
+			{
+				type: 'dropdown',
+				id: 'valuetype',
+				label: 'Evaluate value as type',
+				choices: [
+					{ id: 't', label: 'Text' },
+					{ id: 'n', label: 'Number' },
+					{ id: 'b', label: 'Boolean' },
+					{ id: 'o', label: 'Object' },
+				],
+				default: 't',
+			},
+			{
+				type: 'dropdown',
+				id: 'actionst',
+				label: 'Check',
+				choices: [
+					{ id: '1', label: 'Text equals' },
+					{ id: '2', label: 'Text containes' },
+					{ id: '3', label: 'Text length is' },
+					{ id: '4', label: 'Text matches regular expression' },
+				],
+				default: '1',
+				isVisible: (thisOptions: FeedbackDeviceCustomOptions) => { return thisOptions.valuetype === 't' },
+			},
+			{
+				type: 'textinput',
+				id: 'textValue',
+				label: 'value',
+				default: '',
+				isVisible: (thisOptions: FeedbackDeviceCustomOptions) => { return thisOptions.valuetype === 't' },
+			},
+			{
+				type: 'dropdown',
+				id: 'actionsn',
+				label: 'Check',
+				choices: [
+					{ id: '==', label: 'Number equals' },
+					{ id: '>', label: 'Number is greater than' },
+					{ id: '...', label: 'Number is in range between value and value2' },
+					{ id: '%', label: 'Number modulo value is value2' },
+				],
+				default: '==',
+				isVisible: (thisOptions: FeedbackDeviceCustomOptions) => { return thisOptions.valuetype === 'n' },
+			},
+			{
+				type: 'number',
+				id: 'numericValue',
+				label: 'value1',
+				default: 0,
+				isVisible: (thisOptions: FeedbackDeviceCustomOptions) => { return thisOptions.valuetype === 'n' },
+			},
+			{
+				type: 'number',
+				id: 'numericValue2',
+				label: 'value 2',
+				default: 0,
+				isVisible: (thisOptions: FeedbackDeviceCustomOptions) => { return thisOptions.valuetype === 'n' && (thisOptions.actionsn === '...' || thisOptions.actionsn === '%') },
+			},
+			{
+				type: 'checkbox',
+				id: 'invert',
+				label: 'Invert feedback result',
+				default: false,
+			},
+			{
+				type: 'textinput',
+				id: 'variable',
+				label: 'Custom Name of Variable to use',
+				default: '',
+				regex: '/^[A-Za-z0-9_-]*$/',
+				tooltip: 'Can be left empty, if filled this will be the name of the variable with the value of the feedback.\nOnly letters, numbers, underscore and minus is allowed.'
+			}
+		],
+		learn: (feedback) => {
+			const newoptions = {
+			}
+			const lastMsg = state.get('LOCAL/lastMsg')
+			const path = lastMsg.path
+			const value = lastMsg.value
+			if (JSON.stringify(value).length > 132) {
+				return undefined
+			}
+			newoptions['path'] = instance.jsonToAWJpath(path)
+			switch (typeof value) {
+				case 'string':
+					newoptions['valuetype'] = 't'
+					newoptions['actionst'] = '1'
+					newoptions['textValue'] = value
+					break
+				case 'number':
+					newoptions['valuetype'] = 'n'
+					newoptions['actionsn'] = '=='
+					newoptions['numericValue'] = value
+					break
+				case 'boolean':
+					newoptions['valuetype'] = 'b'
+					break
+				case 'object':
+					newoptions['valuetype'] = 'o'
+			}
+
+			return {
+				...feedback.options,
+				...newoptions,
+			}
+		},
+		callback: (feedback: CompanionFeedbackBooleanEvent & { options: FeedbackDeviceCustomOptions }) => {
+			let ret = false
+			const path = instance.AWJtoJsonPath(feedback.options.path)
+			if (path.length < 2) {
+				return false
+			}
+			const value = instance.state.get(['DEVICE', ...path])
+			let varId = feedback.options.variable.replace(/[^A-Za-z0-9_-]/g, '')
+			if (varId === '') varId = feedback.options.path.replace(/\//g, '_').replace(/[^A-Za-z0-9_-]/g, '')
+
+			console.log('custom feedback checked', feedback.options);
+			console.log('value', value)
+			if (value === undefined) {
+				instance.setVariableValues({ [varId]: undefined })
+			} else if (value === null) {
+				instance.setVariableValues({ [varId]: 'null' })
+			} else if (feedback.options.valuetype === 't') {
+				const valuet: string = (typeof value === 'string') ? value : JSON.stringify(value)
+				instance.setVariableValues({ [varId]: valuet })
+				switch (feedback.options.actionst) {
+					case '1':
+						ret = (valuet === feedback.options.textValue)
+						break
+				
+					case '2':
+						ret = valuet.includes(feedback.options.textValue)
+						break
+				
+					case '3':
+						ret = (valuet.length === parseInt(feedback.options.textValue))
+						break
+				
+					case '4':
+						ret = valuet.match(new RegExp(feedback.options.textValue)) !== null
+						break
+				
+					default:
+						break
+				}
+			} else if (feedback.options.valuetype === 'n') {
+				const valuen = Number(value)
+				instance.setVariableValues({ [varId]: valuen })
+				switch (feedback.options.actionsn) {
+					case '==':
+						ret = (valuen === feedback.options.numericValue)
+						break
+				
+					case '>':
+						ret = (valuen > feedback.options.numericValue)
+						break
+				
+					case '...':
+						if (feedback.options.numericValue2 > feedback.options.numericValue)
+							ret = (valuen >= feedback.options.numericValue && valuen <= feedback.options.numericValue2)
+						else
+							ret = (valuen >= feedback.options.numericValue2 && valuen <= feedback.options.numericValue)
+						break
+
+					case '%':
+						ret = (valuen % feedback.options.numericValue === feedback.options.numericValue2)
+						break
+				
+					default:
+						break
+				}
+			} else if (feedback.options.valuetype === 'b') {
+				if (typeof value === 'boolean') {
+					ret = value
+				} else if (typeof value === 'number') {
+					ret = value >= 0.5 ? true : false
+				} else if (typeof value === 'string') {
+					ret = value.match(/^y(es)?|true|1|go|\+|right|correct|ok(ay)?$/i) !== null
+				}
+				const bool = feedback.options.invert ? !ret : ret
+				instance.setVariableValues({ [varId]: bool ? 1 : 0 })
+			} else if (feedback.options.valuetype === 'o') { 
+				const valueo = JSON.stringify(value)
+				instance.setVariableValues({ [varId]: valueo })
+				ret = valueo.length > 0
+			}
+			return feedback.options.invert ? !ret : ret
+		},
+		subscribe: (feedback: CompanionFeedbackBooleanEvent & { options: FeedbackDeviceCustomOptions }) => {
+			console.log('subscribe', feedback.id, feedback.options.path);
+			let varId = ''
+			const sub = {}
+			let varname = `Custom Variable for Path ${feedback.options.path}`
+			if (feedback.options.path.match(regexAWJpath) !== null) {
+				// we got a path to work with
+				varname = `Custom Variable for Feedback ${feedback.options.path}`
+				if (feedback.options.variable.match(/[A-Za-z0-9_-]+/) !== null) {
+					varId = feedback.options.variable.replace(/[^A-Za-z0-9_-]/g, '')
+				} else {
+					varId = feedback.options.path.replace(/\//g, '_').replace(/[^A-Za-z0-9_-]/g, '')
+				}
+				const parts = instance.AWJtoJsonPath(feedback.options.path)
+
+				if (
+					parts[4] === 'presetList' &&
+					parts[5] === 'items' &&
+					parts[6] &&
+					feedback.options.path.split('/')[6]?.match(/^PGM|PVW|program|preview$/i) !== null
+				) {
+					parts[6] = '(\\w+?)'
+					sub[`${feedback.id}-take`] = {
+						pat: 'DEVICE/device/(screenGroup|transition/screen)List/items/(\\w+?)/status/pp/transition',
+						fbk: `id:${feedback.id}`,
+					}
+				}
+
+				sub[feedback.id] = {
+					pat: parts.join('/'),
+					fbk: `id:${feedback.id}`
+				}
+				console.log('add sub', sub)
+				instance.addSubscriptions(sub)
+				// console.log('subscriptions', Object.keys(state.subscriptions).map(key => `${key} : ${state.subscriptions[key].pat}`))
+
+			} else {
+				// we got no valid path
+				varname = `Custom Variable for Feedback ${feedback.id}`
+				if (feedback.options.variable !== '') {
+					varId = feedback.options.variable
+				} else {
+					varId = feedback.id
+				}
+			}
+			instance.addVariable({
+				id: feedback.id,
+				variableId: varId,
+				name: varname,
+			})
+		},
+		unsubscribe: (feedback: CompanionFeedbackBooleanEvent & FeedbackDeviceCustomOptions) => {
+			instance.removeSubscription(feedback.id)
+			instance.removeSubscription(feedback.id + '-take')
+			instance.removeVariable(feedback.id)
+		}
+	}
 
 	return feedbacks
 }

@@ -3189,10 +3189,9 @@ export function getActions(instance: AWJinstance): any {
 			try {
 				//const obj = JSON.parse(action.options.command) // check if the data is a valid json TODO: further validation
 				const path = instance.AWJtoJsonPath( await instance.parseVariablesInString(action.options.path))
-				if (path.length){
-					device.sendRawWSmessage(
-					`{"channel":"DEVICE","data":{"path":${path},"value":${value}}}`
-					)
+				if (path.length > 1) {
+					device.sendWSmessage(path, value)
+					//device.sendRawWSmessage(`{"channel":"DEVICE","data":{"path":${JSON.stringify(path)},"value":${value}}}`)
 				}
 				if (action.options.xUpdate) {
 					device.sendXupdate()

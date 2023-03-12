@@ -755,7 +755,7 @@ const midraSubscriptions: Record<string, Subscription> = {
  * Combines the common subscriptions with the platform specific ones
  * @param platform 
  */
-export function updateSubscriptions(connection: AWJdevice): void {
+export function initSubscriptions(connection: AWJdevice): void {
 	if (connection.state.platform === 'livepremier') {
 		connection.state.set('LOCAL/subscriptions', { ...livepremierSubscriptions, ...commonSubscriptions })
 	} else if (connection.state.platform === 'alta') {
@@ -791,14 +791,15 @@ function checkForAction(instance: AWJinstance, pat?: string | string[], value?: 
 		return undefined
 	}
 
-	const subscription = Object.keys(subscriptions).find((key) => {
+	const subscriptionlist = Object.keys(subscriptions).filter((key) => {
 		const regexp = new RegExp(subscriptions[key].pat)
 		if (path.match(regexp)) {
 			return true
 		}
 		return false
 	})
-	if (subscription) {
+	let ret: string[] = []
+	subscriptionlist.forEach((subscription) => {
 		// console.log('found subscription', subscription)
 		const subscriptionobj = subscriptions[subscription]
 		if (subscriptionobj.fun && typeof subscriptionobj.fun === 'function') {
@@ -811,12 +812,23 @@ function checkForAction(instance: AWJinstance, pat?: string | string[], value?: 
 				if (update) void instance.updateInstance()
 			}
 		}
-		if (subscriptions?.[subscription]?.fbk) {
-			// console.log('found feedback', subscriptions[subscription].fbk)
-			return subscriptions[subscription].fbk
+		const fbk = subscriptions?.[subscription]?.fbk
+		if (fbk) {
+			// console.log('found feedback', fbk)
+			if (typeof fbk === 'string') {
+				ret.push(fbk)
+			} else if (Array.isArray(fbk))
+			ret = [...ret, ...fbk]
 		}
+	})
+
+	if (ret.length === 1) {
+		return ret[0]
+	} else if (ret.length > 1) {
+		return ret
+	} else {
+		return undefined
 	}
-	return undefined
 }
 
 /**
