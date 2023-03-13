@@ -336,13 +336,19 @@ If you want to record changes for e.g. positions or any other values with a rang
   
 	Available at: LivePremier, Alta 4K, Midra 4K  
 	This Feedback is a very powerful tool, able to visualize almost every parameter not covered by the other feedbacks.  
-	You have to enter an AWJ path and every time the property of that path changes the feedback will be evaluated. You can specify how the result should be interpreted and according to that have different options to generate decision if the feedback is active or not.  
+	You have to enter an AWJ path and every time the property of that path changes the feedback will be evaluated. The path has to point to exactly one property. Wildcards are not allowed with one exeption: instead of the preset designators A and B, you can also use PVW and PGM. If you use PVW or PGM the feedback will always check a property in preview or program.  
+	You can specify how the result should be interpreted and according to that have different options to generate decision if the feedback is active or not.  
 	The actual value does not necessary has to be of the type you want it to be interpreted as. If you e.g. receive a text with the content "12" and interpret it as a number, it will be converted to the number 12. However if you want to interpret a text like "#12" as a number, it will not work.  
 	If you want to use Regular Expression matching for text, the expression has to be entered without the slashes or modifiers.
 	If you interpret the value as an object, at the moment no options are available to do further checks. The feedback will be true if something has been received at all.  
 	There is a checkbox to invert the status of the feedback. That means if you use e.g. the numeric comparison > and invert the result, you have overall a <= comparison.  
 
-	Each time you add a custom feedback also a variable for that feedback will be generated. In that variable you can monitor the value received by that feedback. If you interpret the value as boolean, the value will be inverted according to the option and the variable will hold the result either as a 1 or as a 0.  
+	There is a learn button available to automatically fill the options. In order to automatically fill options you have to do a change in WebRCS to the property you want to monitor. Then press the learn button. The options will be filled with the last received path and value, which are most likely the ones corresponding to your change. Note: some actions in WebRCS do change many parameters, even if it sometimes looks to you as if it was only one parameter. Only the last received change will be learned in the feedback and this may not be the one you are looking for. You should always check the path if it looks like you expect. If you don't get the correct path, then you can't use the learn button and have to refer to the AWJ programmers guide available from Analog Way.
+
+	Each time you add a custom feedback also a variable for that feedback will be generated. In that variable you can monitor the value received by that feedback.  
+	So it is possible to monitor e.g. device temperature, notifications, input status, connected monitors, memory validity...  
+	Despite popular demand it is not possible to monitor the times of timers. The AWJ devices simply do not expose those values.  
+	If you interpret the value as boolean, the value will be inverted according to the option and the variable will hold the result either as a 1 or as a 0.  
 	The variable will be automatically named after your AWJ path (without the $ or @ characters), if you want to have a mofe conveniant name, you can enter it in the variable name option.
 
 

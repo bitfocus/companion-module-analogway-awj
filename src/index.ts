@@ -81,6 +81,7 @@ export class AWJinstance extends InstanceBase<Config> {
 	 * Clean up the instance before it is destroyed.
 	 */
 	public async destroy(): Promise<void> {
+		this.state.clearTimers()
 		this.device.destroy()
 
 		this.log('debug' ,'destroy '+this.id)

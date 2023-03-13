@@ -127,6 +127,7 @@ class State {
 			mappings: [] as MapItem[]
 		},
 	}
+	private lastMsgTimer: NodeJS.Timeout | undefined = undefined
 
 	constructor(instance: AWJinstance) {
 		this.instance = instance
@@ -185,6 +186,28 @@ class State {
 		}
 	}
 
+	/**
+	 * Stores the last message to the state with a locking mechanism. Message is only stored if there not had been an attempt to call this function in the last 800ms
+	 * @param msg The message object
+	 */
+	private storeLastMsg(msg: { path: unknown, value: unknown }): void {
+		if (this.lastMsgTimer && this.lastMsgTimer.hasRef()) { // there is a running timer
+			this.lastMsgTimer.refresh()
+		} else if (this.lastMsgTimer && this.lastMsgTimer.hasRef() === false) { // there is an elapsed timer
+			this.setUnmapped('LOCAL/lastMsg', msg)
+			this.lastMsgTimer.ref()
+			this.lastMsgTimer.refresh()
+		} else { // there is no timer
+			this.setUnmapped('LOCAL/lastMsg', msg)
+			clearTimeout(this.lastMsgTimer)
+			this.lastMsgTimer = setTimeout(() => { this.lastMsgTimer?.unref()  }, 800)
+		}
+	} 
+
+	public clearTimers() {
+		clearTimeout(this.lastMsgTimer)
+	}
+
 	public apply(obj: any): void {
 		if (obj.channel === undefined || obj.data === undefined) return
 		const channel: Channel = obj.channel
@@ -195,8 +218,8 @@ class State {
 			this.setUnmapped(data.path, data.value, this.stateobj[channel])
 			const mapped = mapIn(this.stateobj.LOCAL.mappings, this.concat(channel, data.path), data.value)
 			feedbacks = checkForAction(this.instance, mapped.path, mapped.value)
-			if (channel === 'DEVICE' && !data.path.toString().endsWith(',pp,xUpdate') && !data.path.toString().match(/,status,/)) {
-				this.setUnmapped('LOCAL/lastMsg', { path: data.path, value: data.value }) // TODO: what about mappings
+			if (channel === 'DEVICE' && !data.path.toString().endsWith(',pp,xUpdate')) {
+				this.storeLastMsg({ path: data.path, value: data.value })
 				if (this.instance.isRecording && JSON.stringify(data.value).length <= 132) {
 					const newoptions = { xUpdate: false}
 					newoptions['path'] = this.instance.jsonToAWJpath(data.path)

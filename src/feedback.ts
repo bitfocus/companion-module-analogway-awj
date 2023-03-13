@@ -1008,8 +1008,6 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 			let varId = feedback.options.variable.replace(/[^A-Za-z0-9_-]/g, '')
 			if (varId === '') varId = feedback.options.path.replace(/\//g, '_').replace(/[^A-Za-z0-9_-]/g, '')
 
-			console.log('custom feedback checked', feedback.options);
-			console.log('value', value)
 			if (value === undefined) {
 				instance.setVariableValues({ [varId]: undefined })
 			} else if (value === null) {
@@ -1081,7 +1079,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 			return feedback.options.invert ? !ret : ret
 		},
 		subscribe: (feedback: CompanionFeedbackBooleanEvent & { options: FeedbackDeviceCustomOptions }) => {
-			console.log('subscribe', feedback.id, feedback.options.path);
+			// console.log('subscribe', feedback.id, feedback.options.path);
 			let varId = ''
 			const sub = {}
 			let varname = `Custom Variable for Path ${feedback.options.path}`
@@ -1112,7 +1110,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 					pat: parts.join('/'),
 					fbk: `id:${feedback.id}`
 				}
-				console.log('add sub', sub)
+				// console.log('add sub', sub)
 				instance.addSubscriptions(sub)
 				// console.log('subscriptions', Object.keys(state.subscriptions).map(key => `${key} : ${state.subscriptions[key].pat}`))
 

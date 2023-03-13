@@ -338,7 +338,7 @@ class AWJdevice {
 				data.toString().match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
 				data.toString().match(/"device","system","temperature",/) === null
 			) {
-				console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
+				// console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
 				this.state.apply(JSON.parse(data.toString()))
 			}
 		})
