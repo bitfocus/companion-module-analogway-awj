@@ -3172,23 +3172,23 @@ export function getActions(instance: AWJinstance): any {
 			},
 		],
 		callback: async (action) => {
-			let value = ''
+			let value: string | number | boolean | string[] = ''
 			if (action.options.valuetype === '1') {	
-				value = await instance.parseVariablesInString(`"${action.options.textValue}"`)
+				value = await instance.parseVariablesInString(action.options.textValue)
 			} else if (action.options.valuetype === '2') {
-				value = action.options.numericValue.toString()
+				value = action.options.numericValue
 			} else if (action.options.valuetype === '3') {
-				if (action.options.booleanValue) {
-					value = 'true'
+				if (action.options.booleanValue === true) {
+					value = true
 				} else {
-					value = 'false'
+					value = false
 				}
 			} else if (action.options.valuetype === '4') {
-				value = await instance.parseVariablesInString(action.options.objectValue)
+				value = JSON.parse(await instance.parseVariablesInString(action.options.objectValue))
 			}
 			try {
 				//const obj = JSON.parse(action.options.command) // check if the data is a valid json TODO: further validation
-				const path = instance.AWJtoJsonPath( await instance.parseVariablesInString(action.options.path))
+				const path = instance.AWJtoJsonPath(await instance.parseVariablesInString(action.options.path))
 				if (path.length > 1) {
 					device.sendWSmessage(path, value)
 					//device.sendRawWSmessage(`{"channel":"DEVICE","data":{"path":${JSON.stringify(path)},"value":${value}}}`)

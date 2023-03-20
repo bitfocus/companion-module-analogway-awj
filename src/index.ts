@@ -16,7 +16,7 @@ import { getPresets } from './presets'
 import { initVariables } from './variables'
 import { Subscription } from './subscriptions'
 
-export const regexAWJpath = '^DeviceObject(?:\\/(@items|@props|\\$?[A-Za-z0-9]+))+$'
+export const regexAWJpath = '^DeviceObject(?:\\/(@items|@props|\\$?[A-Za-z0-9_-]+))+$'
 
 /**
  * Companion instance class for the Analog Way AWJ API products.
