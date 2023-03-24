@@ -17,8 +17,11 @@ For a complete explanation see [HELP](HELP.md)
 
 ## :rocket: Version history:
 
+### 2.1.0
+* Feature: Added action Send custom AWJ get command
+
 ### 2.0.1
-* Fix: Send custom AWJ replace command was only working when value type was text
+* Bugfix: Send custom AWJ replace command was only working when value type was text
 
 ### 2.0.0
 * Major: Rewrite for Companion 3.0 compatibility

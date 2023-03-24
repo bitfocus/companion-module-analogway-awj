@@ -3108,7 +3108,7 @@ export function getActions(instance: AWJinstance): any {
 	
 
 	/**
-	 * MARK: Send a custom AWJ command
+	 * MARK: Send custom AWJ replace command
 	 */
 	type Cstawjcmd = {path: string, valuetype: string, textValue: string, numericValue: number, booleanValue: boolean, objectValue: string, xUpdate: boolean}
 	actions['cstawjcmd'] = {
@@ -3233,6 +3233,75 @@ export function getActions(instance: AWJinstance): any {
 			}
 		},
 	} as AWJaction<Cstawjcmd>
+
+	/**
+	 * MARK: Send custom AWJ get command
+	 */
+	type Cstawjgetcmd = {path: string, variableValue: string | null | undefined, variableType: string | null | undefined}
+	actions['cstawjgetcmd'] = {
+		name: 'Send custom AWJ get command',
+		tooltip:
+			'The "op" parameter is always get. Path is not validated, make sure to use only correct syntax! For your convenience you can use PGM and PVW aditionally to A and B to denote a preset',
+		options: [
+			{
+				type: 'textinput',
+				id: 'path',
+				label: 'Path to get',
+				useVariables: true,
+			},
+			{
+				type: 'custom-variable',
+				id: 'variableValue',
+				label: 'Variable to store value'
+			},
+			{
+				type: 'custom-variable',
+				id: 'variableType',
+				label: 'Variable to store type'
+			},
+		],
+		callback: async (action) => {
+			let value: string | number | boolean | object= 'undefined'
+			let type = 'undefined'
+			try {
+				//const obj = JSON.parse(action.options.command) // check if the data is a valid json TODO: further validation
+				const path = instance.AWJtoJsonPath(await instance.parseVariablesInString(action.options.path))
+				if (path.length > 1) {
+					value = state.get(['DEVICE', ...path])
+					type = typeof value
+				}
+				
+			} catch (error) {
+				instance.log('warn', 'Custom command get failed')
+			}
+			if (type === 'null') value = 'null'
+			if (type === 'object') value = JSON.stringify(value)
+			if (type === 'boolean') value = value ? 1 : 0
+			if (typeof value !== 'string') value = value.toString()
+
+			if (typeof action.options.variableValue === 'string') {
+				instance.setCustomVariableValue(action.options.variableValue, value)
+			}
+			if (typeof action.options.variableType === 'string') {
+				instance.setCustomVariableValue(action.options.variableType, type)
+			}
+		},
+		learn: (action) => {
+			const newoptions = {}
+			const lastMsg = state.get('LOCAL/lastMsg')
+			const path = lastMsg.path
+			const value = lastMsg.value
+			if (JSON.stringify(value).length > 132) {
+				return undefined
+			}
+			newoptions['path'] = instance.jsonToAWJpath(path)
+
+			return {
+				...action.options,
+				...newoptions,
+			}
+		},
+	} as AWJaction<Cstawjgetcmd>
 
 	/**
 	 * MARK: Adjust GPO
