@@ -1287,7 +1287,7 @@ down: [
 		presets['Select Widget Source' + source.label] = {
 		type: 'button',
 			name: 'Select Widget Source' + source.label,
-			category: 'Wultiviewer Source',
+			category: 'Multiviewer Source',
 			style: {
 				text: 'MV ' + source.label.replace(/ - /, '\\n'),
 				size: 'auto',
