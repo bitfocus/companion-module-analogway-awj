@@ -56,6 +56,7 @@ export class AWJinstance extends InstanceBase<Config> {
 			this.config.deviceaddr = 'http://192.168.2.140'
 			this.config.macaddress = ''
 			this.config.sync = true
+			this.config.showDisabled = false
 			this.config.color_bright = 16777215
 			this.config.color_dark = 2239025
 			this.config.color_highlight = combineRgb(24,111,173)
@@ -67,6 +68,8 @@ export class AWJinstance extends InstanceBase<Config> {
 			this.config.color_redgrey = combineRgb(79,31,31)		
 			this.saveConfig(this.config)
 		}
+		this.state.setUnmapped('LOCAL/config', this.config)
+
 		this.setFeedbackDefinitions(getFeedbacks(this, this.state)) 
 		this.variables = initVariables(this)
 		this.updateVariableDefinitions(this.variables)
@@ -101,6 +104,7 @@ export class AWJinstance extends InstanceBase<Config> {
 		console.log('Config Update called', this.oldlabel, this.label)
 		const oldconfig = {  ...this.config }
 		this.config = config
+		this.state.setUnmapped('LOCAL/config', this.config)
 
 		if (this.config.deviceaddr !== oldconfig.deviceaddr) {
 			// new address, reconnect
@@ -110,6 +114,7 @@ export class AWJinstance extends InstanceBase<Config> {
 		}
 		if (
 			this.label !== this.oldlabel ||
+			this.config.showDisabled !== oldconfig.showDisabled ||
 			this.config.color_bright !== oldconfig.color_bright || 
 			this.config.color_dark !== oldconfig.color_dark || 
 			this.config.color_green !== oldconfig.color_green || 

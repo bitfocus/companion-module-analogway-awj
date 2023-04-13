@@ -4,6 +4,7 @@ export interface Config {
 	deviceaddr: string
 	macaddress: string
 	sync: boolean
+	showDisabled: boolean
 	color_bright: number
 	color_dark: number
 	color_highlight: number
@@ -40,6 +41,13 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			type: 'checkbox',
 			label: 'Turn sync selection on after connection established',
 			default: true,
+			width: 12,
+		},
+		{
+			id: 'showDisabled',
+			type: 'checkbox',
+			label: 'Show also disabled inputs in dropdowns',
+			default: false,
 			width: 12,
 		},
 		{

@@ -17,6 +17,10 @@ For a complete explanation see [HELP](HELP.md)
 
 ## :rocket: Version history:
 
+### 2.2.0
+* Feature: Added configuration option to also show disabled inputs for programming
+* Fix: corrected typo in presets
+
 ### 2.1.0
 * Feature: Added action Send custom AWJ get command
 

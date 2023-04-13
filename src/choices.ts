@@ -180,7 +180,9 @@ export function getLiveInputArray(state: State, prefix?: string): Choicemeta[] {
 		const items = state.getUnmapped('DEVICE/device/inputList/itemKeys')
 		if (items) {
 			items.forEach((key: string) => {
-				if (state.getUnmapped('DEVICE/device/inputList/items/' + key + '/status/pp/isAvailable') && state.getUnmapped('DEVICE/device/inputList/items/' + key + '/status/pp/isEnabled')) {
+				if (state.getUnmapped('DEVICE/device/inputList/items/' + key + '/status/pp/isAvailable')
+					&& (state.getUnmapped('LOCAL/config/showDisabled') || state.getUnmapped('DEVICE/device/inputList/items/' + key + '/status/pp/isEnabled'))
+				) {
 					ret.push({
 						id: key.replace(/^\w+_/, prefix + '_'),
 						label: state.getUnmapped('DEVICE/device/inputList/items/' + key + '/control/pp/label'),

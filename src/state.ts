@@ -3,6 +3,7 @@ import { checkForAction, Subscription } from './subscriptions'
 import { mapIn, mapOut, MapItem } from './mappings'
 //import { InputValue } from './../../../instance_skel_types'
 import { Choicemeta, getAuxArray, getScreensArray } from './choices'
+import { Config } from './config'
 
 type Channel = 'REMOTE' | 'DEVICE' | 'LOCAL'
 
@@ -124,7 +125,8 @@ class State {
 			layerIds: [],
 			intelligentParams: {},
 			subscriptions: {} as Record<string, Subscription>,
-			mappings: [] as MapItem[]
+			mappings: [] as MapItem[],
+			config: {} as Config
 		},
 	}
 	private lastMsgTimer: NodeJS.Timeout | undefined = undefined
