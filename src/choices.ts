@@ -861,6 +861,12 @@ export function getAudioInputChoicesMidra(state: State): Dropdown<string>[] {
 		if (state.getUnmapped('DEVICE/device/audio/inputList/items/' + input + '/status/pp/isAvailable')){
 			for (const channel of state.get('DEVICE/device/audio/inputList/items/' + input + '/channelList/itemKeys')) {
 				if (state.getUnmapped('DEVICE/device/audio/inputList/items/' + input + '/channelList/items/' + channel + '/status/pp/isAvailable')) {
+					if (inputtype === 'Dante') {
+						ret.push({
+						id: `IN_DANTE_CH${channelstart + parseInt(channel)}`,
+						label: `Dante Channel ${channelstart + parseInt(channel)} (${channelstart+1}-${channelstart+8} / ${channel})`,
+					})
+					} else
 					ret.push({
 						id: input + '_CH' + channel,
 						label: `${inputtype}${inputnum}${inputplug === '' ? '' : ' ' + inputplug} Channel ${channelstart + parseInt(channel)}${inputlabel === '' ? '' : ' - ' + inputlabel}`,

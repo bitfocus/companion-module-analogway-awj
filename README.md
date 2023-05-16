@@ -17,9 +17,15 @@ For a complete explanation see [HELP](HELP.md)
 
 ## :rocket: Version history:
 
+### 2.2.1
+* Bugfix: corrected routing of Dante audio channels at Midra and Alta platforms
+* Bugfix: corrected block routing of audio channels where sometimes not all channels of the block had been processed
+* Brush: improved stability of the global update command
+* Brush: updated dependency yaml from 2.2.1 to 2.2.2
+
 ### 2.2.0
 * Feature: Added configuration option to also show disabled inputs for programming
-* Fix: corrected typo in presets
+* Bugfix: corrected typo in presets
 
 ### 2.1.0
 * Feature: Added action Send custom AWJ get command

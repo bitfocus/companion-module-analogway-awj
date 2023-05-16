@@ -455,7 +455,7 @@ class AWJdevice {
 	sendRawWSmessage(message: string): void {
 		if (this.websocket?.readyState === 1) {
 			this.websocket?.send(message)
-			//this.instance.debug('sendig WS message', this.websocket.url ,message)
+			//console.log('sendig WS message', this.websocket.url ,message)
 		}
 	}
 
@@ -556,11 +556,14 @@ class AWJdevice {
 	sendXupdate(platform?: string): void {
 		if (!platform) platform = this.state.platform
 		const updates: Record<string, string> = {
-			livepremier: '{"channel":"DEVICE","data":{"path":"device/screenGroupList/control/pp/xUpdate","value":true}}',
-			midra: '{"channel":"DEVICE","data":{"path":"device/preset/control/pp/xUpdate","value":true}}'
+			livepremier: '{"channel":"DEVICE","data":{"path":["device","screenGroupList","control","pp","xUpdate"],"value":',
+			midra: '{"channel":"DEVICE","data":{"path":["device","preset","control","pp","xUpdate"],"value":'
 		}
 		const xUpdate = updates[platform]
-		if (xUpdate) this.sendRawWSmessage(xUpdate)
+		if (xUpdate) {
+			this.sendRawWSmessage(xUpdate + 'false}}')
+			this.sendRawWSmessage(xUpdate + 'true}}')
+		}
 
 	}
 

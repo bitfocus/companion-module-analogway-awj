@@ -2394,7 +2394,7 @@ export function getActions(instance: AWJinstance): any {
 			if (outstart > -1 && instart > -1) {
 				const max = Math.min(
 					audioOutputChoices.length - outstart,
-					audioOutputChoices.length - instart,
+					audioInputChoices.length - instart,
 					action.options.blocksize
 				) // since 'None' is input at index 0 no extra test is needed, it is possible to fill all outputs with none
 				for (let s = 0; s < max; s += 1) {
@@ -2426,7 +2426,7 @@ export function getActions(instance: AWJinstance): any {
 			if (outstart > -1 && instart > -1) {
 				const max = Math.min(
 					audioOutputChoices.length - outstart,
-					audioOutputChoices.length - instart,
+					audioInputChoices.length - instart,
 					action.options.blocksize
 				) // since 'None' is input at index 0 no extra test is needed, it is possible to fill all outputs with none
 				const routings: Record<string, string[]> = {}
@@ -2455,6 +2455,8 @@ export function getActions(instance: AWJinstance): any {
 					]
 					device.sendWSmessage(path, routings[block])
 				})
+			} else {
+				console.error("%s can't be found in available outputs or %s can't be found in available inputs", action.options.out, action.options.in)
 			}
 		}
 
