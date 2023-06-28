@@ -145,7 +145,8 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 2,
 			},
 		],
-		callback: (feedback: CompanionFeedbackBooleanEvent & {options: {screens: string[], preset: string, memory: string, unmodified: number}}) => {
+		callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screens: string[], preset: string, memory: string, unmodified: number } }) => {
+			if (state.platform !== 'livepremier' && state.platform !== 'midra') return false // we are not connected
 			const screens = state.platform === 'midra' ? state.getChosenScreens(feedback.options.screens) : state.getChosenScreenAuxes(feedback.options.screens)
 			const presets = feedback.options.preset === 'all' ? ['pgm', 'pvw'] : [feedback.options.preset]
 			const map = {
@@ -257,7 +258,8 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 2,
 			},
 		],
-		callback: (feedback: CompanionFeedbackBooleanEvent & {options:{screens: string[], preset: string, memory: string, unmodified: number}}) => {
+		callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screens: string[], preset: string, memory: string, unmodified: number } }) => {
+			if (state.platform !== 'midra') return false // we are not connected or connected to a livepremier
 			const screens = state.getChosenAuxes(feedback.options.screens)
 			const presets = feedback.options.preset === 'all' ? ['pgm', 'pvw'] : [feedback.options.preset]
 			const map = {
@@ -337,6 +339,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 			},
 		],
 		callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screens: string[], preset: string, source: string } }) => {  
+			if (state.platform !== 'livepremier' && state.platform !== 'midra') return false // we are not connected
 			const checkTally = (): boolean => {
 				// go thru the screens
 				for (const screen of state.getChosenScreenAuxes(feedback.options.screens)) {
@@ -468,7 +471,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 					return state.get(`DEVICE/device/screenGroupList/items/${screen}/status/pp/transition`).match(/FROM/)
 				})) return true
 	
-			if (state.platform === 'midra' && state.getChosenScreenAuxes(feedback.options.screens)
+			else if (state.platform === 'midra' && state.getChosenScreenAuxes(feedback.options.screens)
 				.find((screen: string) => {
 					return state.get(`DEVICE/device/transition/screenList/items/${screen}/status/pp/transition`).match(/FROM/)
 				})) return true
@@ -494,7 +497,8 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				choices: getScreenAuxChoices(instance.state),
 			},
 		],
-		callback: (feedback: CompanionFeedbackBooleanEvent & {options: {screen: string}}) => {
+		callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screen: string } }) => {
+			if (state.platform !== 'livepremier' && state.platform !== 'midra') return false // we are not connected
 			return state.getSelectedScreens()?.includes(feedback.options.screen)
 		},
 	}
@@ -528,7 +532,8 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 'PROGRAM',
 			},
 		],
-		callback: (feedback: CompanionFeedbackBooleanEvent & {options: {screen: string, preset: string}}) => {
+		callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screen: string, preset: string } }) => {
+			if (state.platform !== 'livepremier' && state.platform !== 'midra') return false // we are not connected
 			return state.isLocked(feedback.options.screen, feedback.options.preset)
 		},
 	}
@@ -553,7 +558,8 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				],
 			},
 		],
-		callback: (feedback) => {
+		callback: (feedback: CompanionFeedbackBooleanEvent & { options: { preset: string } }) => {
+			if (state.platform !== 'livepremier' && state.platform !== 'midra') return false // we are not connected
 			let preset: string,
 				vartext = 'PGM'
 			if (state.syncSelection) {
@@ -605,7 +611,8 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 'all',
 			},
 		],
-		callback: (feedback) => {
+		callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screen: string, layer: string, preset: string } }) => {
+			if (state.platform !== 'livepremier' && state.platform !== 'midra') return false // we are not connected
 			let pst = true
 			if (feedback.options.preset != 'all') {
 				let preset: string
@@ -652,7 +659,8 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: getWidgetChoices(state)[0]?.id,
 			},
 		],
-		callback: (feedback) => {
+		callback: (feedback: CompanionFeedbackBooleanEvent & { options: { widget: string } }) => {
+			if (state.platform !== 'livepremier' && state.platform !== 'midra') return false // we are not connected
 			const mvw = feedback.options.widget?.toString().split(':')[0] ?? '1'
 			const widget = feedback.options.widget?.toString().split(':')[1] ?? '0'
 			let widgetSelection: {widgetKey: string, multiviewerKey: string}[] = []
@@ -685,7 +693,8 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: getLiveInputChoices(state)[0]?.id,
 			},
 		],
-		callback: (feedback) => {
+		callback: (feedback: CompanionFeedbackBooleanEvent & { options: { input: string } }) => {
+			if (state.platform !== 'livepremier' && state.platform !== 'midra') return false // we are not connected
 			const input = feedback.options.input?.toString().replace('LIVE', 'IN') || ''
 			const freeze = state.get('DEVICE/device/inputList/items/' + input + '/control/pp/freeze')
 			if (freeze) {
@@ -727,7 +736,8 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 'RUNNING',
 			},
 		],
-		callback: (feedback) => {
+		callback: (feedback: CompanionFeedbackBooleanEvent & { options: { timer: string, state: string } }) => {
+			if (state.platform !== 'livepremier' && state.platform !== 'midra') return false // we are not connected
 			return (
 				state.get('DEVICE/device/timerList/items/' + feedback.options.timer + '/status/pp/state') ===
 				feedback.options.state
@@ -765,7 +775,8 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 1,
 			},
 		],
-		callback: (feedback) => {
+		callback: (feedback: CompanionFeedbackBooleanEvent & { options: { gpo: number, state: number } }) => {
+			if (state.platform !== 'livepremier' && state.platform !== 'midra') return false // we are not connected
 			const val = feedback.options.state === 1 ? true : false
 			return (
 				state.get([
@@ -813,7 +824,8 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 1,
 			},
 		],
-		callback: (feedback) => {
+		callback: (feedback: CompanionFeedbackBooleanEvent & { options: { gpi: number, state: number } }) => {
+			if (state.platform !== 'livepremier' && state.platform !== 'midra') return false // we are not connected
 			const val = feedback.options.state === 1 ? true : false
 			return (
 				state.get([
@@ -852,7 +864,8 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				default: 'LIVE',
 			},
 		],
-		callback: (feedback) => {
+		callback: (feedback: CompanionFeedbackBooleanEvent & { options: { state: string } }) => {
+			if (state.platform !== 'livepremier' && state.platform !== 'midra') return false // we are not connected
 			return (
 				state.getUnmapped([
 					'DEVICE',
@@ -965,7 +978,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				tooltip: 'Can be left empty, if filled this will be the name of the variable with the value of the feedback.\nOnly letters, numbers, underscore and minus is allowed.'
 			}
 		],
-		learn: (feedback) => {
+		learn: (feedback: CompanionFeedbackBooleanEvent & { options: FeedbackDeviceCustomOptions }) => {
 			const newoptions = {
 			}
 			const lastMsg = state.get('LOCAL/lastMsg')
@@ -999,6 +1012,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 			}
 		},
 		callback: (feedback: CompanionFeedbackBooleanEvent & { options: FeedbackDeviceCustomOptions }) => {
+			if (state.platform !== 'livepremier' && state.platform !== 'midra') return false // we are not connected
 			let ret = false
 			const path = instance.AWJtoJsonPath(feedback.options.path)
 			if (path.length < 2) {

@@ -3,6 +3,7 @@ import {
 	choicesBackgroundSources,
 	choicesBackgroundSourcesPlusNone,
 	choicesForegroundImagesSource,
+	getAuxArray,
 	getAuxMemoryArray,
 	getLayerChoices,
 	getLayerMemoryArray,
@@ -11,6 +12,7 @@ import {
 	getMultiviewerArray,
 	getMultiviewerMemoryArray,
 	getScreenMemoryArray,
+	getScreensArray,
 	getScreensAuxArray,
 	getSourceChoices,
 	getTimerChoices,
@@ -25,7 +27,14 @@ import {
 	splitRgb
 } from '@companion-module/base'
 
-type Dropdown<t> = {id: t, label: string}
+type Dropdown<t> = { id: t, label: string }
+
+function inverseColorBW(color: number): number {
+	return (0.2126 * splitRgb(color).r + 0.7152 * splitRgb(color).g + 0.0722* splitRgb(color).b) > 127
+	? 0x000000
+	: 0xffffff
+}
+
 
 export function getPresets(instance: AWJinstance): CompanionPresetDefinitions {
 	const state = instance.state
@@ -39,10 +48,6 @@ export function getPresets(instance: AWJinstance): CompanionPresetDefinitions {
 	for (const memory of getMasterMemoryArray(state)) {
 		// const label = state.get(['DEVICE', 'device', 'presetBank', 'bankList', 'items', memory, 'control', 'pp', 'label'])
 		const bgcolor = parseInt(state.get(['REMOTE', 'banks', 'master', 'items', memory.id, 'color'])?.slice(1), 16)
-		const color =
-			(splitRgb(bgcolor).r + splitRgb(bgcolor).g + splitRgb(bgcolor).b) / 3 > 127
-				? config.color_dark
-				: config.color_bright
 
 		presets[`Load Master Memory ${memory.id}`] = {
 		type: 'button',
@@ -51,7 +56,7 @@ export function getPresets(instance: AWJinstance): CompanionPresetDefinitions {
 			style: {
 				text: `MM${memory.id}\\n$(${ilabel}:masterMemory${memory.id}label)`,
 				size: 'auto',
-				color,
+				color: inverseColorBW(bgcolor),
 				bgcolor,
 			},
 			steps: [
@@ -77,6 +82,7 @@ export function getPresets(instance: AWJinstance): CompanionPresetDefinitions {
 						preset: 'pvw',
 					},
 					style: {
+						color: inverseColorBW(config.color_green),
 						bgcolor: config.color_green,
 					},
 				},
@@ -87,6 +93,7 @@ export function getPresets(instance: AWJinstance): CompanionPresetDefinitions {
 						preset: 'pgm',
 					},
 					style: {
+						color: inverseColorBW(config.color_red),
 						bgcolor: config.color_red,
 					},
 				},
@@ -94,178 +101,188 @@ export function getPresets(instance: AWJinstance): CompanionPresetDefinitions {
 		}
 	}
 	// MARK: Screen Memories
-	for (const memory of getScreenMemoryArray(state)) {
-		// const label = state.get(['DEVICE', 'device', 'presetBank', 'bankList', 'items', memory, 'control', 'pp', 'label'])
-		const bgcolor = parseInt(state.get(['REMOTE', 'banks', 'screen', 'items', memory.id, 'color'])?.slice(1), 16)
-		const color =
-			(splitRgb(bgcolor).r + splitRgb(bgcolor).g + splitRgb(bgcolor).b) / 3 > 127
-				? config.color_dark
-				: config.color_bright
+	for (const screen of
+		state.platform === 'livepremier'
+			? [{ id: 'sel', label: 'Selected', index: '0' }, ...getScreensArray(state), ...getAuxArray(state)]
+			: [{ id: 'sel', label: 'Selected', index: '0' }, ...getScreensArray(state)]
+	) {
+		for (const memory of getScreenMemoryArray(state)) {
+			// const label = state.get(['DEVICE', 'device', 'presetBank', 'bankList', 'items', memory, 'control', 'pp', 'label'])
+			const bgcolor = parseInt(state.get(['REMOTE', 'banks', 'screen', 'items', memory.id, 'color'])?.slice(1), 16)
 
-		presets[`Load Screen Memory ${memory.id}`] = {
-		type: 'button',
-			name: `Load Screen Memory ${memory.id}`,
-			category: 'Screen Memories',
-			style: {
-				text: `SM${memory.id}\\n$(${ilabel}:screenMemory${memory.id}label)`,
-				size: 'auto',
-				color,
-				bgcolor,
-			},
-			steps: [
-{
-down: [
-				{
-					actionId: 'deviceScreenMemory',
-					options: {
-						screen: ['sel'],
-						preset: 'sel',
-						memory: memory.id,
-						selectScreens: false,
-					},
+			presets[`LoadScreenMemory_${memory.id}_to_${screen.id}`] = {
+				type: 'button',
+				name: `Load Screen Memory ${memory.id} into screen ${screen.id}${screen.label ? ' ('+screen.label+')' : ''}`,
+				category: `Screen Memories into ${screen.id != 'sel' ? screen.id : 'Selection'}`,
+				style: {
+					text: `SM${memory.id}${screen.id != 'sel' ? ' '+screen.id : ''}\\n$(${ilabel}:screenMemory${memory.id}label)`,
+					size: 'auto',
+					color: inverseColorBW(bgcolor),
+					bgcolor,
 				},
-			],
-			up: [],
-},
-],
-			feedbacks: [
-				{
-					feedbackId: 'deviceScreenMemory',
-					options: {
-						screens: ['all'],
-						preset: 'pvw',
-						memory: memory.id,
-						unmodified: 0,
+				steps: [
+					{
+						down: [
+							{
+								actionId: 'deviceScreenMemory',
+								options: {
+									screens: [screen.id],
+									preset: screen.id === 'sel' ? 'sel' : 'pvw',
+									memory: memory.id,
+									selectScreens: false,
+								},
+							},
+						],
+						up: [],
 					},
-					style: {
-						bgcolor: config.color_green,
+				],
+				feedbacks: [
+					{
+						feedbackId: 'deviceScreenMemory',
+						options: {
+							screens: screen.id != 'sel' ? [screen.id] : ['all'],
+							preset: 'pvw',
+							memory: memory.id,
+							unmodified: 0,
+						},
+						style: {
+							color: inverseColorBW(config.color_green),
+							bgcolor: config.color_green,
+						},
 					},
-				},
-				{
-					feedbackId: 'deviceScreenMemory',
-					options: {
-						screens: ['all'],
-						preset: 'pgm',
-						memory: memory.id,
-						unmodified: 0,
+					{
+						feedbackId: 'deviceScreenMemory',
+						options: {
+							screens: screen.id != 'sel' ? [screen.id] : ['all'],
+							preset: 'pgm',
+							memory: memory.id,
+							unmodified: 0,
+						},
+						style: {
+							color: inverseColorBW(config.color_red),
+							bgcolor: config.color_red,
+						},
 					},
-					style: {
-						bgcolor: config.color_red,
+					{
+						feedbackId: 'deviceScreenMemory',
+						options: {
+							screens: screen.id != 'sel' ? [screen.id] : ['all'],
+							preset: 'pvw',
+							memory: memory.id,
+							unmodified: 1,
+						},
+						style: {
+							color: inverseColorBW(config.color_greendark),
+							bgcolor: config.color_greendark,
+						},
 					},
-				},
-				{
-					feedbackId: 'deviceScreenMemory',
-					options: {
-						screens: ['all'],
-						preset: 'pvw',
-						memory: memory.id,
-						unmodified: 1,
+					{
+						feedbackId: 'deviceScreenMemory',
+						options: {
+							screens: screen.id != 'sel' ? [screen.id] : ['all'],
+							preset: 'pgm',
+							memory: memory.id,
+							unmodified: 1,
+						},
+						style: {
+							color: inverseColorBW(config.color_reddark),
+							bgcolor: config.color_reddark,
+						},
 					},
-					style: {
-						bgcolor: config.color_greendark,
-					},
-				},
-				{
-					feedbackId: 'deviceScreenMemory',
-					options: {
-						screens: ['all'],
-						preset: 'pgm',
-						memory: memory.id,
-						unmodified: 1,
-					},
-					style: {
-						bgcolor: config.color_reddark,
-					},
-				},
-			],
+				],
+			}
 		}
 	}
 
 	// MARK: Aux Memories
-	if (state.platform === 'midra') for (const memory of getAuxMemoryArray(state)) {
-		// const label = state.get(['DEVICE', 'device', 'presetBank', 'bankList', 'items', memory, 'control', 'pp', 'label'])
-		const bgcolor = parseInt(state.get(['REMOTE', 'banks', 'screen', 'items', memory.id, 'color'])?.slice(1), 16)
-		const color =
-			(splitRgb(bgcolor).r + splitRgb(bgcolor).g + splitRgb(bgcolor).b) / 3 > 127
-				? config.color_dark
-				: config.color_bright
+	if (state.platform === 'midra') {
+		for (const screen of [{ id: 'sel', label: 'Selected', index: '0' }, ...getAuxArray(state)]) {
+			for (const memory of getAuxMemoryArray(state)) {
+				// const label = state.get(['DEVICE', 'device', 'presetBank', 'bankList', 'items', memory, 'control', 'pp', 'label'])
+				const bgcolor = parseInt(state.get(['REMOTE', 'banks', 'screen', 'items', memory.id, 'color'])?.slice(1), 16)
 
-		presets[`Load Aux Memory ${memory.id}`] = {
-		type: 'button',
-			name: `Load Aux Memory ${memory.id}`,
-			category: 'Aux Memories',
-			style: {
-				text: `AM${memory.id}\\n$(${ilabel}:auxMemory${memory.id}label)`,
-				size: 'auto',
-				color,
-				bgcolor,
-			},
-			steps: [
-{
-down: [
-				{
-					actionId: 'deviceAuxMemory',
-					options: {
-						screens: ['sel'],
-						preset: 'sel',
-						memory: memory.id,
-						selectScreens: false,
-					},
-				},
-			],
-			up: [],
-},
-],
-			feedbacks: [
-				{
-					feedbackId: 'deviceAuxMemory',
-					options: {
-						screens: ['all'],
-						preset: 'pvw',
-						memory: memory.id,
-						unmodified: 0,
-					},
+				presets[`LoadAuxMemory_${memory.id}_${screen.id}`] = {
+					type: 'button',
+					name: `Load Aux Memory ${memory.id} into auxscreen ${screen.id}${screen.label ? ' ('+screen.label+')' : ''}`,
+					category: `Aux Memories into ${screen.id != 'sel' ? screen.id : 'Selection'}`,
 					style: {
-						bgcolor: config.color_green,
+						text: `AM${memory.id}${screen.id != 'sel' ? ' '+screen.id : ''}\\n$(${ilabel}:auxMemory${memory.id}label)`,
+						size: 'auto',
+						color: inverseColorBW(bgcolor),
+						bgcolor,
 					},
-				},
-				{
-					feedbackId: 'deviceAuxMemory',
-					options: {
-						screens: ['all'],
-						preset: 'pgm',
-						memory: memory.id,
-						unmodified: 0,
-					},
-					style: {
-						bgcolor: config.color_red,
-					},
-				},
-				{
-					feedbackId: 'deviceAuxMemory',
-					options: {
-						screens: ['all'],
-						preset: 'pvw',
-						memory: memory.id,
-						unmodified: 1,
-					},
-					style: {
-						bgcolor: config.color_greendark,
-					},
-				},
-				{
-					feedbackId: 'deviceAuxMemory',
-					options: {
-						screens: ['all'],
-						preset: 'pgm',
-						memory: memory.id,
-						unmodified: 1,
-					},
-					style: {
-						bgcolor: config.color_reddark,
-					},
-				},
-			],
+					steps: [
+						{
+							down: [
+								{
+									actionId: 'deviceAuxMemory',
+									options: {
+										screens: ['sel'],
+										preset: screen.id === 'sel' ? 'sel' : 'pvw',
+										memory: memory.id,
+										selectScreens: false,
+									},
+								},
+							],
+							up: [],
+						},
+					],
+					feedbacks: [
+						{
+							feedbackId: 'deviceAuxMemory',
+							options: {
+								screens: screen.id != 'sel' ? [screen.id] : ['all'],
+								preset: 'pvw',
+								memory: memory.id,
+								unmodified: 0,
+							},
+							style: {
+								color: inverseColorBW(config.color_green),
+								bgcolor: config.color_green,
+							},
+						},
+						{
+							feedbackId: 'deviceAuxMemory',
+							options: {
+								screens: screen.id != 'sel' ? [screen.id] : ['all'],
+								preset: 'pgm',
+								memory: memory.id,
+								unmodified: 0,
+							},
+							style: {
+								color: inverseColorBW(config.color_red),
+								bgcolor: config.color_red,
+							},
+						},
+						{
+							feedbackId: 'deviceAuxMemory',
+							options: {
+								screens: screen.id != 'sel' ? [screen.id] : ['all'],
+								preset: 'pvw',
+								memory: memory.id,
+								unmodified: 1,
+							},
+							style: {
+								color: inverseColorBW(config.color_greendark),
+								bgcolor: config.color_greendark,
+							},
+						},
+						{
+							feedbackId: 'deviceAuxMemory',
+							options: {
+								screens: screen.id != 'sel' ? [screen.id] : ['all'],
+								preset: 'pgm',
+								memory: memory.id,
+								unmodified: 1,
+							},
+							style: {
+								color: inverseColorBW(config.color_reddark),
+								bgcolor: config.color_reddark,
+							},
+						},
+					],
+				}
+			}
 		}
 	}
 
@@ -273,10 +290,6 @@ down: [
 	for (const memory of getLayerMemoryArray(state)) {
 		// const label = state.get(['DEVICE', 'device', 'layerBank', 'bankList', 'items', memory, 'control', 'pp', 'label'])
 		const bgcolor = parseInt(state.get(['REMOTE', 'banks', 'layer', 'items', memory, 'color'])?.slice(1), 16)
-		const color =
-			(splitRgb(bgcolor).r + splitRgb(bgcolor).g + splitRgb(bgcolor).b) / 3 > 127
-				? config.color_dark
-				: config.color_bright
 
 		presets[`Load Layer Memory${memory}`] = {
 		type: 'button',
@@ -285,7 +298,7 @@ down: [
 			style: {
 				text: `LM${memory}\\n$(${ilabel}:layerMemory${memory}label)`,
 				size: 'auto',
-				color,
+				color: inverseColorBW(bgcolor),
 				bgcolor,
 			},
 			steps: [
@@ -340,6 +353,7 @@ down: [
 					screens: ['all'],
 				},
 				style: {
+					color: inverseColorBW(config.color_red),
 					bgcolor: config.color_red,
 				},
 			},
@@ -377,6 +391,7 @@ down: [
 					screens: ['all'],
 				},
 				style: {
+					color: inverseColorBW(config.color_red),
 					bgcolor: config.color_red,
 				},
 			},
@@ -415,6 +430,7 @@ down: [
 						screens: [screen],
 					},
 					style: {
+						color: inverseColorBW(config.color_red),
 						bgcolor: config.color_red,
 					},
 				},
@@ -536,6 +552,7 @@ down: [
 				options: {},
 				style: {
 					text: `$(${ilabel}:connectionLabel)\\n🔗\\nSynced`,
+					color: inverseColorBW(config.color_highlight),
 					bgcolor: config.color_highlight,
 				},
 			},
@@ -574,6 +591,7 @@ down: [
 				},
 				style: {
 					text: 'PGM\\n⬆︎',
+					color: inverseColorBW(config.color_red),
 					bgcolor: config.color_red,
 				},
 			},
@@ -610,6 +628,7 @@ down: [
 				options: {},
 				style: {
 					text: 'Preset\\nToggle\\non',
+					color: inverseColorBW(config.color_highlight),
 					bgcolor: config.color_highlight,
 				},
 			},
@@ -684,6 +703,7 @@ down: [
 						screen: screen,
 					},
 					style: {
+						color: inverseColorBW(config.color_highlight),
 						bgcolor: config.color_highlight,
 					},
 				},
@@ -720,6 +740,7 @@ down: [
 						screen: screen,
 					},
 					style: {
+						color: inverseColorBW(config.color_highlight),
 						bgcolor: config.color_highlight,
 					},
 				},
@@ -757,6 +778,7 @@ down: [
 						preset: 'all',
 					},
 					style: {
+						color: inverseColorBW(config.color_highlight),
 						bgcolor: config.color_highlight,
 					},
 				},
@@ -800,6 +822,7 @@ down: [
 					preset: 'PROGRAM',
 				},
 				style: {
+					color: inverseColorBW(config.color_redgrey),
 					bgcolor: config.color_redgrey,
 					png64:
 						'iVBORw0KGgoAAAANSUhEUgAAADcAAAA3CAYAAACo29JGAAABSklEQVRoge2a2w7DIAhAZdl3N60/zp5MjBNLBdwknKe19cIZLdVlKTkGrCc4jgOpazln0/lNBh8JUViIqg44I9WiKaky0J0UwHgaxO/uAADXdYnieol6J7lYacNp9xSxHMVMwHV77KXzaQySzlTWmiB5gRB9JM+geuZKkIjIFivt2zHEscx27GWtFmvOd+fp3Xq9MWazp565JgNAiZXr2vPXqMm1cXIDb9uVL0fD26xa/gMhtyshtyshtyshtyshtyuu5YarU40ffKwZbYdcZ+7NbWi89WKBiAkA2Dt815kLuV1hP3NSzvOE6vOSKrwkc7VY79gKczlKZIWgqdydgLWg64IScrPcVUXrqrmioHQFVrwOVr0KcHRsRbzndiXkJLhdofyakJsl1paGuJYz3YmvWolQuM6cazn2banwPzMVnsThOnOu5VzzARnBeIM8tq0ZAAAAAElFTkSuQmCC',
@@ -845,6 +868,7 @@ down: [
 						preset: 'PROGRAM',
 					},
 					style: {
+						color: inverseColorBW(config.color_redgrey),
 						bgcolor: config.color_redgrey,
 						png64:
 							'iVBORw0KGgoAAAANSUhEUgAAADcAAAA3CAYAAACo29JGAAABSklEQVRoge2a2w7DIAhAZdl3N60/zp5MjBNLBdwknKe19cIZLdVlKTkGrCc4jgOpazln0/lNBh8JUViIqg44I9WiKaky0J0UwHgaxO/uAADXdYnieol6J7lYacNp9xSxHMVMwHV77KXzaQySzlTWmiB5gRB9JM+geuZKkIjIFivt2zHEscx27GWtFmvOd+fp3Xq9MWazp565JgNAiZXr2vPXqMm1cXIDb9uVL0fD26xa/gMhtyshtyshtyshtyshtyuu5YarU40ffKwZbYdcZ+7NbWi89WKBiAkA2Dt815kLuV1hP3NSzvOE6vOSKrwkc7VY79gKczlKZIWgqdydgLWg64IScrPcVUXrqrmioHQFVrwOVr0KcHRsRbzndiXkJLhdofyakJsl1paGuJYz3YmvWolQuM6cazn2banwPzMVnsThOnOu5VzzARnBeIM8tq0ZAAAAAElFTkSuQmCC',
@@ -890,6 +914,7 @@ down: [
 					preset: 'PREVIEW',
 				},
 				style: {
+					color: inverseColorBW(config.color_greengrey),
 					bgcolor: config.color_greengrey,
 					png64:
 						'iVBORw0KGgoAAAANSUhEUgAAADcAAAA3CAYAAACo29JGAAABSklEQVRoge2a2w7DIAhAZdl3N60/zp5MjBNLBdwknKe19cIZLdVlKTkGrCc4jgOpazln0/lNBh8JUViIqg44I9WiKaky0J0UwHgaxO/uAADXdYnieol6J7lYacNp9xSxHMVMwHV77KXzaQySzlTWmiB5gRB9JM+geuZKkIjIFivt2zHEscx27GWtFmvOd+fp3Xq9MWazp565JgNAiZXr2vPXqMm1cXIDb9uVL0fD26xa/gMhtyshtyshtyshtyshtyuu5YarU40ffKwZbYdcZ+7NbWi89WKBiAkA2Dt815kLuV1hP3NSzvOE6vOSKrwkc7VY79gKczlKZIWgqdydgLWg64IScrPcVUXrqrmioHQFVrwOVr0KcHRsRbzndiXkJLhdofyakJsl1paGuJYz3YmvWolQuM6cazn2banwPzMVnsThOnOu5VzzARnBeIM8tq0ZAAAAAElFTkSuQmCC',
@@ -935,6 +960,7 @@ down: [
 						preset: 'PREVIEW',
 					},
 					style: {
+						color: inverseColorBW(config.color_greengrey),
 						bgcolor: config.color_greengrey,
 						png64:
 							'iVBORw0KGgoAAAANSUhEUgAAADcAAAA3CAYAAACo29JGAAABSklEQVRoge2a2w7DIAhAZdl3N60/zp5MjBNLBdwknKe19cIZLdVlKTkGrCc4jgOpazln0/lNBh8JUViIqg44I9WiKaky0J0UwHgaxO/uAADXdYnieol6J7lYacNp9xSxHMVMwHV77KXzaQySzlTWmiB5gRB9JM+geuZKkIjIFivt2zHEscx27GWtFmvOd+fp3Xq9MWazp565JgNAiZXr2vPXqMm1cXIDb9uVL0fD26xa/gMhtyshtyshtyshtyshtyuu5YarU40ffKwZbYdcZ+7NbWi89WKBiAkA2Dt815kLuV1hP3NSzvOE6vOSKrwkc7VY79gKczlKZIWgqdydgLWg64IScrPcVUXrqrmioHQFVrwOVr0KcHRsRbzndiXkJLhdofyakJsl1paGuJYz3YmvWolQuM6cazn2banwPzMVnsThOnOu5VzzARnBeIM8tq0ZAAAAAElFTkSuQmCC',
@@ -982,13 +1008,14 @@ down: [
 							preset: 'all',
 						},
 						style: {
+							color: inverseColorBW(config.color_highlight),
 							bgcolor: config.color_highlight,
 						},
 					},
 				],
 			}
 			presets['Toggle Layer' + layer.label + ' of ' + screen.id] = {
-		type: 'button',
+				type: 'button',
 				name: 'Toggle Layer' + layer.label + ' of ' + screen.id,
 				category: 'Select Layers',
 				style: {
@@ -1022,6 +1049,7 @@ down: [
 							preset: 'all',
 						},
 						style: {
+							color: inverseColorBW(config.color_highlight),
 							bgcolor: config.color_highlight,
 						},
 					},
@@ -1048,18 +1076,18 @@ down: [
 				bgcolor: config.color_dark,
 			},
 			steps: [
-{
-down: [
 				{
-					actionId: 'deviceSelectSource',
-					options: {
-						method: 'sel',
-					},
+					down: [
+						{
+							actionId: 'deviceSelectSource',
+							options: {
+								method: 'sel',
+							},
+						},
+					],
+					up: [],
 				},
 			],
-			up: [],
-},
-],
 			feedbacks: [
 				{
 					feedbackId: 'deviceSourceTally',
@@ -1069,6 +1097,7 @@ down: [
 						source: input.id,
 					},
 					style: {
+						color: inverseColorBW(config.color_green),
 						bgcolor: config.color_green,
 					},
 				},
@@ -1080,6 +1109,7 @@ down: [
 						source: input.id,
 					},
 					style: {
+						color: inverseColorBW(config.color_red),
 						bgcolor: config.color_red,
 					},
 				},
@@ -1153,6 +1183,7 @@ down: [
 						input: input.id,
 					},
 					style: {
+						color: 0xffffff,
 						bgcolor: combineRgb(0, 0, 100),
 						png64:
 							'iVBORw0KGgoAAAANSUhEUgAAADcAAAA3AQMAAACSFUAFAAABS2lUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS42LWMxMzggNzkuMTU5ODI0LCAyMDE2LzA5LzE0LTAxOjA5OjAxICAgICAgICAiPgogPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIi8+CiA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgo8P3hwYWNrZXQgZW5kPSJyIj8+IEmuOgAAAARnQU1BAACxjwv8YQUAAAABc1JHQgCuzhzpAAAABlBMVEUAAABfXKLsUQDeAAAAAXRSTlMAQObYZgAAAM9JREFUGNONkTEOwjAMRX9UpDC1nIBwEKRyJCMGmNogDsCRyMY1wg26ESTUYLc1sEGWp1h2/vcPABDG84MrWoxXOgxcUycol7tbEFb748Aim4HmKZyXSCZsUFpQwQ1OeIqorsxzQHFnXgCTmT3PtczErD1ZEXCBXJR6RzXXzSNR3wA2NrvkPCpf52gDZnDZw3Oj7Ue/xfObM9gMSL/LgfttbHPH8+bRb+U9tIla0XVx1FP9yY/6U7/qX/fR/XRf3f+Th+Yz5aX5vfPUfP/6jxdhImTMvNrBOgAAAABJRU5ErkJggg==',
@@ -1168,10 +1199,6 @@ down: [
 	for (const multiviewer of getMultiviewerArray(state)) {
 		for (const memory of getMultiviewerMemoryArray(state)) {
 			const bgcolor = parseInt(state.get(['REMOTE', 'banks', 'monitoring', 'items', memory.id, 'color'])?.slice(1), 16)
-			const color =
-				(splitRgb(bgcolor).r + splitRgb(bgcolor).g + splitRgb(bgcolor).b) / 3 > 127
-					? config.color_dark
-					: config.color_bright
 
 			presets['Load VM' + memory.id + multimulti ? ' on Multiviewer ' + multiviewer : ''] = {
 		type: 'button',
@@ -1180,7 +1207,7 @@ down: [
 				style: {
 					text: (multimulti ? `MV${multiviewer} `: '') +  `VM${memory.id}\\n$(${ilabel}:multiviewerMemory${memory.id}label)`,
 					size: 'auto',
-					color,
+					color: inverseColorBW(bgcolor),
 					bgcolor,
 				},
 				steps: [
@@ -1215,19 +1242,19 @@ down: [
 				bgcolor: config.color_dark,
 			},
 			steps: [
-{
-down: [
 				{
-					actionId: 'remoteMultiviewerSelectWidget',
-					options: {
-						widget: widget.id,
-						sel: 'selectExclusive',
-					},
+				down: [
+								{
+									actionId: 'remoteMultiviewerSelectWidget',
+									options: {
+										widget: widget.id,
+										sel: 'selectExclusive',
+									},
+								},
+							],
+							up: [],
 				},
 			],
-			up: [],
-},
-],
 			feedbacks: [
 				{
 					feedbackId: 'remoteWidgetSelection',
@@ -1235,6 +1262,7 @@ down: [
 						widget: widget.id,
 					},
 					style: {
+						color: inverseColorBW(config.color_highlight),
 						bgcolor: config.color_highlight,
 					},
 				},
@@ -1255,19 +1283,19 @@ down: [
 				bgcolor: config.color_dark,
 			},
 			steps: [
-{
-down: [
 				{
-					actionId: 'remoteMultiviewerSelectWidget',
-					options: {
-						widget: widget.id,
-						sel: 'toggle',
-					},
+					down: [
+						{
+							actionId: 'remoteMultiviewerSelectWidget',
+							options: {
+								widget: widget.id,
+								sel: 'toggle',
+							},
+						},
+					],
+					up: [],
 				},
 			],
-			up: [],
-},
-],
 			feedbacks: [
 				{
 					feedbackId: 'remoteWidgetSelection',
@@ -1295,19 +1323,19 @@ down: [
 				bgcolor: config.color_dark,
 			},
 			steps: [
-{
-down: [
 				{
-					actionId: 'deviceMultiviewerSource',
-					options: {
-						widget: 'sel',
-						source: source.id,
-					},
+					down: [
+						{
+							actionId: 'deviceMultiviewerSource',
+							options: {
+								widget: 'sel',
+								source: source.id,
+							},
+						},
+					],
+					up: [],
 				},
 			],
-			up: [],
-},
-],
 			feedbacks: [],
 		}
 	}
@@ -1325,19 +1353,19 @@ down: [
 				bgcolor: config.color_dark,
 			},
 			steps: [
-{
-down: [
 				{
-					actionId: 'deviceTimerTransport',
-					options: {
-						timer: timer.id,
-						cmd: 'tgl_start_pause',
-					},
+					down: [
+						{
+							actionId: 'deviceTimerTransport',
+							options: {
+								timer: timer.id,
+								cmd: 'tgl_start_pause',
+							},
+						},
+					],
+					up: [],
 				},
 			],
-			up: [],
-},
-],
 			feedbacks: [
 				{
 					feedbackId: 'timerState',
@@ -1346,6 +1374,7 @@ down: [
 						state: 'RUNNING'
 					},
 					style: {
+						color: inverseColorBW(config.color_green),
 						bgcolor: config.color_green,
 						text: timer.label.replace(/\D/g, '') + ' ⏸',
 					},
@@ -1357,6 +1386,7 @@ down: [
 						state: 'PAUSED'
 					},
 					style: {
+						color: inverseColorBW(config.color_greendark),
 						bgcolor: config.color_greendark,
 						text: timer.label.replace(/\D/g, '') + ' ⏵',
 					},
@@ -1368,6 +1398,7 @@ down: [
 						state: 'IDLE'
 					},
 					style: {
+						color: inverseColorBW(config.color_greendark),
 						bgcolor: config.color_greendark,
 						text: timer.label.replace(/\D/g, '') + ' ⏵',
 					},
@@ -1396,19 +1427,19 @@ down: [
 				bgcolor: config.color_dark,
 			},
 			steps: [
-{
-down: [
 				{
-					actionId: 'deviceTimerTransport',
-					options: {
-						timer: timer.id,
-						cmd: 'stop',
-					},
+					down: [
+						{
+							actionId: 'deviceTimerTransport',
+							options: {
+								timer: timer.id,
+								cmd: 'stop',
+							},
+						},
+					],
+					up: [],
 				},
 			],
-			up: [],
-},
-],
 			feedbacks: [
 				{
 					feedbackId: 'timerState',
@@ -1428,6 +1459,7 @@ down: [
 						state: 'PAUSED'
 					},
 					style: {
+						color: inverseColorBW(config.color_greendark),
 						bgcolor: config.color_greendark,
 					},
 				},
@@ -1469,18 +1501,18 @@ down: [
 				bgcolor: config.color_dark,
 			},
 			steps: [
-{
-down: [
 				{
-					actionId: 'deviceStreamControl',
-					options: {
-						stream: 'toggle',
-					},
+					down: [
+						{
+							actionId: 'deviceStreamControl',
+							options: {
+								stream: 'toggle',
+							},
+						},
+					],
+					up: [],
 				},
 			],
-			up: [],
-},
-],
 			feedbacks: [
 				{
 					feedbackId: 'deviceStreaming',
