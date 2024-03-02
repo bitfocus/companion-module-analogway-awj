@@ -674,7 +674,7 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 	}
 
 	// MARK: deviceInputFreeze
-	if (state.platform === 'livepremier') feedbacks['deviceInputFreeze'] = {
+	feedbacks['deviceInputFreeze'] = {
 		type: 'boolean',
 		name: 'Input Freeze',
 		description: 'Shows wether an input currently is frozen',

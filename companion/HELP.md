@@ -119,9 +119,17 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 
 - Set Input Freeze
 
-	Available at: LivePremier  
-	Remember that freeze is not a functionality done in the layer but in the input. If you change freeze it will immediately impact all occurences of that input in any layer on preview and program.
+	Available at: LivePremier , Alta 4K, Midra 4K 
+	Remember that input freeze is not a functionality done in the layer but in the input. If you change freeze it will immediately impact all occurences of that input in any layer on preview and program.
+
+- Set Layer Freeze
+
+	Available at: Alta 4K, Midra 4K 
 	
+- Set Screen Freeze
+
+	Available at: Alta 4K, Midra 4K 
+
 - Set Position and Size
   
 	Available at: LivePremier

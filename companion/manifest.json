@@ -3,7 +3,7 @@
 	"name": "analogway-awj",
 	"shortname": "AWJdevice",
 	"description": "Module for controlling the Analog Way AWJ protocol devices (LivePremier, Alta 4K, Midra 4K)",
-	"version": "2.2.1",
+	"version": "0.0.0",
 	"license": "MIT",
 	"repository": "git+https://github.com/bitfocus/companion-module-analogway-awj.git",
 	"bugs": "https://github.com/bitfocus/companion-module-analogway-awj/issues",

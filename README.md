@@ -17,6 +17,10 @@ For a complete explanation see [HELP](HELP.md)
 
 ## :rocket: Version history:
 
+### 2.4.0 (2024 upcoming)
+* Feature: add input freeze for Midra 4K and Alta 4K devices
+* Bugfix: Fix input freeze presets only generated for inputs with a name
+
 ### 2.3.0 (2023-06-28)
 * Feature: generate screen and aux memory recall presets additionally for each individual screen
 * Feature: presets are now generating contrasting foreground color automatically according to background color 

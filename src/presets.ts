@@ -1151,8 +1151,8 @@ down: [
 
 
 	// MARK: Toggle Freeze Input ...
-	if (state.platform === 'livepremier') for (const input of getLiveInputArray(state)) {
-		presets['Toggle Freeze ' + input.label] = {
+	for (const input of getLiveInputArray(state)) {
+		presets['Toggle Freeze ' + input.id] = {
 		type: 'button',
 			name: 'Toggle Freeze ' + input.label,
 			category: 'Input Freeze',
