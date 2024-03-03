@@ -14,6 +14,7 @@ import {
 	getScreenChoices,
 	getScreenMemoryChoices,
 	getScreensArray,
+	getScreensAuxArray,
 	getSourceChoices,
 	getTimerChoices,
 	getWidgetChoices,
@@ -792,6 +793,44 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 			}
 			return retval
 			
+		},
+	}
+
+	// MARK: deviceScreenFreeze
+	if (state.platform === 'midra') feedbacks['deviceScreenFreeze'] = {
+		type: 'boolean',
+		name: 'Screen Freeze',
+		description: 'Shows wether a screen currently is frozen',
+		defaultStyle: {
+			color: config.color_bright,
+			bgcolor: combineRgb(0, 0, 100),
+			png64:
+				'iVBORw0KGgoAAAANSUhEUgAAADcAAAA3AQMAAACSFUAFAAABS2lUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS42LWMxMzggNzkuMTU5ODI0LCAyMDE2LzA5LzE0LTAxOjA5OjAxICAgICAgICAiPgogPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIi8+CiA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgo8P3hwYWNrZXQgZW5kPSJyIj8+IEmuOgAAAARnQU1BAACxjwv8YQUAAAABc1JHQgCuzhzpAAAABlBMVEUAAABfXKLsUQDeAAAAAXRSTlMAQObYZgAAAM9JREFUGNONkTEOwjAMRX9UpDC1nIBwEKRyJCMGmNogDsCRyMY1wg26ESTUYLc1sEGWp1h2/vcPABDG84MrWoxXOgxcUycol7tbEFb748Aim4HmKZyXSCZsUFpQwQ1OeIqorsxzQHFnXgCTmT3PtczErD1ZEXCBXJR6RzXXzSNR3wA2NrvkPCpf52gDZnDZw3Oj7Ue/xfObM9gMSL/LgfttbHPH8+bRb+U9tIla0XVx1FP9yY/6U7/qX/fR/XRf3f+Th+Yz5aX5vfPUfP/6jxdhImTMvNrBOgAAAABJRU5ErkJggg==',
+		},
+		options: [
+			{
+				id: 'screen',
+				type: 'dropdown',
+				label: 'Screen',
+				choices: [{id: 'any', label:'Any'}, ...getScreenAuxChoices(state)],
+				default: getScreenAuxChoices(state)[0]?.id,
+			}
+		],
+		callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screen: string } }) => {
+			if (state.platform !== 'midra') return false // we are not connected
+			//const screen = feedback.options.screen.substring(1)
+			let retval = false
+			let screens: Choicemeta[]
+			if (feedback.options.screen === 'any') {
+				screens = getScreensAuxArray(state)
+			} else {
+				screens = [{id: feedback.options.screen, label: feedback.options.screen}]
+			}
+			for (const screen of screens) {
+				const path = ['DEVICE', 'device', 'screenList', 'items', screen.id, 'control', 'pp', 'freeze']
+				if (state.get(path)) retval = true
+			}
+			return retval
 		},
 	}
 

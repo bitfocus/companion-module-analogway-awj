@@ -1393,7 +1393,7 @@ export function getActions(instance: AWJinstance): any {
 	 */
 	if (state.platform === 'midra') {
 		type DeviceLayerFreeze = {screen: string[], mode: number}
-		actions['deviceLayerFreeze_midra'] = {
+		actions['deviceLayerFreeze'] = {
 			name: 'Set Layer Freeze',
 			options: [
 				{
@@ -1457,6 +1457,54 @@ export function getActions(instance: AWJinstance): any {
 				}				
 			},
 		} as AWJaction<DeviceLayerFreeze>
+	}
+
+	/**
+	 * MARK: Change screen freeze (Midra)
+	 */
+	if (state.platform === 'midra') {
+		type DeviceScreenFreeze = {screen: string[], mode: number}
+		actions['deviceScreenFreeze'] = {
+			name: 'Set Screen Freeze',
+			options: [
+				{
+					id: 'screen',
+					type: 'multidropdown',
+					label: 'Screen',
+					choices: getScreenAuxChoices(state),
+					default: [getScreenAuxChoices(state)[0]?.id],
+				},
+				{
+					id: 'mode',
+					type: 'dropdown',
+					label: 'Mode',
+					choices: [
+						{ id: 1, label: 'Freeze' },
+						{ id: 0, label: 'Unfreeze' },
+						{ id: 2, label: 'Toggle' },
+					],
+					default: 2,
+				},
+			],
+			callback: (action) => {
+				for (const screen of action.options.screen) {
+					let val = false
+					let path: string[]
+					const screenNum = screen.substring(1)
+					if (screen.startsWith('A')) {
+						path = ['device', 'auxiliaryScreenList', 'items', screenNum, 'control', 'pp', 'freeze']
+					} else if (screen.startsWith('S')){
+						path = ['device', 'screenList', 'items', screenNum, 'control', 'pp', 'freeze']
+					} else return
+					if (action.options.mode === 1) {
+						val = true
+					} else if (action.options.mode === 2) {
+						val = !state.getUnmapped(['DEVICE', ...path])
+					}
+					device.sendWSmessage(path, val)	
+				}				
+			},
+		} as AWJaction<DeviceScreenFreeze>
 	}
 
 	/**

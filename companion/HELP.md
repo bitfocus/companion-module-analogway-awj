@@ -125,8 +125,8 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 - Set Layer Freeze
 
 	Available at: Alta 4K, Midra 4K  
-	There is no differentiation between program and preview.
-	
+	There is no differentiation between program and preview.  
+
 - Set Screen Freeze
 
 	Available at: Alta 4K, Midra 4K 
@@ -345,6 +345,10 @@ If you want to record changes for e.g. positions or any other values with a rang
 
 	Available at: Alta 4K, Midra 4K  
 
+- Screen Freeze
+
+	Available at: Alta 4K, Midra 4K  
+
 - Timer State
 
 	Available at: LivePremier, Alta 4K, Midra 4K  
@@ -399,7 +403,8 @@ INPUT_1label | the label of the input
 STILL_1label | the label of the still image
 SCREEN_1label | the label of the screen
 AUXSCREEN_1label | the label of the aux screen
-frozen_IN1	| gives a * if frozen
+frozen_IN1	| gives a * if input 1 is frozen
+frozen_S1 | gives a * if screen 1 is frozen. Only available at Alta 4K and Midra 4K
 frozen_S1_L1 | gives a * if layer 1 of screen 1 is frozen. Only available at Alta 4K and Midra 4K
 frozen_S1_NATIVE | gives a * if background layer of screen 1 is frozen. Only available at Alta 4K and Midra 4K
 screenS1memoryPGM | the memory currently loaded in screen program

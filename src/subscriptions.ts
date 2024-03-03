@@ -774,6 +774,29 @@ const midraSubscriptions: Record<string, Subscription> = {
 			return false
 		}
 	},
+	screenFreeze: {
+		pat: 'DEVICE/device/screenList/items/([SA]\\d{1,2})/control/pp/freeze',
+		fbk: 'deviceScreenFreeze',
+		ini: [
+			...Array.from({ length: 8 }, (_, i) => 'S' + (i + 1).toString()),
+			...Array.from({ length: 8 }, (_, i) => 'A' + (i + 1).toString()),
+		],
+		fun: (instance, path, value) => {
+			if (!path) return false
+			const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
+			if (value === true) {
+				instance.setVariableValues({[`frozen_${screen}`]: '*'})	
+			} else if (value === false) {
+				instance.setVariableValues({[`frozen_${screen}`]: ' '})	
+			} else if (value === undefined) {
+				value = instance.state.get(path)
+				instance.setVariableValues({[`frozen_${screen}`]: value === true ? '*' : ' '})	
+			} else {
+				instance.setVariableValues({[`frozen_${screen}`]: '-'})
+			}
+			return false
+		}
+	},
 	streamStatus: {
 		pat: 'DEVICE/device/streaming/status/pp/mode',
 		fbk: 'deviceStreaming'

@@ -1212,7 +1212,7 @@ down: [
 						{
 						down: [
 										{
-											actionId: 'deviceLayerFreeze_midra',
+											actionId: 'deviceLayerFreeze',
 											options: {
 												screen: [screen.id],
 												...Object.fromEntries( 
@@ -1243,6 +1243,52 @@ down: [
 						},
 					],
 				}
+			}
+		}
+	}
+
+	// MARK: Toggle Freeze Screen ...
+	if (state.platform === 'midra') {
+		const screens = getScreensAuxArray(state)
+		for (const screen of screens) {
+			presets[`toggleFreeze${screen.id}`] = {
+			type: 'button',
+				name: `Toggle Freeze ${screen.id}`,
+				category: 'Screen Freeze',
+				style: {
+					text: `Freeze\\n${screen.id}`,
+					size: 'auto',
+					color: config.color_bright,
+					bgcolor: config.color_dark,
+				},
+				steps: [
+					{
+					down: [
+									{
+										actionId: 'deviceScreenFreeze',
+										options: {
+											screen: [screen.id],
+											mode: 2,
+										},
+									},
+								],
+								up: [],
+					},
+				],
+				feedbacks: [
+					{
+						feedbackId: 'deviceScreenFreeze',
+						options: {
+							screen: screen.id,
+						},
+						style: {
+							color: 0xffffff,
+							bgcolor: combineRgb(0, 0, 100),
+							png64:
+								'iVBORw0KGgoAAAANSUhEUgAAADcAAAA3AQMAAACSFUAFAAABS2lUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS42LWMxMzggNzkuMTU5ODI0LCAyMDE2LzA5LzE0LTAxOjA5OjAxICAgICAgICAiPgogPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIi8+CiA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgo8P3hwYWNrZXQgZW5kPSJyIj8+IEmuOgAAAARnQU1BAACxjwv8YQUAAAABc1JHQgCuzhzpAAAABlBMVEUAAABfXKLsUQDeAAAAAXRSTlMAQObYZgAAAM9JREFUGNONkTEOwjAMRX9UpDC1nIBwEKRyJCMGmNogDsCRyMY1wg26ESTUYLc1sEGWp1h2/vcPABDG84MrWoxXOgxcUycol7tbEFb748Aim4HmKZyXSCZsUFpQwQ1OeIqorsxzQHFnXgCTmT3PtczErD1ZEXCBXJR6RzXXzSNR3wA2NrvkPCpf52gDZnDZw3Oj7Ue/xfObM9gMSL/LgfttbHPH8+bRb+U9tIla0XVx1FP9yY/6U7/qX/fR/XRf3f+Th+Yz5aX5vfPUfP/6jxdhImTMvNrBOgAAAABJRU5ErkJggg==',
+						},
+					},
+				],
 			}
 		}
 	}
