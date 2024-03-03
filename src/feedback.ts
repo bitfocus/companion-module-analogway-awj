@@ -1,16 +1,19 @@
 import {AWJinstance, regexAWJpath} from './index'
 import { State } from './state'
 import {
+	Choicemeta,
 	choicesBackgroundSources,
 	choicesPreset,
 	getAuxChoices,
 	getAuxMemoryChoices,
 	getLayerChoices,
+	getLayersAsArray,
 	getLiveInputChoices,
 	getMasterMemoryChoices,
 	getScreenAuxChoices,
 	getScreenChoices,
 	getScreenMemoryChoices,
+	getScreensArray,
 	getSourceChoices,
 	getTimerChoices,
 	getWidgetChoices,
@@ -703,6 +706,92 @@ export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeed
 				instance.setVariableValues({ ['frozen_' + input]: ' '})
 			}
 			return freeze
+		},
+	}
+
+	// MARK: deviceLayerFreeze
+	if (state.platform === 'midra') feedbacks['deviceLayerFreeze'] = {
+		type: 'boolean',
+		name: 'Layer Freeze',
+		description: 'Shows wether a layer currently is frozen',
+		defaultStyle: {
+			color: config.color_bright,
+			bgcolor: combineRgb(0, 0, 100),
+			png64:
+				'iVBORw0KGgoAAAANSUhEUgAAADcAAAA3AQMAAACSFUAFAAABS2lUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS42LWMxMzggNzkuMTU5ODI0LCAyMDE2LzA5LzE0LTAxOjA5OjAxICAgICAgICAiPgogPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIi8+CiA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgo8P3hwYWNrZXQgZW5kPSJyIj8+IEmuOgAAAARnQU1BAACxjwv8YQUAAAABc1JHQgCuzhzpAAAABlBMVEUAAABfXKLsUQDeAAAAAXRSTlMAQObYZgAAAM9JREFUGNONkTEOwjAMRX9UpDC1nIBwEKRyJCMGmNogDsCRyMY1wg26ESTUYLc1sEGWp1h2/vcPABDG84MrWoxXOgxcUycol7tbEFb748Aim4HmKZyXSCZsUFpQwQ1OeIqorsxzQHFnXgCTmT3PtczErD1ZEXCBXJR6RzXXzSNR3wA2NrvkPCpf52gDZnDZw3Oj7Ue/xfObM9gMSL/LgfttbHPH8+bRb+U9tIla0XVx1FP9yY/6U7/qX/fR/XRf3f+Th+Yz5aX5vfPUfP/6jxdhImTMvNrBOgAAAABJRU5ErkJggg==',
+		},
+		options: [
+			{
+				id: 'screen',
+				type: 'dropdown',
+				label: 'Screen',
+				choices: [{id: 'any', label:'Any'}, ...getScreenChoices(state)],
+				default: getScreenChoices(state)[0]?.id,
+			},
+			...[{id:'any'}, ...getScreensArray(state)].map((screen) => {
+				// eslint-disable-next-line @typescript-eslint/ban-types
+				let visFn = (_arg0: any): boolean => {
+					return true
+				}
+				// make the code more injection proof
+				if (screen.id === 'any' || screen.id.match(/^S\d{1,3}$/)) {
+					// eslint-disable-next-line @typescript-eslint/no-implied-eval
+					visFn = new Function(
+						'thisOptions',
+						`return thisOptions.screen === '${screen.id}'`
+					) as (arg0: any) => boolean
+				}
+				const opt = {
+					id: `layer${screen.id}`,
+					type: 'dropdown',
+					label: 'Layer',
+					choices: [
+						{id:'any', label: 'Any'},
+						{id:'NATIVE', label: 'Background Layer'}
+					],
+					default: '1',
+					isVisible: visFn,
+				}
+				if (screen.id === 'any') {
+					opt.choices.push(...getLayerChoices(state, 8, false))
+				} else {
+					opt.label += ' ' + screen.id
+					opt.choices.push(...getLayerChoices(state, screen.id, false))
+				}
+				return opt
+			}),
+		],
+		callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screen: string } }) => {
+			if (state.platform !== 'midra') return false // we are not connected
+			//const screen = feedback.options.screen.substring(1)
+			let retval = false
+			let screens: Choicemeta[]
+			if (feedback.options.screen === 'any') {
+				screens = getScreensArray(state)
+			} else {
+				screens = [{id: feedback.options.screen, label: feedback.options.screen}]
+			}
+			const layeropt = feedback.options[`layer${feedback.options.screen}`] as string
+			for (const screen of screens) {
+				let layers: string[]
+				if (layeropt === 'any') {
+					layers = getLayersAsArray(state, screen.id, false)
+				} else {
+					layers = [layeropt]
+				}
+				for (const layer of layers) {
+					const screenNum = screen.id.substring(1)
+					let path: string[]
+					if (layer === 'NATIVE') {
+						path = ['DEVICE', 'device', 'screenList', 'items', screenNum, 'background', 'control', 'pp', 'freeze']
+					} else {
+						path = ['DEVICE', 'device', 'screenList', 'items', screenNum, 'liveLayerList', 'items', layer, 'control', 'pp', 'freeze']
+					}
+					if (state.getUnmapped(path)) retval = true
+				}
+			}
+			return retval
+			
 		},
 	}
 

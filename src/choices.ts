@@ -582,21 +582,36 @@ export function getWidgetSourceChoices(state: State): Dropdown<string>[] {
 
 export function getLayersAsArray(state: State, param: string | number, bkg?: boolean): string[] {
 	const ret: string[] = []
-	if (bkg === undefined || bkg === true) {
-		ret.push('NATIVE')
-	}
 	let layercount = 0
 	if (typeof param === 'number') {
-		layercount = param
-	} else if (typeof param === 'string') {
-		let bankpath = `DEVICE/device/screenList/items/${param}/status/pp/layerCount`
-		if (state.platform === 'midra') {
-			bankpath = `DEVICE/device/preconfig/status/stateList/items/CURRENT/screenList/items/${param}/pp/layerCount`
+		if (bkg === undefined || bkg === true) ret.push('NATIVE')
+		for (let i = 1; i <= param; i += 1) {
+			ret.push(i.toString())
 		}
-		layercount = state.get(bankpath) ?? 0
-	}
-	for (let i = 1; i <= layercount; i += 1) {
-		ret.push(i.toString())
+		if (state.platform === 'midra' && (bkg === undefined || bkg === true)) ret.push('TOP')
+		return ret
+	} else if (typeof param === 'string') {
+		if (state.platform === 'livepremier') {
+			if (bkg === undefined || bkg === true) ret.push('NATIVE')
+			layercount = state.get(`DEVICE/device/screenList/items/${param}/status/pp/layerCount`) ?? 1
+			for (let i = 1; i <= layercount; i += 1) {
+				ret.push(i.toString())
+			}
+			return ret
+		}
+		if (state.platform === 'midra') {
+			if (param.startsWith('A')) {
+				ret.push('BKG')
+			}
+			if (param.startsWith('S')) {
+				layercount = state.getUnmapped(`DEVICE/device/preconfig/status/stateList/items/CURRENT/screenList/items/${param.replace(/\D/g, '')}/pp/layerCount`) ?? 1
+				if (bkg === undefined || bkg === true) ret.push('NATIVE')
+				for (let i = 1; i <= layercount; i += 1) {
+					ret.push(i.toString())
+				}
+				if (bkg === undefined || bkg === true) ret.push('TOP')
+			}
+		}
 	}
 	return ret
 }

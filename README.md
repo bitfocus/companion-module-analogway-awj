@@ -18,7 +18,8 @@ For a complete explanation see [HELP](HELP.md)
 ## :rocket: Version history:
 
 ### 2.4.0 (2024 upcoming)
-* Feature: add input freeze for Midra 4K and Alta 4K devices
+* Feature: add input freeze action, feedback and presets for Midra 4K and Alta 4K devices
+* Feature: add layer freeze action, feedback, variables and presets for Midra 4K and Alta 4K devices
 * Bugfix: Fix input freeze presets only generated for inputs with a name
 
 ### 2.3.0 (2023-06-28)

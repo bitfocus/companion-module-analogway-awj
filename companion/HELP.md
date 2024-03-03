@@ -124,7 +124,8 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 
 - Set Layer Freeze
 
-	Available at: Alta 4K, Midra 4K 
+	Available at: Alta 4K, Midra 4K  
+	There is no differentiation between program and preview.
 	
 - Set Screen Freeze
 
@@ -338,7 +339,11 @@ If you want to record changes for e.g. positions or any other values with a rang
 
 - Input Freeze
 
-	Available at: LivePremier  
+	Available at: LivePremier, Alta 4K, Midra 4K  
+
+- Layer Freeze
+
+	Available at: Alta 4K, Midra 4K  
 
 - Timer State
 
@@ -395,6 +400,8 @@ STILL_1label | the label of the still image
 SCREEN_1label | the label of the screen
 AUXSCREEN_1label | the label of the aux screen
 frozen_IN1	| gives a * if frozen
+frozen_S1_L1 | gives a * if layer 1 of screen 1 is frozen. Only available at Alta 4K and Midra 4K
+frozen_S1_NATIVE | gives a * if background layer of screen 1 is frozen. Only available at Alta 4K and Midra 4K
 screenS1memoryPGM | the memory currently loaded in screen program
 screenS1memoryPVW | the memory currently loaded in screen preview
 screenA1memoryPGM | the memory currently loaded in aux program
@@ -410,6 +417,8 @@ screenA1timePVW | the transtion time for the aux and preset
 selectedPreset	| PGM or PVW
 timer1_status | Running or Stopped and so on
 tally_S1_pgm_LIVE_1 | the tally state (0 or 1) of the source LIVE_1 in S1 program
+----
+  
 
 The tally variables are not automatically generated for all possible combinations. Instead the variables are generated along with your used feedbacks. That means if you want to use a variable for source LIVE_3 on screen S2 preview, you have to add a feedback showing that state on some button. At the time you add the feedback the variable will also be added and can be used in triggers.  
 Caveat: there have been reports of rare cases where feedback subscriptions are not processed correctly at Companion startup. That means if you create a feedback, the variable will show in the variables list and can be used in triggers. If you restart Companion the variable is still there and usable but it won't be shown in the variables list. To make it accessible again, you have to change a parameter in one of the feedbacks generating the variable.

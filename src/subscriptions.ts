@@ -725,6 +725,55 @@ const midraSubscriptions: Record<string, Subscription> = {
 			return true
 		},
 	},
+	liveLayerFreeze: {
+		pat: 'device/screenList/items/S?\\d{1,2}/liveLayerList/items/(\\d{1,2})/control/pp/freeze',
+		fbk: 'deviceLayerFreeze',
+		ini: (_instance: AWJinstance):string[] => {
+			const paths: string[] = []
+			for (let screen = 1; screen <= 4; screen += 1) {
+				for (let layer = 1; layer <= 8; layer += 1) {
+					paths.push(`DEVICE/device/screenList/items/S${screen}/liveLayerList/items/${layer}/control/pp/freeze`)
+				}
+			}
+			return paths
+		},
+		fun: (instance, path, value) => {
+			if (!path) return false
+			const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
+			const layer = Array.isArray(path) ? path[7] : path.split('/')[7]
+			if (value === true) {
+				instance.setVariableValues({[`frozen_${screen}_L${layer}`]: '*'})	
+			} else if (value === false) {
+				instance.setVariableValues({[`frozen_${screen}_L${layer}`]: ' '})	
+			} else if (value === undefined) {
+				value = instance.state.get(path)
+				instance.setVariableValues({[`frozen_${screen}_L${layer}`]: value === true ? '*' : ' '})	
+			} else {
+				instance.setVariableValues({[`frozen_${screen}_L${layer}`]: '-'})
+			}
+			return false
+		}
+	},
+	backgroundLayerFreeze: {
+		pat: 'DEVICE/device/screenList/items/(S?\\d{1,2})/background/control/pp/freeze',
+		fbk: 'deviceLayerFreeze',
+		ini: Array.from({ length: 8 }, (_, i) => 'S' + (i + 1).toString()),
+		fun: (instance, path, value) => {
+			if (!path) return false
+			const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
+			if (value === true) {
+				instance.setVariableValues({[`frozen_${screen}_NATIVE`]: '*'})	
+			} else if (value === false) {
+				instance.setVariableValues({[`frozen_${screen}_NATIVE`]: ' '})	
+			} else if (value === undefined) {
+				value = instance.state.get(path)
+				instance.setVariableValues({[`frozen_${screen}_NATIVE`]: value === true ? '*' : ' '})	
+			} else {
+				instance.setVariableValues({[`frozen_${screen}_NATIVE`]: '-'})
+			}
+			return false
+		}
+	},
 	streamStatus: {
 		pat: 'DEVICE/device/streaming/status/pp/mode',
 		fbk: 'deviceStreaming'
@@ -770,7 +819,7 @@ export function initSubscriptions(connection: AWJdevice): void {
  * @param pat The path in the state object to check if a feedback or action exists for, if undefined checks all possible subscriptions
  */
 function checkForAction(instance: AWJinstance, pat?: string | string[], value?: any): string | string[] | undefined {
-	// console.log('Checking for action', pat, value);
+	//console.log('Checking for action', pat, value);
 	const subscriptions = instance.state.subscriptions
 	let path: string
 	if (pat === undefined) {

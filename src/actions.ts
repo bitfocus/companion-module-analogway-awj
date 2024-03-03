@@ -435,7 +435,7 @@ export function getActions(instance: AWJinstance): any {
 						'DEVICE',
 						...bankpath,
 						list,
-					...memorypath,
+						...memorypath,
 						...filterpath,
 						'screenFilter',
 					]).map((scr: string) => 'S' + scr),
@@ -443,7 +443,7 @@ export function getActions(instance: AWJinstance): any {
 						'DEVICE',
 						...bankpath,
 						list,
-					...memorypath,
+						...memorypath,
 						...filterpath,
 						'auxFilter',
 					]).map((scr: string) => 'A' + scr)
@@ -1387,6 +1387,77 @@ export function getActions(instance: AWJinstance): any {
 			device.sendWSmessage(['device', 'inputList', 'items', input, 'control', 'pp', 'freeze'], val)
 		},
 	} as AWJaction<DeviceInputFreeze>
+
+	/**
+	 * MARK: Change layer freeze (Midra)
+	 */
+	if (state.platform === 'midra') {
+		type DeviceLayerFreeze = {screen: string[], mode: number}
+		actions['deviceLayerFreeze_midra'] = {
+			name: 'Set Layer Freeze',
+			options: [
+				{
+					id: 'screen',
+					type: 'multidropdown',
+					label: 'Screen',
+					choices: getScreenChoices(state),
+					default: [getScreenChoices(state)[0]?.id],
+				},
+				...getScreensArray(state).map((screen) => {
+					// eslint-disable-next-line @typescript-eslint/ban-types
+					let visFn = (_arg0: any): boolean => {
+						return true
+					}
+					// make the code more injection proof
+					if (screen.id.match(/^S\d{1,3}$/)) {
+						// eslint-disable-next-line @typescript-eslint/no-implied-eval
+						visFn = new Function(
+							'thisOptions',
+							`return thisOptions.screen.includes('${screen.id}')`
+						) as (arg0: any) => boolean
+					}
+					return {
+						id: `layerS${screen.index}`,
+						type: 'multidropdown',
+						label: 'Layer ' + screen.id,
+						choices: [{id:'NATIVE', label: 'Background Layer'}, ...getLayerChoices(state, screen.id, false)],
+						default: ['1'],
+						isVisible: visFn,
+					}
+				}),
+				{
+					id: 'mode',
+					type: 'dropdown',
+					label: 'Mode',
+					choices: [
+						{ id: 1, label: 'Freeze' },
+						{ id: 0, label: 'Unfreeze' },
+						{ id: 2, label: 'Toggle' },
+					],
+					default: 2,
+				},
+			],
+			callback: (action) => {
+				for (const screen of action.options.screen) {
+					for (const layer of action.options[`layer${screen}`]) {
+						let val = false
+						let path: string[]
+						if (layer === 'NATIVE') {
+							path = ['device', 'screenList', 'items', screen, 'background', 'control', 'pp', 'freeze']
+						} else {
+							path = ['device', 'screenList', 'items', screen, 'liveLayerList', 'items', layer, 'control', 'pp', 'freeze']
+						}
+						if (action.options.mode === 1) {
+							val = true
+						} else if (action.options.mode === 2) {
+							val = !state.get(['DEVICE', ...path])
+						}
+						device.sendWSmessage(path, val)
+					}
+				}				
+			},
+		} as AWJaction<DeviceLayerFreeze>
+	}
 
 	/**
 	 * MARK: Layer position and size
