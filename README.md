@@ -21,13 +21,14 @@ For a complete explanation see [HELP](HELP.md)
 * Feature: add input freeze action, feedback and presets for Midra 4K and Alta 4K devices
 * Feature: add layer freeze action, feedback, variables and presets for Midra 4K and Alta 4K devices
 * Feature: add screen freeze action, feedback, variables and presets for Midra 4K and Alta 4K devices
-* Bugfix: Fix input freeze presets only generated for inputs with a name
+* Feature: add support for colors with alpha at Setup Timer action for LivePremier
+* Bugfix: input freeze presets were only generated for inputs with a name
 
 ### 2.3.0 (2023-06-28)
 * Feature: generate screen and aux memory recall presets additionally for each individual screen
 * Feature: presets are now generating contrasting foreground color automatically according to background color 
 * Bugfix: preset for selecting screen memories had no screen option selected 
-* Bugfix: some feedbacks was generating errors when not connected to a device or to the wrong platform
+* Bugfix: some feedbacks were generating errors when not connected to a device or to the wrong platform
 * Brush: improved typing for feedbacks
 
 ### 2.2.1 (2023-05-16)

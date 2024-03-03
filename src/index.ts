@@ -15,6 +15,7 @@ import { getFeedbacks } from './feedback'
 import { getPresets } from './presets'
 import { initVariables } from './variables'
 import { Subscription } from './subscriptions'
+import { UpgradeScripts } from './upgrades'
 
 export const regexAWJpath = '^DeviceObject(?:\\/(@items|@props|\\$?[A-Za-z0-9_-]+))+$'
 
@@ -426,4 +427,4 @@ export class AWJinstance extends InstanceBase<Config> {
 	}
 }
 
-runEntrypoint(AWJinstance, [])
+runEntrypoint(AWJinstance, UpgradeScripts)

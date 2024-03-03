@@ -33,7 +33,7 @@
 		"node": "^18"
 	},
 	"dependencies": {
-		"@companion-module/base": "~1.2.1",
+		"@companion-module/base": "~1.7.0",
 		"@tsconfig/node18": "^1.0.1",
 		"dgram": "^1.0.1",
 		"superagent": "^8.0.3",

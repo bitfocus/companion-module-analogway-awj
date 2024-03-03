@@ -1273,6 +1273,8 @@ export function getActions(instance: AWJinstance): any {
 			}
 		)
 		inputoptions.default = inputoptions.choices[0].id ?? ''
+		// Typescript throws an error because of function overloading bug. Remove when https://github.com/microsoft/TypeScript/issues/54539 is fixed
+		// @ts-expect-error Target signature provides too few arguments. Expected 2 or more, but got 1.
 		actions['deviceInputPlug'].options.push(inputoptions)
 
 		inputoptions.choices.forEach(
@@ -1280,14 +1282,15 @@ export function getActions(instance: AWJinstance): any {
 				// eslint-disable-next-line @typescript-eslint/ban-types
 				let visFn = (_action: DeviceInputPlug): boolean => {
 					return true
-				}
+				} 
 				// make the code more injection proof
 				if (input.id.match(/^IN(PUT)?_\d{1,3}$/)) {
+					// @ts-expect-error Target signature provides too few arguments. Expected 2 or more, but got 1.
 					// eslint-disable-next-line @typescript-eslint/no-implied-eval
 					visFn = new Function(
 						'thisOptions',
 						`return thisOptions.input.includes('${input.id}')`
-					) as (arg0: DeviceInputPlug) => boolean
+					) as (arg0: DeviceInputPlug, arg1: any | undefined) => boolean | undefined
 				}
 				const plugs = getPlugChoices(state, input.id)
 				actions['deviceInputPlug']?.options.push({
@@ -2742,14 +2745,18 @@ export function getActions(instance: AWJinstance): any {
 			{
 				id: 'fg_color',
 				type: 'colorpicker',
+				enableAlpha: true,
+				returnType: 'string',
 				label: 'Text color',
-				default: config.color_bright,
+				default: `rgba(${splitRgb(config.color_bright).r},${splitRgb(config.color_bright).g},${splitRgb(config.color_bright).b},1)`,
 			},
 			{
 				id: 'bg_color',
 				type: 'colorpicker',
+				enableAlpha: true,
+				returnType: 'string',
 				label: 'Background color',
-				default: config.color_dark,
+				default: `rgba(${splitRgb(config.color_dark).r},${splitRgb(config.color_dark).g},${splitRgb(config.color_dark).b},0.7)`,
 			},
 		],
 		callback: (action) => {
@@ -2768,7 +2775,9 @@ export function getActions(instance: AWJinstance): any {
 					action.options.unitMode
 				)
 			}
-			if (state.platform === 'midra') return
+			instance.log('debug', action.options.fg_color.toString())
+			instance.log('debug', JSON.stringify(splitRgb(action.options.fg_color).a))
+			if (state.platform === 'midra') return // color handling is not available at midra
 			device.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'background', 'color', 'pp', 'red'],
 				splitRgb(action.options.bg_color).r
@@ -2782,6 +2791,10 @@ export function getActions(instance: AWJinstance): any {
 				splitRgb(action.options.bg_color).b
 			)
 			device.sendWSmessage(
+				['device', 'timerList', 'items', action.options.timer, 'control', 'background', 'color', 'pp', 'alpha'],
+				Math.round((splitRgb(action.options.bg_color).a || 1) * 255)
+			)
+			device.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'text', 'color', 'pp', 'red'],
 				splitRgb(action.options.fg_color).r
 			)
@@ -2792,6 +2805,10 @@ export function getActions(instance: AWJinstance): any {
 			device.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'text', 'color', 'pp', 'blue'],
 				splitRgb(action.options.fg_color).b
+			)
+			device.sendWSmessage(
+				['device', 'timerList', 'items', action.options.timer, 'control', 'text', 'color', 'pp', 'alpha'],
+				Math.round((splitRgb(action.options.fg_color).a || 1) * 255)
 			)
 		},
 	} as AWJaction<DeviceTimerSetup>
