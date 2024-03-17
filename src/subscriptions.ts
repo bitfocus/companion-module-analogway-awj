@@ -11,6 +11,8 @@ export type Subscription = {
 
 }
 
+const maxScreens = 24
+
 /**
  * This object holds all the paths we need to react on when receiving an update from the devive
  * @property pat - The pattern to subscribe for changes in JSON-Path like notation. It will be regex tested against the actual path.
@@ -86,8 +88,8 @@ const commonSubscriptions: Record<string, Subscription> = {
 			if (instance.state.platform === 'livepremier') presets = ['takeUpTime', 'takeDownTime']
 			if (instance.state.platform === 'midra') presets = ['takeTime']
 			const screens: string[] = [
-				...Array.from({ length: 24 }, (_, i) => 'S' + (i + 1).toString()),
-				...Array.from({ length: 24 }, (_, i) => 'A' + (i + 1).toString()),
+				...Array.from({ length: maxScreens }, (_, i) => 'S' + (i + 1).toString()),
+				...Array.from({ length: maxScreens }, (_, i) => 'A' + (i + 1).toString()),
 				]
 			const paths =  screens.reduce((cb: string[], screen) => cb.concat(presets.map((preset) => {
 				return 'DEVICE/device/screenGroupList/items/'+ screen +'/control/pp/'+ preset
@@ -307,8 +309,8 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 		pat: 'DEVICE/device/screenGroupList/items/(\\w+?)/status/pp/transition',
 		fbk: 'deviceTake',
 		ini: [
-			...Array.from({ length: 24 }, (_, i) => 'S' + (i + 1).toString()),
-			...Array.from({ length: 24 }, (_, i) => 'A' + (i + 1).toString()),
+			...Array.from({ length: maxScreens }, (_, i) => 'S' + (i + 1).toString()),
+			...Array.from({ length: maxScreens }, (_, i) => 'A' + (i + 1).toString()),
 		],
 		fun: (instance, path, _value) => {
 			const setMemoryVariables = (screen: string, preset: string, variableSuffix: string): void => {
@@ -842,7 +844,7 @@ export function initSubscriptions(connection: AWJdevice): void {
  * @param pat The path in the state object to check if a feedback or action exists for, if undefined checks all possible subscriptions
  */
 function checkForAction(instance: AWJinstance, pat?: string | string[], value?: any): string | string[] | undefined {
-	//console.log('Checking for action', pat, value);
+	// console.log('Checking for action', pat, value);
 	const subscriptions = instance.state.subscriptions
 	let path: string
 	if (pat === undefined) {

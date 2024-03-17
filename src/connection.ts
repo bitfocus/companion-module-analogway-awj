@@ -455,7 +455,7 @@ class AWJdevice {
 	sendRawWSmessage(message: string): void {
 		if (this.websocket?.readyState === 1) {
 			this.websocket?.send(message)
-			//console.log('sendig WS message', this.websocket.url ,message)
+			// console.log('sendig WS message', this.websocket.url ,message)
 		}
 	}
 

@@ -21,8 +21,16 @@ For a complete explanation see [HELP](HELP.md)
 * Feature: add input freeze action, feedback and presets for Midra 4K and Alta 4K devices
 * Feature: add layer freeze action, feedback, variables and presets for Midra 4K and Alta 4K devices
 * Feature: add screen freeze action, feedback, variables and presets for Midra 4K and Alta 4K devices
+* Feature: supercharge the layer position and size action, it can now:
+    - use variables
+    - use an expression syntax
+    - work absolute and incremental
+    - adjust to a given anchor point
+    - handle aspect ratios
+    - grab parameters with learn button 
 * Feature: add support for colors with alpha at Setup Timer action for LivePremier
 * Bugfix: input freeze presets were only generated for inputs with a name
+* Chore: update some isVisible functions to newly available syntax avoiding additional code evaluation
 * Chore: bump @companion-module/base from 1.2.1 to 1.7.0
 * Chore: bump @companion-module/tools from 1.2.0 to 1.5.0
 * Chore: bump semver from 6.3.0 to 6.3.1

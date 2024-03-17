@@ -40,6 +40,7 @@ import {
 	SomeCompanionActionInputField,
 } from '@companion-module/base'
 import { Config } from './config'
+import { compileExpression } from '@nx-js/compiler-util'
 import { AWJdevice } from './connection'
 import { InstanceStatus, splitRgb } from '@companion-module/base'
 
@@ -1513,8 +1514,18 @@ export function getActions(instance: AWJinstance): any {
 	/**
 	 * MARK: Layer position and size
 	 */
-	type DevicePositionSize = {screen: string, preset: string, parameters: string, x: number, y: number, w: number, h: number} & Record<string, string> 
+	type DevicePositionSize = {screen: string, preset: string, layersel: string, parameters: string[], x: string, xAnchor: string, y: string, yAnchor: string, w: string, h: string, ar: string} & Record<string, string> 
 	if (state.platform === 'livepremier') {
+		//const regexNumber = `[+-]?\\d+(?:\\.\\d+)?`
+		//const regexFraction = `${regexNumber}(%|[\\/:]${regexNumber})?`
+		//const regexInput = `/([+-]\\s+)?${regexFraction}[psl]?(\\s+[+-]\\s+${regexFraction}[psl]?)*/g`
+		const tooltip =
+`start with "inc" to increase by amount,
+start with "dec" to decrease by amount,
+otherwise set value.
+You can use expression syntax with operators like +, -, *, /, (), ?:,  ...
+You can use the following keywords to be replaced on execution time:
+sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: layer left edge, ly: layer top edge, la: layer aspect ratio, sa: screen aspect ratio, layer: layer name, screen: screen name`
 		actions['devicePositionSize'] = {
 			name: 'Set Position and Size',
 			options: [
@@ -1522,183 +1533,346 @@ export function getActions(instance: AWJinstance): any {
 					id: 'screen',
 					type: 'dropdown',
 					label: 'Screen / Aux',
-					choices: getScreenAuxChoices(state),
-					default: getScreenAuxChoices(state)[0]?.id,
+					choices: [{ id: 'sel', label: 'Selected Screen(s)' }, ...getScreenAuxChoices(state)],
+					default: 'sel',
 				},
 				{
 					id: 'preset',
 					type: 'dropdown',
 					label: 'Preset',
-					choices: choicesPreset,
-					default: 'pvw',
+					choices: [{ id: 'sel', label: 'Selected Preset' }, ...choicesPreset],
+					default: 'sel',
+				},
+				{
+					id: `layersel`,
+					type: 'dropdown',
+					label: 'Layer',
+					tooltip: 'When using "selected layer" and screen or preset are not using "Selected", you can narrow the selection',
+					choices: [{ id: 'sel', label: 'Selected Layer(s)' }, ...Array.from({length: 128}, (_i, e:number) => {return {id: e+1, label: `Layer ${e+1}`}})],
+					default: 'sel',
+					isVisible: (options) => {return options.screen === 'sel'},
+				},
+				...screens.map((screen) => {
+					return{
+						id: `layer${screen.id}`,
+						type: 'dropdown',
+						label: 'Layer',
+						tooltip: 'When using "selected layer" and screen or preset are not using "Selected", you can narrow the selection',
+						choices: [{ id: 'sel', label: 'Selected Layer(s)' }, ...getLayerChoices(state, screen.id, false)],
+						default: 'sel',
+						// isVisible: visFn,
+						isVisibleData: screen.id,
+						isVisible: (options: any, screenID: string) => {
+							return options.screen === screenID
+						}
+					}
+				}),
+				{
+					id: 'parameters',
+					type: 'multidropdown',
+					label: 'Act on',
+					choices: [
+						{ id: 'x', label: 'X Position' },
+						{ id: 'y', label: 'Y Position' },
+						{ id: 'w', label: 'Width' },
+						{ id: 'h', label: 'Height' },
+					],
+					default: ['x', 'y', 'w', 'h'],
+				},
+				{
+					id: 'x',
+					type: 'textinput',
+					label: 'X position in screen (pixels)',
+					tooltip,
+					default: '',
+					useVariables: true,
+					isVisible: (options) => {return options.parameters.includes('x')},
+				},
+				{
+					id: 'y',
+					type: 'textinput',
+					label: 'Y position in screen (pixels)',
+					tooltip,
+					default: '',
+					useVariables: true,
+					isVisible: (options) => {return options.parameters.includes('y')},
+				},
+				{
+					id: 'w',
+					type: 'textinput',
+					label: 'Width (pixels)',
+					tooltip,
+					default: '',
+					useVariables: true,
+					isVisible: (options) => {return options.parameters.includes('w')},
+				},
+				{
+					id: 'h',
+					type: 'textinput',
+					label: 'Height (pixels)',
+					tooltip,
+					default: '',
+					useVariables: true,
+					isVisible: (options) => {return options.parameters.includes('h')},
+				},
+				{
+					id: 'xAnchor',
+					type: 'textinput',
+					label: 'Anchor X position in layer (fraction)',
+					tooltip,
+					default: '0.5',
+					useVariables: true,
+					isVisible: (options) => {return options.parameters.includes('x') || options.parameters.includes('w')},
+				},
+				{
+					id: 'yAnchor',
+					type: 'textinput',
+					label: 'Anchor Y position in layer (fraction)',
+					tooltip,
+					default: '0.5',
+					useVariables: true,
+					isVisible: (options) => {return options.parameters.includes('y') || options.parameters.includes('h')},
+				},
+				{
+					id: 'ar',
+					type: 'textinput',
+					label: 'Aspect Ratio',
+					tooltip: `use "keep" to keep the aspect ratio, use notations like 16/9, 4/3, 1.678 to set to a specific ratio, use nothing or any other word to change aspect ratio`,
+					default: '',
+					useVariables: true,
+					isVisible: (options) => {return options.parameters.includes('h') && !options.parameters.includes('w') || !options.parameters.includes('h') && options.parameters.includes('w')},
 				},
 			],
-			callback: (action) => {
-				if (state.isLocked(action.options.screen, action.options.preset)) return
-				const layer = action.options[`layer${action.options.screen}`]
-				const preset = state.getPreset(action.options.screen, action.options.preset)
-				if (action.options.parameters.includes('x')) {
-					device.sendWSmessage(
-						[
-							'device',
-							'screenList',
-							'items',
-							action.options.screen,
-							'presetList',
-							'items',
-							preset,
-							'layerList',
-							'items',
-							layer,
-							'position',
-							'pp',
-							'posH',
-						],
-						action.options.x
-					)
+			learn: (action) => {
+				const options = action.options
+				const newoptions:DevicePositionSize = {...options}
+
+				let layers: {screenAuxKey: string, layerKey: string}[]
+				if (options.screen === 'sel') {
+					if (options.layersel === 'sel') {
+						layers = state.getSelectedLayers()
+					} else {
+						layers = [{screenAuxKey: options.screen, layerKey: options.layersel}]
+					}
+				} else {
+					if (options[`layer${options.screen}`] === 'sel') {
+						layers = state.getSelectedLayers().filter(layer => layer.screenAuxKey == options.screen)
+					} else {
+						layers = [{screenAuxKey: options.screen, layerKey: options[`layer${options.screen}`]}]
+					}
 				}
-				if (action.options.parameters.includes('y')) {
-					device.sendWSmessage(
-						[
-							'device',
-							'screenList',
-							'items',
-							action.options.screen,
-							'presetList',
-							'items',
-							preset,
-							'layerList',
-							'items',
-							layer,
-							'position',
-							'pp',
-							'posV',
-						],
-						action.options.y
-					)
+
+				if (layers.length === 0) return options
+
+				const [screen, layer] = [layers[0].screenAuxKey, layers[0].layerKey]
+				
+				newoptions.screen = screen
+				newoptions.layersel = layer
+				newoptions.preset = state.getPresetSelection()
+				newoptions.xAnchor = '0.5'
+				newoptions.yAnchor = '0.5'
+				newoptions.parameters = ['x', 'y', 'w', 'h']
+				
+				const pathToLayer = ['device','screenList','items',screen,'presetList','items',state.getPreset(screen, newoptions.preset),'layerList','items',layer,'position','pp']
+				const w = state.get(['DEVICE', ...pathToLayer, 'sizeH'])
+				const h = state.get(['DEVICE', ...pathToLayer, 'sizeV'])
+				newoptions.w = w.toString()
+				newoptions.h = h.toString()
+				newoptions.x = state.get(['DEVICE', ...pathToLayer, 'posH']).toString()
+				newoptions.y = state.get(['DEVICE', ...pathToLayer, 'posV']).toString()
+				
+				newoptions.ar = h !== 0 ? (Math.round((w/h)*10000000)/10000000).toString() : ''
+
+				return newoptions
+			},
+			callback: async (action) => {
+				let layers: {screenAuxKey: string, layerKey: string}[]
+				if (action.options.screen === 'sel') {
+					if (action.options.layersel === 'sel') {
+						layers = state.getSelectedLayers()
+					} else {
+						layers = [{screenAuxKey: action.options.screen, layerKey: action.options.layersel}]
+					}
+				} else {
+					if (action.options[`layer${action.options.screen}`] === 'sel') {
+						layers = state.getSelectedLayers().filter(layer => layer.screenAuxKey == action.options.screen)
+					} else {
+						layers = [{screenAuxKey: action.options.screen, layerKey: action.options[`layer${action.options.screen}`]}]
+					}
 				}
-				if (action.options.parameters.includes('w')) {
-					device.sendWSmessage(
-						[
-							'device',
-							'screenList',
-							'items',
-							action.options.screen,
-							'presetList',
-							'items',
-							preset,
-							'layerList',
-							'items',
-							layer,
-							'position',
-							'pp',
-							'sizeH',
-						],
-						action.options.w
-					)
+
+				const preset = action.options.preset === 'sel' ? state.getPresetSelection('sel') : action.options.preset
+				layers = layers.filter(layer => (!state.isLocked(layer.screenAuxKey, preset) && layer.layerKey.match(/^\d+$/))) // wipe out layers of locked screens and native layer
+				if (layers.length === 0) return
+
+				const parseExpressionString = (expression: string, context: {[name: string]: number | string | boolean}, initialValue = 0) => {
+					let relate: (n: number) => number
+					if (expression.toLowerCase().startsWith('inc')) {
+						relate = (n) => initialValue + n
+						expression = expression.substring(3)
+					} else if (expression.toLowerCase().startsWith('dec')) {
+						relate = (n) => initialValue - n
+						expression = expression.substring(3)
+					} else {
+						relate = (n) => n
+					}
+					let result:any = undefined
+					try {
+						const expressionFn = compileExpression(expression)
+						result = expressionFn(context)
+					} catch (_error) {
+						// fail silent
+					}
+					if (typeof result === 'number') {
+						return relate(result)
+					}
+					return 0
 				}
-				if (action.options.parameters.includes('h')) {
-					device.sendWSmessage(
-						[
-							'device',
-							'screenList',
-							'items',
-							action.options.screen,
-							'presetList',
-							'items',
-							state.getPreset(action.options.screen, action.options.preset),
-							'layerList',
-							'items',
-							layer,
-							'position',
-							'pp',
-							'sizeV',
-						],
-						action.options.h
-					)
+
+				const calculateAr = (widthOrAr: number,height?: number) => {
+					let ar: number
+					let roundingError: number
+					const knownArs = [16/9, 16/10, 4/3, 5/4, 21/9, 1, 2/3, 9/16]
+					if (typeof height !== 'number') {
+						ar = widthOrAr
+						roundingError = 1/99 - 1/100
+					} else {
+						if (height == 0) return undefined
+						ar = widthOrAr / height
+						if (height < widthOrAr) {
+							roundingError = widthOrAr / (Math.ceil(height)-1) - widthOrAr / Math.ceil(height)
+						} else {
+							roundingError = Math.ceil(widthOrAr) / height - (Math.ceil(widthOrAr) - 1) / height
+						}
+					}
+					for (const knownAr of knownArs) {
+						if (Math.abs(ar - knownAr) <= roundingError) {
+							return knownAr
+						}	
+					}
+					return ar
+				
+				}
+
+				for (const layerIndex in layers as {screenAuxKey: string, layerKey: string, x: number, y: number, w: number, h: number, [name: string]: number | string}[]) {
+					const layer: any = layers[layerIndex]
+					const presetKey = state.getPreset(layer.screenAuxKey, preset)
+					const screenWidth = state.get(`DEVICE/device/screenList/items/${layer.screenAuxKey}/status/size/pp/sizeH`)
+					const screenHeight = state.get(`DEVICE/device/screenList/items/${layer.screenAuxKey}/status/size/pp/sizeV`)
+					
+					const pathToLayer = ['device','screenList','items',layer.screenAuxKey,'presetList','items',presetKey,'layerList','items',layer.layerKey,'position','pp']
+					layer.w = state.get(['DEVICE', ...pathToLayer, 'sizeH']) ?? 1920
+					layer.wOriginal = layer.w
+					layer.h = state.get(['DEVICE', ...pathToLayer, 'sizeV']) ?? 1080
+					layer.hOriginal = layer.h
+					layer.x = (state.get(['DEVICE', ...pathToLayer, 'posH']) ?? 0) - layer.w / 2
+					layer.xOriginal = layer.x
+					layer.y = (state.get(['DEVICE', ...pathToLayer, 'posV']) ?? 0) - layer.h / 2
+					layer.yOriginal = layer.y
+
+					const context = {
+						sw: screenWidth,
+						sh: screenHeight,
+						lw: layer.w,
+						lh: layer.h,
+						lx: layer.x,
+						ly: layer.y,
+						la: calculateAr(layer.w, layer.h) ?? 0,
+						sa: calculateAr(screenWidth, screenHeight) ?? 0,
+						screen: layer.screenAuxKey,
+						layer: layer.layerKey,
+						index: layerIndex
+					}
+
+					const xAnchorPromise = instance.parseVariablesInString(action.options.xAnchor)
+					const xPromise = instance.parseVariablesInString(action.options.x)
+					const yAnchorPromise = instance.parseVariablesInString(action.options.yAnchor)
+					const yPromise = instance.parseVariablesInString(action.options.y)
+					const wPromise = instance.parseVariablesInString(action.options.w)
+					const hPromise = instance.parseVariablesInString(action.options.h)
+					const arPromise = instance.parseVariablesInString(action.options.ar)
+
+					const [xAnchorParsed, xParsed, yAnchorParsed, yParsed, wParsed, hParsed, arP] = await Promise.all([xAnchorPromise, xPromise, yAnchorPromise, yPromise, wPromise, hPromise, arPromise])
+
+					const xAnchor = parseExpressionString(xAnchorParsed, context, 0)
+					const xPos = parseExpressionString(xParsed, context, layer.x)
+					const yAnchor = parseExpressionString(yAnchorParsed, context, 0)
+					const yPos = parseExpressionString(yParsed, context, layer.y)
+					const widthInput = parseExpressionString(wParsed, context, layer.w)
+					const heightInput = parseExpressionString(hParsed, context, layer.h)
+
+					let ar: number | undefined
+					if (action.options.ar.match(/keep/i)) {
+						ar = calculateAr(layer.w, layer.h)
+					} else {
+						ar = parseExpressionString(arP, context, calculateAr(layer.w, layer.h))
+					}
+
+					let xChange = false
+					let yChange = false
+
+					// do resizing
+					if (action.options.parameters.includes('w') && action.options.parameters.includes('h')) {
+						// set new width and height
+						layer.w = widthInput
+						layer.h = heightInput
+					} else if (action.options.parameters.includes('w')) {
+						// set new width by value, height by ar or leave untouched
+						layer.w = widthInput
+						if (ar !== undefined && ar !== 0) layer.h = layer.w / ar
+					} else if (action.options.parameters.includes('h')) {
+						// set new height by value, width by ar or leave untouched
+						layer.h = heightInput
+						if (ar !== undefined) layer.w = layer.h * ar
+					}
+
+					// do positioning
+					if (action.options.parameters.includes('x')) {
+						layer.x = xPos - layer.w * xAnchor
+					} else if (layer.w !== layer.wOriginal) {
+						const anchorPos = layer.xOriginal + layer.wOriginal * xAnchor
+						layer.x = anchorPos - layer.w * xAnchor
+						xChange = true
+					}
+					if (action.options.parameters.includes('y')) {
+						layer.y = yPos - layer.h * yAnchor
+					} else if (layer.h !== layer.hOriginal) {
+						const anchorPos = layer.yOriginal + layer.hOriginal * yAnchor
+						layer.y = anchorPos - layer.h * yAnchor
+						yChange = true
+					}
+
+					// send values
+					if (layer.x !== layer.xOriginal || xChange) {
+						device.sendWSmessage(
+							[...pathToLayer, 'posH'],
+							Math.round(layer.x + layer.w / 2)
+						)
+					}
+					if (layer.y !== layer.yOriginal || yChange) {
+						device.sendWSmessage(
+							[...pathToLayer, 'posV'],
+							Math.round(layer.y + layer.h / 2)
+						)
+					}
+					if (layer.w !== layer.wOriginal) {
+						device.sendWSmessage(
+							[...pathToLayer, 'sizeH'],
+							Math.round(layer.w)
+						)
+					}
+					if (layer.h !== layer.hOriginal) {
+						device.sendWSmessage(
+							[...pathToLayer, 'sizeV'],
+							Math.round(layer.h)
+						)
+					}
 				}
 
 				device.sendXupdate()
 			},
 		} as AWJaction<DevicePositionSize>
-		screens.forEach((screen) => {
-			// eslint-disable-next-line @typescript-eslint/ban-types
-			let visFn = (_action: any): boolean => {
-				return true
-			}
-			// make the code more injection proof
-			if (screen.id.match(/^S|A\d{1,3}$/)) {
-				// eslint-disable-next-line @typescript-eslint/no-implied-eval
-				visFn = new Function('thisOptions', `return thisOptions.screen === '${screen.id}'`) as (arg0: any) => boolean
-			}
-			actions['devicePositionSize']?.options.push({
-				id: `layer${screen.id}`,
-				type: 'dropdown',
-				label: 'Layer',
-				tooltip: 'When using "selected layer", screen and preset options are ignored',
-				choices: getLayerChoices(state, screen.id, false),
-				default: '1',
-				isVisible: visFn,
-			})
-		})
-		actions['devicePositionSize'].options.push(
-			{
-				id: 'parameters',
-				type: 'multidropdown',
-				label: 'Act on',
-				choices: [
-					{ id: 'x', label: 'X Position' },
-					{ id: 'y', label: 'Y Position' },
-					{ id: 'w', label: 'Width' },
-					{ id: 'h', label: 'Height' },
-				],
-				default: ['x', 'y', 'w', 'h'],
-			},
-			{
-				id: 'x',
-				type: 'number',
-				label: 'X Position',
-				default: 0,
-				min: -16383,
-				max: 16383,
-				isVisible: (options) => {
-					return options.parameters.includes('x')
-				},
-			},
-			{
-				id: 'y',
-				type: 'number',
-				label: 'Y Position',
-				default: 0,
-				min: -16383,
-				max: 16383,
-				isVisible: (options) => {
-					return options.parameters.includes('y')
-				},
-			},
-			{
-				id: 'w',
-				type: 'number',
-				label: 'Width',
-				default: 0,
-				min: -16383,
-				max: 16383,
-				isVisible: (options) => {
-					return options.parameters.includes('w')
-				},
-			},
-			{
-				id: 'h',
-				type: 'number',
-				label: 'Height',
-				default: 0,
-				min: -16383,
-				max: 16383,
-				isVisible: (options) => {
-					return options.parameters.includes('h')
-				},
-			}
-		)
+		
 	}
 
 	/**
@@ -1952,7 +2126,6 @@ export function getActions(instance: AWJinstance): any {
 			},
 		],
 		callback: (action: ActionEvent<SelectScreen>) => {
-			console.log('action obj', action)
 			let sel = action.options.sel
 			const surface = action.surfaceId ? action.surfaceId : ''
 			const id = surface + action.controlId
