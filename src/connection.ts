@@ -131,83 +131,100 @@ class AWJdevice {
 		const urlObj = this.getURLobj(this.addr)
 		if (urlObj === null) return
 
-		const handleAPIresponse = (res: superagent.Response) => {
+		const handleApiStateResponse = (res: superagent.Response) => {
 			if (res.body.device) {
 				this.state.setUnmapped('DEVICE', res.body)
-				//console.log('rest get API result')
-				const serialNumber = (): string => {
-					const sn = this.state.getUnmapped('DEVICE/device/system/serial/pp/serialNumber')
-					if (sn === 'ZZ9999') return ' Simulator'
-					else return ', S/N: ' + sn
+				//console.log('rest get API device state result')
+
+				const system = this.state.getUnmapped('DEVICE/device/system')
+				const device = system.pp?.dev ?? system.deviceList?.items?.['1']?.pp?.dev ?? null
+				const fwVersion = this.state.getUnmapped('DEVICE/device/system/version/pp/updater') ?? this.state.getUnmapped('DEVICE/device/system/deviceList/items/1/version/pp/updater') ?? '0.0.0'
+
+				const serialAndFirmware = (): string => {
+					// const sn = this.state.getUnmapped('DEVICE/device/system/serial/pp/serialNumber')
+					const sn = system.serial?.pp?.serialNumber ?? system.deviceList?.items?.['1']?.serial?.pp?.serialNumber ?? 'unknown'
+					if (sn.startsWith('ZZ99')) return ` Simulator, fw ${fwVersion}`
+					else return `, S/N: ${sn}, fw ${fwVersion}`
 				}
-				if (this.state.getUnmapped('DEVICE/device/system/pp/dev')) {
-					if (this.state.getUnmapped('DEVICE/device/system/pp/dev').substring(0, 3) === 'NLC') {
+
+				if (device) {
+					if (device.substring(0, 3) === 'NLC') {
 						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
 							'info',
 							'Connected to ' +
-							this.state.getUnmapped('DEVICE/device/system/pp/dev').replace('NLC_', 'Aquilon ') +
-							(this.state.getUnmapped('DEVICE/device/system/pp/isSimulated')
-								? ' Simulator'
-								: ', S/N:' + this.state.getUnmapped('DEVICE/device/system/serial/pp/serialNumber'))
+							device.replace('NLC_', 'Aquilon ') + serialAndFirmware()
 						)
-						this.state.setUnmapped('LOCAL/platform', 'livepremier')
-					} else if (this.state.getUnmapped('DEVICE/device/system/pp/dev').match(/^EIKOS/)) {
+						const major = parseInt(fwVersion.split('.')[0])
+						if (!isNaN(major) && major >= 0) {
+							this.state.setUnmapped('LOCAL/platform', `livepremier${major}`)
+						} else {
+							this.state.setUnmapped('LOCAL/platform', 'livepremier')
+						}
+					} else if (device.match(/^EIKOS/)) {
 						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
 							'info',
-							'Connected to Eikos 4k' + serialNumber()
-						)
-						this.state.setUnmapped('LOCAL/platform', 'midra')
-					} else if (this.state.getUnmapped('DEVICE/device/system/pp/dev').match(/^PULSE/)) {
-						this.instance.updateStatus(InstanceStatus.Ok)
-						this.instance.log(
-							'info',
-							'Connected to Pulse 4k' + serialNumber()
+							'Connected to Eikos 4k' + serialAndFirmware()
 						)
 						this.state.setUnmapped('LOCAL/platform', 'midra')
-					} else if (this.state.getUnmapped('DEVICE/device/system/pp/dev').match(/^QMX/)) {
+					} else if (device.match(/^PULSE/)) {
 						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
 							'info',
-							'Connected to QuikMatrix 4k' + serialNumber()
+							'Connected to Pulse 4k' + serialAndFirmware()
 						)
 						this.state.setUnmapped('LOCAL/platform', 'midra')
-					} else if (this.state.getUnmapped('DEVICE/device/system/pp/dev').match(/^QVU/)) {
+					} else if (device.match(/^QMX/)) {
 						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
 							'info',
-							'Connected to QuickVu 4k' + serialNumber()
+							'Connected to QuikMatrix 4k' + serialAndFirmware()
 						)
 						this.state.setUnmapped('LOCAL/platform', 'midra')
-					} else if (this.state.getUnmapped('DEVICE/device/system/pp/dev').match(/^ZEN100/)) {
+					} else if (device.match(/^QVU/)) {
 						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
 							'info',
-							'Connected to Zenith 100' + serialNumber()
+							'Connected to QuickVu 4k' + serialAndFirmware()
 						)
 						this.state.setUnmapped('LOCAL/platform', 'midra')
-					} else if (this.state.getUnmapped('DEVICE/device/system/pp/dev').match(/^ZEN200/)) {
+					} else if (device.match(/^ZEN100/)) {
 						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
 							'info',
-							'Connected to Zenith 200' + serialNumber()
+							'Connected to Zenith 100' + serialAndFirmware()
 						)
 						this.state.setUnmapped('LOCAL/platform', 'midra')
-					} else if (this.state.getUnmapped('DEVICE/device/system/pp/dev').match(/^DBG/)) {
+					} else if (device.match(/^ZEN200/)) {
 						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
 							'info',
-							'Connected to MNG_DEBUG' + serialNumber()
+							'Connected to Zenith 200' + serialAndFirmware()
+						)
+						this.state.setUnmapped('LOCAL/platform', 'midra')
+					} else if (device.match(/^DBG/)) {
+						this.instance.updateStatus(InstanceStatus.Ok)
+						this.instance.log(
+							'info',
+							'Connected to MNG_DEBUG' + serialAndFirmware()
 						)
 						this.state.setUnmapped('LOCAL/platform', 'midra')
 					} else {
 						this.instance.updateStatus(InstanceStatus.ConnectionFailure)
-						this.instance.log('error', 'Connected to an AWJ device but device type is not compatible with this module')
+						this.instance.log('error', `Connected to an AWJ device of type '${device}', firmware '${fwVersion}'. Device type or firmware can not be determined or is not compatible with this module`)
 						return
 					}
-					updateMappings(this.instance)
-					initSubscriptions(this)
+					try {
+						updateMappings(this.instance)
+					} catch (error) {
+						this.instance.log('error', 'update Mappings failed ' + error)
+					}
+					try {
+						initSubscriptions(this)
+					} catch (error) {
+						this.instance.log('error', 'init Subscriptions failed ' + error)
+					}
 
 					if (this.instance.config.sync === true && this.hadError === false) {
 						console.log('switching sync on because of config')
@@ -220,9 +237,21 @@ class AWJdevice {
 						console.log('setting sync off by default')
 					}
 					this.hadError = false
-					checkSubscriptions(this.instance)
-					this.instance.getMACfromDevice()
-					void this.instance.updateInstance()
+					try {
+						checkSubscriptions(this.instance)
+					} catch (error: any) {
+						this.instance.log('error', 'initializing subscriptions failed ' + error + ' ' + error.trace)
+					}
+					try {
+						this.instance.getMACfromDevice()
+					} catch (error) {
+						this.instance.log('error', 'getting MAC address from device failed ' + error)
+					}
+					try {
+						void this.instance.updateInstance()
+					} catch (error) {
+						this.instance.log('error', 'initializing Instance failed ' + error)
+					}
 				} else {
 					this.instance.updateStatus(InstanceStatus.ConnectionFailure)
 					this.instance.log('error', 'Connected to an Analog Way device but device type is not compatible with this module')
@@ -239,12 +268,31 @@ class AWJdevice {
 		this.websocket.on('open', () => {
 			this.reconnectinterval = this.reconnectmin
 
+			const getState = (msg?: string | undefined) => {
+				msg = msg ? ' '+msg : ''
+				superagent
+					.get(`${urlObj.protocol()}://${urlObj.host()}/api/stores/device`)
+					.set('Cookie', this.authcookie)
+					.on('progress', (event) => {console.log('get state' + msg, JSON.stringify(event))})
+					.then(handleApiStateResponse)
+					.catch((err) => {
+						this.instance.updateStatus(InstanceStatus.ConnectionFailure)
+						this.instance.log('error', "Can't retrieve state from device"+ msg + ' ' + err)
+					})
+			}
+
 			superagent
 				.get(`${urlObj.protocol()}://${urlObj.host()}/auth/status`)
 				.retry(2)
 				.then((res) => {
-					if (res.body?.authentication?.isAuthenticationEnabled !== undefined) {
+					const isAuth = res.body?.authentication?.isAuthenticationEnabled
+					const device = res.body.devices?.leader?.reference?.enum ?? res.body.devices?.leader?.reference?.enum
+					const swVerMajor = res.body.devices?.leader?.version?.major ?? res.body.devices?.leader?.version?.major
+					const swVerMinor = res.body.devices?.leader?.version?.minor ?? res.body.devices?.leader?.version?.minor
+					const swVerPatch = res.body.devices?.leader?.version?.patch ?? res.body.devices?.leader?.version?.patch
+					if (isAuth !== undefined && device !== undefined && swVerMajor !== undefined && swVerMinor !== undefined && swVerPatch !== undefined) {
 						// it seems we are speaking to an AWJ device
+
 						if (res.body?.authentication.isAuthenticationEnabled === true) {
 							// Password required
 							superagent
@@ -259,27 +307,14 @@ class AWJdevice {
 										this.authcookie = res.header['set-cookie']
 										this.instance.log('info', 'Login to device is successful')
 									}
-									superagent
-										.get(`${urlObj.protocol()}://${urlObj.host()}/api/stores/device`)
-										.set('Cookie', this.authcookie)
-										.then(handleAPIresponse)
-										.catch((err) => {
-											this.instance.updateStatus(InstanceStatus.ConnectionFailure)
-											this.instance.log('error', "Can't retrieve state from device " + err)
-										})
+									getState()
 								})
 								.catch((err) => {
 									this.instance.log('error', 'Password failed ' + err)
 								})
 						} else {
 							// no Password required
-							superagent
-								.get(`${urlObj.protocol()}://${urlObj.host()}/api/stores/device`)
-								.then(handleAPIresponse)
-								.catch((err) => {
-									this.instance.updateStatus(InstanceStatus.ConnectionFailure)
-									this.instance.log('error', "Can't retrieve state from device " + err)
-								})
+							getState()
 						}
 					}
 				})

@@ -103,7 +103,7 @@ export function getPresets(instance: AWJinstance): CompanionPresetDefinitions {
 	}
 	// MARK: Screen Memories
 	for (const screen of
-		state.platform === 'livepremier'
+		state.platform.startsWith('livepremier')
 			? [{ id: 'sel', label: 'Selected', index: '0' }, ...getScreensArray(state), ...getAuxArray(state)]
 			: [{ id: 'sel', label: 'Selected', index: '0' }, ...getScreensArray(state)]
 	) {
@@ -1140,7 +1140,7 @@ down: [
 			makeInputSelectionPreset(choice, ['sourceFront'], 'Foreground')
 		})
 	}
-	if (state.platform === 'livepremier') {
+	if (state.platform.startsWith('livepremier')) {
 		getSourceChoices(state).filter(choice => choice.id !== 'NONE' && choice.id !== 'COLOR').forEach((choice: Dropdown<string>) => {
 			makeInputSelectionPreset(choice, ['sourceLayer', 'sourceBack'], '')
 		})

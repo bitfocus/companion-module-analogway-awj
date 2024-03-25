@@ -2,7 +2,7 @@ import { State } from './state'
 
 type Dropdown<t> = {id: t, label: string}
 
-export type Choicemeta = { id: string, label: string, index?: string, longname?: string }
+export type Choicemeta = { id: string, label: string, index?: string, longname?: string, device?: number }
 
 export const choicesPreset: Dropdown<string>[] = [
 	{ id: 'pgm', label: 'Program' },
@@ -36,7 +36,7 @@ export function getScreensAuxArray(state: State, getAlsoDisabled = false): Choic
 
 export function getScreensArray(state: State, getAlsoDisabled = false): Choicemeta[] {
 	const ret: Choicemeta[] = []
-	if (state.platform === 'livepremier') {
+	if (state.platform.startsWith('livepremier')) {
 		const screens = state.get('DEVICE/device/screenList/items')
 		if (screens) {
 			Object.keys(screens).forEach((key) => {
@@ -83,11 +83,13 @@ export function getScreenChoices(state: State): Dropdown<string>[] {
 
 export function getAuxArray(state: State, getAlsoDisabled = false ): Choicemeta[] {
 	const ret: Choicemeta[] = []
-	if (state.platform === 'livepremier') {
-		const screens = state.getUnmapped('DEVICE/device/screenList/itemKeys')
+	if (state.platform.startsWith('livepremier')) {
+		const screens = (state.platform === 'livepremier4')
+			? state.getUnmapped('DEVICE/device/auxiliaryList/itemKeys')
+			: state.getUnmapped('DEVICE/device/screenList/itemKeys').filter((key: string) => key.startsWith('A'))
 		if (screens) {
 			screens.forEach((screen: string) => {
-				if (screen.startsWith('A') && (getAlsoDisabled || state.get('DEVICE/device/screenList/items/' + screen + '/status/pp/mode') != 'DISABLED')) {
+				if (getAlsoDisabled || state.get('DEVICE/device/screenList/items/' + screen + '/status/pp/mode') != 'DISABLED') {
 					ret.push({
 						id: screen,
 						label: state.get('DEVICE/device/screenList/items/' + screen + '/control/pp/label'),
@@ -146,7 +148,7 @@ export function getScreenAuxChoices(state: State): Dropdown<string>[] {
 }
 
 export function getPlatformScreenChoices(state: State): Dropdown<string>[] {
-	if (state.platform === 'livepremier')
+	if (state.platform.startsWith('livepremier'))
 		return [
 			...getScreensArray(state).map((scr: Choicemeta) => {
 			return {
@@ -175,7 +177,7 @@ export function getPlatformScreenChoices(state: State): Dropdown<string>[] {
 
 export function getLiveInputArray(state: State, prefix?: string): Choicemeta[] {
 	const ret: Choicemeta[] = []
-	if (state.platform === 'livepremier') {
+	if (state.platform.startsWith('livepremier')) {
 		if(prefix == undefined) prefix = 'IN'
 		const items = state.getUnmapped('DEVICE/device/inputList/itemKeys')
 		if (items) {
@@ -234,7 +236,7 @@ export function getLiveInputChoices(state: State, prefix?: string): Dropdown<str
 }
 
 export function getAuxBackgroundChoices(state: State): Dropdown<string>[] {
-	if (state.platform === 'livepremier') return []
+	if (state.platform.startsWith('livepremier')) return []
 	return [
 		{id: 'NONE', label: 'None'},
 		...getLiveInputChoices(state, 'INPUT'),
@@ -280,7 +282,7 @@ export function getSourceChoices(state: State): Dropdown<string>[] {
 	const prefix = state.platform === 'midra' ? 'INPUT' : 'LIVE'
 	ret.push( ...getLiveInputChoices(state, prefix) )
 
-	if (state.platform === 'livepremier') {
+	if (state.platform.startsWith('livepremier')) {
 		// next add still images
 		ret.push(...getStillsArray(state).map((itm: Choicemeta) => {
 			return {
@@ -303,7 +305,7 @@ export function getAuxSourceChoices(state: State): Dropdown<string>[] {
 	const prefix = state.platform === 'midra' ? 'INPUT' : 'LIVE'
 	ret.push( ...getLiveInputChoices(state, prefix) )
 
-	if (state.platform === 'livepremier') {
+	if (state.platform.startsWith('livepremier')) {
 		// next add still images
 		ret.push(...getStillsArray(state).map((itm: Choicemeta) => {
 			return {
@@ -496,7 +498,7 @@ export function getMultiviewerChoices(state: State): Dropdown<string>[] {
 
 export function getWidgetChoices(state: State): Dropdown<string>[] {
 	const ret: Dropdown<string>[] = []
-	if (state.platform === 'livepremier') {
+	if (state.platform.startsWith('livepremier')) {
 		for (const multiviewer of getMultiviewerArray(state)) {
 			for (const widget of state.getUnmapped([
 				'DEVICE',
@@ -551,7 +553,7 @@ export function getWidgetSourceChoices(state: State): Dropdown<string>[] {
 
 	// next add Auxscreens
 	// not available on midra
-	if (state.platform === 'livepremier') {
+	if (state.platform.startsWith('livepremier')) {
 		for (const screen of getAuxArray(state)) {
 			ret.push({
 				id: screen.id,
@@ -568,7 +570,7 @@ export function getWidgetSourceChoices(state: State): Dropdown<string>[] {
 
 	// next add still images
 	// not available on midra
-	if (state.platform === 'livepremier') {
+	if (state.platform.startsWith('livepremier')) {
 		ret.push(...getStillsArray(state).map((itm: Choicemeta) => {
 			return {
 				id: `STILL_${itm.id}`,
@@ -591,7 +593,7 @@ export function getLayersAsArray(state: State, param: string | number, bkg?: boo
 		if (state.platform === 'midra' && (bkg === undefined || bkg === true)) ret.push('TOP')
 		return ret
 	} else if (typeof param === 'string') {
-		if (state.platform === 'livepremier') {
+		if (state.platform.startsWith('livepremier')) {
 			if (bkg === undefined || bkg === true) ret.push('NATIVE')
 			layercount = state.get(`DEVICE/device/screenList/items/${param}/status/pp/layerCount`) ?? 1
 			for (let i = 1; i <= layercount; i += 1) {
@@ -632,7 +634,7 @@ export function getLayerChoices(state: State, param: string | number, bkg?: bool
 		if (state.platform === 'midra' && (bkg === undefined || bkg === true)) ret.push({ id: 'TOP', label: 'Foreground' })
 		return ret
 	} else if (typeof param === 'string') {
-		if (state.platform === 'livepremier') {
+		if (state.platform.startsWith('livepremier')) {
 			if (bkg === undefined || bkg === true) ret.push({ id: 'NATIVE', label: 'Background' })
 			layercount = state.get(`DEVICE/device/screenList/items/${param}/status/pp/layerCount`) ?? 1
 			for (let i = 1; i <= layercount; i += 1) {
@@ -678,9 +680,15 @@ export function getOutputChoices(state: State): Dropdown<string>[] {
 	})
 }
 
-export function getAudioOutputsArray(state: State): Choicemeta[] {
+/**
+ * getAudioOutputsArray
+ * @param state the state object holding the data
+ * @param device optional number of device to return outputs for
+ * @returns array of output describing objects
+ */
+export function getAudioOutputsArray(state: State, _device?: number): Choicemeta[] {
 	const ret: Choicemeta[] = []
-	if (state.platform === 'livepremier') {
+	if (state.platform.startsWith('livepremier')) {
 		const outputs = state.get('DEVICE/device/audio/control/txList/itemKeys') ?? []
 		for (const out of outputs) {
 			const outputnum = out.split('_')[1]

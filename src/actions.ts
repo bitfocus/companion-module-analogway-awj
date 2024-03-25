@@ -280,7 +280,7 @@ export function getActions(instance: AWJinstance): any {
 		},
 	}
 
-	if (state.platform === 'livepremier') actions['deviceScreenMemory'] = deviceScreenMemory_livepremier
+	if (state.platform.startsWith('livepremier')) actions['deviceScreenMemory'] = deviceScreenMemory_livepremier
 	else if (state.platform === 'midra') actions['deviceScreenMemory'] = deviceScreenMemory_midra
 	
 	// MARK: recall Aux memory
@@ -421,7 +421,7 @@ export function getActions(instance: AWJinstance): any {
 
 			const filterpath = state.getUnmapped(['DEVICE', ...bankpath, list, ...memorypath, 'status', 'pp', 'isShadow']) ? ['status', 'shadow', 'pp'] : ['status', 'pp']			
 			
-			if (state.platform == 'livepremier') {
+			if (state.platform.startsWith('livepremier')) {
 				screens = state.getUnmapped([
 					'DEVICE',
 					...bankpath,
@@ -621,7 +621,7 @@ export function getActions(instance: AWJinstance): any {
 			device.sendXupdate()
 		},
 	}
-	if (state.platform === 'livepremier') actions['deviceLayerMemory'] = deviceLayerMemory_livepremier
+	if (state.platform.startsWith('livepremier')) actions['deviceLayerMemory'] = deviceLayerMemory_livepremier
 
 	/**
 	 * MARK: Recall Multiviewer Memory
@@ -718,7 +718,7 @@ export function getActions(instance: AWJinstance): any {
 		callback: (action) => {
 			let dir = 'xTake'
 			for (const screen of state.getChosenScreenAuxes(action.options.screens)) {
-				if (state.platform === 'livepremier') {
+				if (state.platform.startsWith('livepremier')) {
 					dir = 'xTakeUp'
 					if (state.getPreset(screen, 'pgm') === 'B') {
 						dir = 'xTakeDown'
@@ -899,14 +899,14 @@ export function getActions(instance: AWJinstance): any {
 		},
 	}
 
-	if (state.platform === 'livepremier') actions['deviceTakeTime'] = deviceTakeTime_livepremier
+	if (state.platform.startsWith('livepremier')) actions['deviceTakeTime'] = deviceTakeTime_livepremier
 	else if (state.platform === 'midra') actions['deviceTakeTime'] = deviceTakeTime_midra
 
 	/**
 	 * MARK: Select the source in a layer livepremier
 	 */
 	type DeviceSelectSource = {method: string, screen: string[], preset: string}
-	if (state.platform === 'livepremier') {
+	if (state.platform.startsWith('livepremier')) {
 		const deviceSelectSource_livepremier: AWJaction<DeviceSelectSource> = {
 			name: 'Select Layer Source',
 			options: [
@@ -1515,7 +1515,7 @@ export function getActions(instance: AWJinstance): any {
 	 * MARK: Layer position and size
 	 */
 	type DevicePositionSize = {screen: string, preset: string, layersel: string, parameters: string[], x: string, xAnchor: string, y: string, yAnchor: string, w: string, h: string, ar: string} & Record<string, string> 
-	if (state.platform === 'livepremier') {
+	if (state.platform.startsWith('livepremier')) {
 		//const regexNumber = `[+-]?\\d+(?:\\.\\d+)?`
 		//const regexFraction = `${regexNumber}(%|[\\/:]${regexNumber})?`
 		//const regexInput = `/([+-]\\s+)?${regexFraction}[psl]?(\\s+[+-]\\s+${regexFraction}[psl]?)*/g`
@@ -1988,7 +1988,7 @@ sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: laye
 			const widget = action.options.widget?.split(':')[1] ?? '0'
 			let widgetSelection: Record<'multiviewerKey' | 'widgetKey', string>[] = []
 			if (state.syncSelection) {
-				if (state.platform === 'livepremier') widgetSelection = [...state.getUnmapped('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
+				if (state.platform.startsWith('livepremier')) widgetSelection = [...state.getUnmapped('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
 				if (state.platform === 'midra') widgetSelection = [...state.getUnmapped('REMOTE/live/multiviewer/widgetSelection/widgetKeys').map((key: string) => {return {multiviewerKey: '1', widgetKey: key}})]
 			} else {
 				widgetSelection = [...state.get('LOCAL/widgetSelection/widgetIds')]
@@ -2006,7 +2006,7 @@ sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: laye
 			}
 
 			if (state.syncSelection) {
-				if (state.platform === 'livepremier') device.sendWSdata('REMOTE', 'replace', 'live/multiviewers/widgetSelection', [widgetSelection])
+				if (state.platform.startsWith('livepremier')) device.sendWSdata('REMOTE', 'replace', 'live/multiviewers/widgetSelection', [widgetSelection])
 				if (state.platform === 'midra') device.sendWSdata('REMOTE', 'replace', 'live/multiviewer/widgetSelection', [widgetSelection.map((itm: {widgetKey: string}) => itm.widgetKey)])
 			} else {
 				state.set('LOCAL/widgetSelection/widgetIds', widgetSelection)
@@ -2645,7 +2645,7 @@ sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: laye
 	type DeviceAudioRouteBlock = {out: string, in: string, blocksize: number}
 	let audioOutputChoices: DropdownChoice[] = []
 	const audioInputChoices = getAudioInputChoices(state)
-	if (state.platform === 'livepremier') audioOutputChoices = getAudioOutputChoices(state)
+	if (state.platform.startsWith('livepremier')) audioOutputChoices = getAudioOutputChoices(state)
 	if (state.platform === 'midra') audioOutputChoices = getAudioCustomBlockChoices()
 
 	actions['deviceAudioRouteBlock'] = {
@@ -2679,7 +2679,7 @@ sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: laye
 			},
 		],
 	} as AWJaction<DeviceAudioRouteBlock>
-	if (state.platform === 'livepremier') actions['deviceAudioRouteBlock'].callback = (action: ActionEvent<DeviceAudioRouteBlock>) => {
+	if (state.platform.startsWith('livepremier')) actions['deviceAudioRouteBlock'].callback = (action: ActionEvent<DeviceAudioRouteBlock>) => {
 			const outstart = audioOutputChoices.findIndex((item) => {
 				return item.id === action.options.out
 			})
@@ -2781,7 +2781,7 @@ sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: laye
 			},
 		],
 	} as AWJaction<DeviceAudioRouteChannels>
-	if (state.platform === 'livepremier') actions['deviceAudioRouteChannels'].callback = (action: ActionEvent<DeviceAudioRouteChannels>) => {
+	if (state.platform.startsWith('livepremier')) actions['deviceAudioRouteChannels'].callback = (action: ActionEvent<DeviceAudioRouteChannels>) => {
 		if (action.options.in.length > 0) {
 			const outstart = audioOutputChoices.findIndex((item) => {
 				return item.id === action.options.out
@@ -3128,7 +3128,7 @@ sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: laye
 	 */
 	type DeviceTestpatterns = {group: string, screenList: string, outputList: string, patall: string, screenListPat: string, outputListPat: string, inputList?: string, inputListPat?: string}
 	const deviceTestpatternsOptions: (Omit<CompanionInputFieldDropdown, 'choices'> & {choices: Dropdown<string>[]})[] = []
-	if (state.platform === 'livepremier') deviceTestpatternsOptions.push(
+	if (state.platform.startsWith('livepremier')) deviceTestpatternsOptions.push(
 		{
 				id: 'group',
 				type: 'dropdown',
@@ -3618,7 +3618,7 @@ sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: laye
 	 * MARK: Adjust GPO
 	 */
 	type DeviceGPO = {gpo: number, action: number}
-	if (state.platform === 'livepremier') actions['deviceGPO'] = {
+	if (state.platform.startsWith('livepremier')) actions['deviceGPO'] = {
 		name: 'Set GPO',
 		options: [
 			{
@@ -3671,7 +3671,7 @@ sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: laye
 	 */
 	type DevicePower = {action : string}
 	const devicePowerChoices: DropdownChoice[] = []
-	if (state.platform === 'livepremier') devicePowerChoices.push(
+	if (state.platform.startsWith('livepremier')) devicePowerChoices.push(
 		{ id: 'on', label: 'Switch on (Wake on LAN)' },
 	)
 	if (state.platform === 'midra') devicePowerChoices.push(
@@ -3710,7 +3710,7 @@ sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: laye
 				device.sendWSmessage(path, 'STANDBY')
 				instance.updateStatus(InstanceStatus.Ok, 'Standby')
 			}
-			if (action.options.action === 'off' && state.platform === 'livepremier') {
+			if (action.options.action === 'off' && state.platform.startsWith('livepremier')) {
 				// device.sendWSmessage(path + 'pp/wakeOnLan', true)
 				// device.sendWSmessage(path + 'pp/xRequest', false)
 				// device.sendWSmessage(path + 'pp/xRequest', true)
@@ -3719,7 +3719,7 @@ sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: laye
 			if (action.options.action === 'off' && state.platform === 'midra') {
 				device.sendWSmessage(path, 'SWITCH_OFF')
 			}
-			if (action.options.action === 'reboot' && state.platform === 'livepremier') {
+			if (action.options.action === 'reboot' && state.platform.startsWith('livepremier')) {
 				device.sendWSmessage(path, 'REBOOT')
 			}
 			if (action.options.action === 'reboot' && state.platform === 'midra') {

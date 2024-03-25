@@ -15,9 +15,19 @@ This module uses many features Companion provides:
 
 For a complete explanation see [HELP](HELP.md)
 
+## :warning: Attention
+
+Starting with release 2.4.0 this module supports also software version 4.x of the LivePremier series. Analog Way did change some internal paths with v4.0 If you are upgrading this module from an earlier version and have programmed AWJ get or AWJ replace actions or custom feedbacks, make sure that the paths you are using are not affected from that change or change them accordingly. Otherwise these actions and feedbacks may stop working or give wrong results.  
+
 ## :rocket: Version history:
 
 ### 2.4.0 (2024 upcoming)
+* Feature: add compatibility with LivePremier software version 4.x
+    Although this feature itself is not a breaking change, unfortunately some AWJ paths have been changed by Analog Way with LivePremier v4 and if you upgrade to v4 from an earlier version and use such a path, you will have to adjust your actions or feedbacks. 
+    Affected:
+    - Send custom AWJ replace command
+    - Send custom AWJ get command
+    - Custom Feedback
 * Feature: add input freeze action, feedback and presets for Midra 4K and Alta 4K devices
 * Feature: add layer freeze action, feedback, variables and presets for Midra 4K and Alta 4K devices
 * Feature: add screen freeze action, feedback, variables and presets for Midra 4K and Alta 4K devices

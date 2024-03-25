@@ -24,6 +24,8 @@ export type MapItem = {
  * @patout pattern to check for outgoing paths
  * @pathoutrep function to be applied at the outgoing path itself
  * @valoutrep function to be applied at the outgoing value
+ * @initfrom path 
+ * @initto path
  */
 const midraMap: MapItem[] = [
 	// MARK: screen selection
@@ -246,12 +248,42 @@ const midraMap: MapItem[] = [
 ]
 
 /**
+ * Bring some paths of livePremier version 1-3 to a common format
+ */
+const livePremier3Map: MapItem[] = [
+
+]
+
+/**
+ * Bring some paths of livePremier version 4 to a common format
+ */
+const livePremier4Map: MapItem[] = [
+	// MARK: auxscreens
+	{
+		patin: 'device/auxiliaryList/items/A\\d+',
+		pathinrep:  (itm) => itm.replace(/device\/auxiliaryList\/items\/A(\d+)/, 'device/screenList/items/A$1'),
+		patout: 'device/screenList/items/A\\d+',
+		pathoutrep: (itm) => itm.replace(/device\/screenList\/items\/A(\d+)/, 'device/auxiliaryList/items/A$1'),
+		initfrom: 'device/auxiliaryList/items',
+	},
+	// MARK: screenGroupList
+	{
+		patin: 'device/screenAuxGroupList/',
+		pathinrep:  (itm) => itm.replace(/device\/screenAuxGroupList/, 'device/screenGroupList'),
+		patout: 'device/screenGroupList/',
+		pathoutrep: (itm) => itm.replace(/device\/screenGroupList/, 'device/screenAuxGroupList'),
+	},
+]
+
+/**
  * Updates which mappings to use on platform
  * @param connection 
  */
 export function updateMappings(instance: AWJinstance): void {
-	if (instance.state.platform === 'livepremier') {
-		instance.state.set('LOCAL/mappings', [] )
+	if (instance.state.platform === 'livepremier4') {
+		instance.state.set('LOCAL/mappings', livePremier4Map )
+	} else if (instance.state.platform.startsWith('livepremier')) {
+		instance.state.set('LOCAL/mappings', livePremier3Map )
 	} else if (instance.state.platform === 'alta') {
 		instance.state.set('LOCAL/mappings', midraMap )
 	} else if (instance.state.platform === 'midra') {
