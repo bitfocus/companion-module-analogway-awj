@@ -1,5 +1,5 @@
-import {AWJinstance} from './index'
-import { State } from './state'
+import {AWJinstance} from './index.js'
+import { State } from './state.js'
 
 import {
 	choicesBackgroundSourcesPlusNone,
@@ -31,7 +31,7 @@ import {
 	getTimerChoices,
 	getWidgetChoices,
 	getWidgetSourceChoices,
-} from './choices'
+} from './choices.js'
 import {
 	CompanionActionEvent,
 	CompanionInputFieldDropdown,
@@ -39,9 +39,9 @@ import {
 	DropdownChoiceId,
 	SomeCompanionActionInputField,
 } from '@companion-module/base'
-import { Config } from './config'
+import { Config } from './config.js'
 import { compileExpression } from '@nx-js/compiler-util'
-import { AWJdevice } from './connection'
+import { AWJdevice } from './connection.js'
 import { InstanceStatus, splitRgb } from '@companion-module/base'
 
 /**
@@ -1729,24 +1729,28 @@ sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: laye
 					return 0
 				}
 
-				const calculateAr = (widthOrAr: number,height?: number) => {
+				const calculateAr = (widthOrAr: number, height?: number) => {
 					let ar: number
-					let roundingError: number
+					let lowerAr: number
+					let upperAr: number
 					const knownArs = [16/9, 16/10, 4/3, 5/4, 21/9, 1, 2/3, 9/16]
 					if (typeof height !== 'number') {
 						ar = widthOrAr
-						roundingError = 1/99 - 1/100
+						lowerAr = 100 * ar - 0.5 / 100
+                        upperAr = 100 * ar + 0.5 / 100
 					} else {
 						if (height == 0) return undefined
 						ar = widthOrAr / height
 						if (height < widthOrAr) {
-							roundingError = widthOrAr / (Math.ceil(height)-1) - widthOrAr / Math.ceil(height)
+							lowerAr = widthOrAr / (height+0.5)
+                            upperAr = widthOrAr / (height-0.5)  
 						} else {
-							roundingError = Math.ceil(widthOrAr) / height - (Math.ceil(widthOrAr) - 1) / height
+							lowerAr = (widthOrAr-0.5) / height
+                            upperAr = (widthOrAr+0.5) / height
 						}
 					}
 					for (const knownAr of knownArs) {
-						if (Math.abs(ar - knownAr) <= roundingError) {
+						if (knownAr >= lowerAr && knownAr <= upperAr) {
 							return knownAr
 						}	
 					}

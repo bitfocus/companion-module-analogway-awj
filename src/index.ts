@@ -7,15 +7,15 @@ import {
 	runEntrypoint,
 	SomeCompanionConfigField,
 } from '@companion-module/base'
-import { getActions } from './actions'
-import { Config, GetConfigFields } from './config'
-import { AWJdevice } from './connection'
-import { State } from './state'
-import { getFeedbacks } from './feedback'
-import { getPresets } from './presets'
-import { initVariables } from './variables'
-import { Subscription } from './subscriptions'
-import { UpgradeScripts } from './upgrades'
+import { getActions } from './actions.js'
+import { Config, GetConfigFields } from './config.js'
+import { AWJdevice } from './connection.js'
+import { State } from './state.js'
+import { getFeedbacks } from './feedback.js'
+import { getPresets } from './presets.js'
+import { initVariables } from './variables.js'
+import { Subscription } from './subscriptions.js'
+import { UpgradeScripts } from './upgrades.js'
 
 export const regexAWJpath = '^DeviceObject(?:\\/(@items|@props|\\$?[A-Za-z0-9_-]+))+$'
 

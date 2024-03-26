@@ -39,6 +39,7 @@ Starting with release 2.4.0 this module supports also software version 4.x of th
     - handle aspect ratios
     - grab parameters with learn button 
 * Feature: add support for colors with alpha at Setup Timer action for LivePremier
+* Feature: show more detailed status during connection and synchronization with download progress
 * Bugfix: input freeze presets were only generated for inputs with a name
 * Chore: update some isVisible functions to newly available syntax avoiding additional code evaluation
 * Chore: bump @companion-module/base from 1.2.1 to 1.7.0

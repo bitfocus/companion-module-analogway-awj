@@ -1,9 +1,9 @@
-import {AWJinstance} from './index'
-import { checkForAction, Subscription } from './subscriptions'
-import { mapIn, mapOut, MapItem } from './mappings'
+import {AWJinstance} from './index.js'
+import { checkForAction, Subscription } from './subscriptions.js'
+import { mapIn, mapOut, MapItem } from './mappings.js'
 //import { InputValue } from './../../../instance_skel_types'
-import { Choicemeta, getAuxArray, getScreensArray } from './choices'
-import { Config } from './config'
+import { Choicemeta, getAuxArray, getScreensArray } from './choices.js'
+import { Config } from './config.js'
 
 type Channel = 'REMOTE' | 'DEVICE' | 'LOCAL'
 

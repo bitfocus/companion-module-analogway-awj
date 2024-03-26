@@ -1,5 +1,5 @@
-import {AWJinstance, regexAWJpath} from './index'
-import { State } from './state'
+import {AWJinstance, regexAWJpath} from './index.js'
+import { State } from './state.js'
 import {
 	Choicemeta,
 	choicesBackgroundSources,
@@ -18,7 +18,7 @@ import {
 	getSourceChoices,
 	getTimerChoices,
 	getWidgetChoices,
-} from './choices'
+} from './choices.js'
 import { combineRgb, CompanionFeedbackBooleanEvent, CompanionFeedbackDefinitions } from '@companion-module/base'
 
 export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeedbackDefinitions {

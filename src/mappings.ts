@@ -1,5 +1,5 @@
-import {AWJinstance} from './index'
-import { State } from './state'
+import {AWJinstance} from './index.js'
+import { State } from './state.js'
 
 
 export type MapItem = {

@@ -1,5 +1,5 @@
 import { CompanionVariableDefinition } from '@companion-module/base'
-import {AWJinstance} from './index'
+import {AWJinstance} from './index.js'
 
 export function initVariables(_instance: AWJinstance): CompanionVariableDefinition[] {
 	const variables: CompanionVariableDefinition[] = [

@@ -1,6 +1,6 @@
 import { InstanceStatus } from '@companion-module/base'
-import { AWJdevice } from './connection'
-import {AWJinstance} from './index'
+import { AWJdevice } from './connection.js'
+import {AWJinstance} from './index.js'
 // import { DeviceMap, DeviceMappingFunction } from '../types/DeviceMap';
 
 export type Subscription = {

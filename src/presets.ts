@@ -1,4 +1,4 @@
-import {AWJinstance} from './index'
+import {AWJinstance} from './index.js'
 import {
 	choicesBackgroundSources,
 	choicesBackgroundSourcesPlusNone,
@@ -19,7 +19,7 @@ import {
 	getTimerChoices,
 	getWidgetChoices,
 	getWidgetSourceChoices,
-} from './choices'
+} from './choices.js'
 import {
 	combineRgb,
 	CompanionButtonPresetDefinition,

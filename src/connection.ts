@@ -1,16 +1,12 @@
-import { AWJinstance } from './index'
-//import dgram = require("dgram")
+import { AWJinstance } from './index.js'
 import * as dgram from 'dgram'
-//import net = require('net')
 import * as net from 'net'
-//import URI = require('urijs')
 import URI from 'urijs'
-//import superagent = require('superagent')
-import * as superagent from 'superagent'
+import ky from 'ky'
 import WebSocket from 'ws'
-import { State } from './state'
-import { checkSubscriptions, initSubscriptions } from './subscriptions'
-import { mapOut, updateMappings } from './mappings'
+import { State } from './state.js'
+import { checkSubscriptions, initSubscriptions } from './subscriptions.js'
+import { mapOut, updateMappings } from './mappings.js'
 import { InstanceStatus } from '@companion-module/base'
 
 
@@ -131,9 +127,10 @@ class AWJdevice {
 		const urlObj = this.getURLobj(this.addr)
 		if (urlObj === null) return
 
-		const handleApiStateResponse = (res: superagent.Response) => {
-			if (res.body.device) {
-				this.state.setUnmapped('DEVICE', res.body)
+		this.instance.updateStatus(InstanceStatus.Connecting, `Init Connection`)
+		const handleApiStateResponse = (res: {[name: string]: any}) => {
+			if (res.device) {
+				this.state.setUnmapped('DEVICE', res)
 				//console.log('rest get API device state result')
 
 				const system = this.state.getUnmapped('DEVICE/device/system')
@@ -265,70 +262,83 @@ class AWJdevice {
 
 		this.websocket = new WebSocket(`${webSocketProtocol}${urlObj.host()}`, { handshakeTimeout: 1234, maxRedirects: 1 })
 
-		this.websocket.on('open', () => {
+		this.websocket.on('open', async () => {
 			this.reconnectinterval = this.reconnectmin
+			let downloaded = 0
 
-			const getState = (msg?: string | undefined) => {
+			const getState = async (msg?: string | undefined) => {
+				this.instance.updateStatus(InstanceStatus.Connecting, `Syncing`)
 				msg = msg ? ' '+msg : ''
-				superagent
-					.get(`${urlObj.protocol()}://${urlObj.host()}/api/stores/device`)
-					.set('Cookie', this.authcookie)
-					.on('progress', (event) => {console.log('get state' + msg, JSON.stringify(event))})
-					.then(handleApiStateResponse)
-					.catch((err) => {
-						this.instance.updateStatus(InstanceStatus.ConnectionFailure)
-						this.instance.log('error', "Can't retrieve state from device"+ msg + ' ' + err)
-					})
+				try {
+					const response = await ky.get(`${urlObj.protocol()}://${urlObj.host()}/api/stores/device`,{
+						headers: {
+							cookie: this.authcookie
+						},
+						retry: 2,
+						onDownloadProgress: (progress, _chunk) => {
+							const newDownloaded = Math.floor(progress.transferredBytes / 1024000)
+							if (newDownloaded !== downloaded) {
+								downloaded = newDownloaded
+								this.instance.updateStatus(InstanceStatus.Connecting, `Syncing ${downloaded.toString().padStart(3,'0')}MB`)
+							}
+						}
+					}).json<any>()
+					handleApiStateResponse(response)
+				} catch (err) {
+					this.instance.updateStatus(InstanceStatus.ConnectionFailure)
+					this.instance.log('error', "Can't retrieve state from device"+ msg + ' ' + err)
+				}
+
 			}
 
-			superagent
-				.get(`${urlObj.protocol()}://${urlObj.host()}/auth/status`)
-				.retry(2)
-				.then((res) => {
-					const isAuth = res.body?.authentication?.isAuthenticationEnabled
-					const device = res.body.devices?.leader?.reference?.enum ?? res.body.devices?.leader?.reference?.enum
-					const swVerMajor = res.body.devices?.leader?.version?.major ?? res.body.devices?.leader?.version?.major
-					const swVerMinor = res.body.devices?.leader?.version?.minor ?? res.body.devices?.leader?.version?.minor
-					const swVerPatch = res.body.devices?.leader?.version?.patch ?? res.body.devices?.leader?.version?.patch
-					if (isAuth !== undefined && device !== undefined && swVerMajor !== undefined && swVerMinor !== undefined && swVerPatch !== undefined) {
-						// it seems we are speaking to an AWJ device
+			try {
+				const authResponse = await ky.get(`${urlObj.protocol()}://${urlObj.host()}/auth/status`, {
+					retry: 2	
+				}).json<{[name: string]: any}>()
+				const isAuth = authResponse.authentication?.isAuthenticationEnabled
+				const device = authResponse.devices?.leader?.reference?.enum ?? authResponse.devices?.leader?.reference?.enum
+				const swVerMajor = authResponse.devices?.leader?.version?.major ?? authResponse.devices?.leader?.version?.major
+				const swVerMinor = authResponse.devices?.leader?.version?.minor ?? authResponse.devices?.leader?.version?.minor
+				const swVerPatch = authResponse.devices?.leader?.version?.patch ?? authResponse.devices?.leader?.version?.patch
+				if (isAuth !== undefined && device !== undefined && swVerMajor !== undefined && swVerMinor !== undefined && swVerPatch !== undefined) {
+					// it seems we are speaking to an AWJ device
 
-						if (res.body?.authentication.isAuthenticationEnabled === true) {
-							// Password required
-							superagent
-								.post(`${urlObj.protocol()}://${urlObj.host()}/auth/login`)
-								.set('Content-Type', 'application/json')
-								.redirects(0)
-								.ok((res) => res.status < 400)
-								.send(JSON.stringify({ password: urlObj.password() }))
-								.then((res) => {
-									// Got succesful auth response
-									if (res.header['set-cookie']) {
-										this.authcookie = res.header['set-cookie']
-										this.instance.log('info', 'Login to device is successful')
-									}
-									getState()
-								})
-								.catch((err) => {
-									this.instance.log('error', 'Password failed ' + err)
-								})
-						} else {
-							// no Password required
+					if (authResponse?.authentication.isAuthenticationEnabled === true) {
+						// Password required
+						this.instance.updateStatus(InstanceStatus.Connecting, `Logging in`)
+						ky(`${urlObj.protocol()}://${urlObj.host()}/auth/login`, {
+							method: 'post',
+							json: { password: urlObj.password() },
+							retry: 2,
+							redirect: 'error'
+						}).then((res) => {
+							// Got succesful auth response
+							if (res.headers['set-cookie']) {
+								this.authcookie = res.headers['set-cookie']
+								this.instance.log('info', 'Login to device is successful')
+							}
 							getState()
-						}
+						})
+						.catch((err) => {
+							this.instance.log('error', 'Password failed ' + err)
+						})
+
+					} else {
+						// no Password required
+						getState()
 					}
-				})
-				.catch(() => {
-					// console.log('superagent down', err)
-					// console.log('ws close and retry in', this.reconnectinterval)
-					this.disconnect()
-					if (this.wsTimeout) clearTimeout(this.wsTimeout)
-					this.wsTimeout = setTimeout(() => {
-						this.connect(this.addr)
-					}, this.reconnectinterval)
-					this.reconnectinterval *= 1.2
-					if (this.reconnectinterval > this.reconnectmax) this.reconnectinterval = this.reconnectmax
-				})
+				}
+			} catch (error) {
+				console.log(`Can't connect to device webserver.`, error)
+				// console.log('ws close and retry in', this.reconnectinterval)
+				this.disconnect()
+				if (this.wsTimeout) clearTimeout(this.wsTimeout)
+				this.wsTimeout = setTimeout(() => {
+					this.connect(this.addr)
+				}, this.reconnectinterval)
+				this.reconnectinterval *= 1.2
+				if (this.reconnectinterval > this.reconnectmax) this.reconnectinterval = this.reconnectmax
+			}
 		})
 
 		this.websocket.on('close', () => {
@@ -388,65 +398,73 @@ class AWJdevice {
 		const urlObj = this.getURLobj(href)
 		if (urlObj === null) return
 		if (urlObj.username() !== 'Admin' && this.authcookie.length === 0) {
-			superagent
-				.post(`${urlObj.protocol()}://${urlObj.host()}${urlObj.resource()}`)
-				.retry(2)
-				.set('Content-Type', 'application/json')
-				.redirects(0)
-				.ok((res) => res.status < 400)
-				.send(message)
-				.then((res) => {
-					this.instance.log('debug', 'http POST successfull ' + res.statusCode)
-				})
-				.catch((err) => {
-					this.instance.log('debug', 'http POST failed ' + err)
-				})
+			ky.post(`${urlObj.protocol()}://${urlObj.host()}${urlObj.resource()}`,{
+				body: message,
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				retry: 2,
+				redirect: 'error'
+			})
+				//.ok((res) => res.status < 400)
+			.then((res) => {
+				this.instance.log('debug', 'http POST successfull ' + res.status)
+			})
+			.catch((err) => {
+				this.instance.log('debug', 'http POST failed ' + err)
+			})
 		} else if (this.authcookie.length > 0) { 
-			superagent
-				.post(`${urlObj.protocol()}://${urlObj.host()}${urlObj.resource()}`)
-				.retry(2)
-				.set('Content-Type', 'application/json')
-				.set('Cookie', this.authcookie)
-				.redirects(0)
-				.ok((res) => res.status < 400)
-				.send(message)
-				.then((res) => {
-					this.instance.log('debug', 'http POST successfull ' + res.statusCode)
-				})
-				.catch((err) => {
-					this.instance.log('debug', 'http POST failed ' + err)
-				})
+			ky.post(`${urlObj.protocol()}://${urlObj.host()}${urlObj.resource()}`,{
+				body: message,
+				headers: {
+					'Content-Type': 'application/json',
+					'Cookie': this.authcookie
+				},
+				retry: 2,
+				redirect: 'error'
+			})
+				//.ok((res) => res.status < 400)
+			.then((res) => {
+				this.instance.log('debug', 'http POST successfull ' + res.status)
+			})
+			.catch((err) => {
+				this.instance.log('debug', 'http POST failed ' + err)
+			})
 		} else if (urlObj.username() === 'Admin' && this.authcookie.length === 0) {
-			superagent
-				.post(`${urlObj.protocol()}://${urlObj.host()}/auth/login`)
-				.set('Content-Type', 'application/json')
-				.redirects(0)
-				.ok((res) => res.status < 400)
-				.send(JSON.stringify({ password: urlObj.password() }))
-				.then((res) => {
-					// Got succesful auth response
-					if (res.header['set-cookie']) {
-						this.authcookie = res.header['set-cookie']
-						this.instance.log('info', 'Login to device is successful')
-					}
-					superagent
-						.post(`${urlObj.protocol()}://${urlObj.host()}${urlObj.resource()}`)
-						.retry(2)
-						.set('Content-Type', 'application/json')
-						.set('Cookie', this.authcookie)
-						.redirects(0)
-						.ok((res) => res.status < 400)
-						.send(message)
-						.then((res) => {
-							this.instance.log('debug', 'http POST successfull ' + res.statusCode)
-						})
-						.catch((err) => {
-							this.instance.log('debug', 'http POST failed ' + err)
-						})
-				})
-				.catch((err) => {
-					this.instance.log('error', 'Password failed ' + err)
-				})
+			ky.post(`${urlObj.protocol()}://${urlObj.host()}/auth/login`,{
+				body: JSON.stringify({ password: urlObj.password() }),
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				retry: 2,
+				redirect: 'error'
+			})
+				//.ok((res) => res.status < 400)
+			.then((res) => {
+				// Got succesful auth response
+				if (res.headers['set-cookie']) {
+					this.authcookie = res.headers['set-cookie']
+					this.instance.log('info', 'Login to device is successful')
+				}
+				ky.post(`${urlObj.protocol()}://${urlObj.host()}${urlObj.resource()}`,{
+					body: message,
+					headers: {
+						'Content-Type': 'application/json',
+						'Cookie': this.authcookie
+					},
+					retry: 2,
+					redirect: 'error'
+					})
+					.then((res) => {
+						this.instance.log('debug', 'http POST successfull ' + res.status)
+					})
+					.catch((err) => {
+						this.instance.log('debug', 'http POST failed ' + err)
+					})
+			})
+			.catch((err) => {
+				this.instance.log('debug', 'http POST failed ' + err)
+			})
 		}
 	} 
 
