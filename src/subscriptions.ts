@@ -250,8 +250,8 @@ const commonSubscriptions: Record<string, Subscription> = {
 		fun: (instance, path, _value) => {
 			if (!path) return false
 			const input = Array.isArray(path) ? path[4] : path.split('/')[4]
-			instance.setVariableValues({[input.replace('A', 'AUXSCREEN_') + 'label']:  instance.state.getUnmapped(path)})
-			instance.setVariableValues({['screen' + input + 'label']:  instance.state.getUnmapped(path)})
+			instance.setVariableValues({[input.replace('A', 'AUXSCREEN_') + 'label']:  instance.state.get(path)})
+			instance.setVariableValues({['screen' + input + 'label']:  instance.state.get(path)})
 			return true
 		},
 	},
@@ -368,7 +368,7 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 			} else {
 				return false
 			}
-			const val = instance.state.getUnmapped(patharr)
+			const val = instance.state.get(patharr)
 			const screen = patharr[4]
 			let program = '', preview = ''
 			if (val === 'AT_UP') {
@@ -441,18 +441,18 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 			const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
 			const presname = pres === instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW'
-			const memorystr = instance.state.getUnmapped(path).toString() !== '0' ? 'M' + instance.state.getUnmapped(path) : ''
+			const memorystr = instance.state.get(path).toString() !== '0' ? 'M' + instance.state.get(path) : ''
 			instance.setVariableValues({['screen' + screen + 'memory' + presname]:  memorystr})
 			instance.setVariableValues({
 				['screen' + screen + 'memoryLabel' + presname]:
-				instance.state.getUnmapped(path).toString() !== '0'
+				instance.state.get(path).toString() !== '0'
 					? instance.state.getUnmapped([
 							'DEVICE',
 							'device',
 							'presetBank',
 							'bankList',
 							'items',
-							instance.state.getUnmapped(path).toString(),
+							instance.state.get(path).toString(),
 							'control',
 							'pp',
 							'label',
@@ -474,7 +474,7 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 				['screen' + screen + 'memoryModified' + presname]:
 				instance.state.get(
 					'DEVICE/device/screenList/items/' + screen + '/presetList/items/' + pres + '/presetId/status/pp/id'
-				) && !instance.state.getUnmapped(path)
+				) && !instance.state.get(path)
 					? '*'
 					: ''
 			})

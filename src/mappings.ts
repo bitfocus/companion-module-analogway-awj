@@ -273,6 +273,16 @@ const livePremier4Map: MapItem[] = [
 		patout: 'device/screenGroupList/',
 		pathoutrep: (itm) => itm.replace(/device\/screenGroupList/, 'device/screenAuxGroupList'),
 	},
+	// MARK: presetId
+	{
+		patin: 'device/presetBank/status/presetId/',
+		pathinrep:  (itm) => itm.replace(/device\/presetBank\/status\/presetId\/(?:screen|auxiliary)List\/items\/([SA]\d+?)\/presetList\/items\/([ABC])/, 'device/screenList/items/$1/presetList/items/$2/presetId/status'),
+		patout: 'device/screenList/items/[SA]\\d+/presetList/items/[ABC]/presetId',
+		pathoutrep: (itm) => {
+			const type = itm.match(/screenList\/items\/S/) ? 'screenList': 'auxiliaryList'
+			return itm.replace(/device\/screenList\/items\/(.+?)\/presetId\/status/, `device/presetBank/status/presetId/${type}/items/$1`)
+		},
+	},
 ]
 
 /**

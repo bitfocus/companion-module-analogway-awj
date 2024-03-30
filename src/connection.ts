@@ -119,6 +119,11 @@ class AWJdevice {
 		return urlObj
 	}
 
+	/**
+	 * Connect to a AWJ device
+	 * @param addr the complete base url of the device to connect to, can contain protocol, credentials, host and port
+	 * @returns void
+	 */
 	connect(addr: string | undefined): void {
 		this.addr = addr
 		if (this.addr === undefined) return
@@ -128,6 +133,7 @@ class AWJdevice {
 		if (urlObj === null) return
 
 		this.instance.updateStatus(InstanceStatus.Connecting, `Init Connection`)
+
 		const handleApiStateResponse = (res: {[name: string]: any}) => {
 			if (res.device) {
 				this.state.setUnmapped('DEVICE', res)
@@ -377,11 +383,12 @@ class AWJdevice {
 		})
 
 		this.websocket.on('message', (data, isBinary) => {
+			//console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
 			if (
 				isBinary != true &&
 				data.toString().match(/"op":"replace","path":"\/system\/status\/current(Device)?Time","value":/) === null &&
 				data.toString().match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
-				data.toString().match(/"device","system","temperature",/) === null
+				data.toString().match(/"device","system",("deviceList","items","[1-4]",)?"temperature",/) === null
 			) {
 				// console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
 				this.state.apply(JSON.parse(data.toString()))
@@ -505,6 +512,10 @@ class AWJdevice {
 	// 	})
 	// }
 
+	/**
+	 * Sends a raw text message to the device via websocket connection
+	 * @param message the message string to send
+	 */
 	sendRawWSmessage(message: string): void {
 		if (this.websocket?.readyState === 1) {
 			this.websocket?.send(message)
@@ -512,6 +523,11 @@ class AWJdevice {
 		}
 	}
 
+	/**
+	 * Sends an AW message to the device via websocket
+	 * @param path a path in the device object, can be a string with slashes as delimiters or an array of strings. The path will be mapped according to mappings.
+	 * @param value the value to send
+	 */
 	sendWSmessage(
 		path: string | string[],
 		value: string | string[] | number | boolean
@@ -531,7 +547,7 @@ class AWJdevice {
 	 * Sends a patch via websocket
 	 * @param channel
 	 * @param op
-	 * @param path
+	 * @param path the path in the channel object. Path will be mapped according to mappings.
 	 * @param value
 	 */
 	sendWSpatch(channel: string, op: string, path: string | string[], value: string | number | boolean | object): void {
@@ -554,7 +570,7 @@ class AWJdevice {
 	 * Sends a patch via websocket
 	 * @param channel
 	 * @param op
-	 * @param path
+	 * @param path the path in the channel object. Path will be mapped according to mappings.
 	 * @param value
 	 */
 	sendWSdata(channel: string, name: string, path: string | string[], args: unknown[]): void {
@@ -606,6 +622,10 @@ class AWJdevice {
 	// 		)
 	// }
 
+	/**
+	 * Sends a global update command
+	 * @param platform 
+	 */
 	sendXupdate(platform?: string): void {
 		if (!platform) platform = this.state.platform
 		const updates: Record<string, string> = {

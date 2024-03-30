@@ -42,13 +42,14 @@ Starting with release 2.4.0 this module supports also software version 4.x of th
 * Feature: show more detailed status during connection and synchronization with download progress
 * Bugfix: input freeze presets were only generated for inputs with a name
 * Chore: update some isVisible functions to newly available syntax avoiding additional code evaluation
+* Chore: refactor from commonjs to ESM
+* Chore: replace superagent by ky
 * Chore: bump @companion-module/base from 1.2.1 to 1.7.0
 * Chore: bump @companion-module/tools from 1.2.0 to 1.5.0
 * Chore: bump semver from 6.3.0 to 6.3.1
 * Chore: bump word-wrap from 1.2.3 to 1.2.4
 * Chore: bump eslint from 8.36.0 to 8.57.0
 * Chore: bump @tsconfig/node18 from 1.0.1 to 1.0.3
-* Chore: bump superagent from 8.0.9 to 8.1.2
 * Chore: bump ws from 8.13.0 to 8.16.0
 
 ### 2.3.0 (2023-06-28)
