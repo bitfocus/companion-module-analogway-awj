@@ -136,33 +136,47 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 	Available at: LivePremier  
 	Positioning and sizing on steroids. You can either select a specific layer to work on use the selected layers or do a combination of selection and specification. E.g. you can use all selected layers but only for one specified screen or you can use a specified layer for the selected screens.  
 	Layers of locked screens / presets will not be touched.  
-	For each layer to touch, you can choose which parameters to act on: vertical and horizontal position, width and height. If you e.g. include x Position but not Y Position, the layer will only be touched in horzontal position and the vertical position will stay the same.
-	Unlike WebRCS this action does not always refer the layer position from the center of the layer but offers detailed settings for the anchor point in X and Y direction. The center point of the layer is 0.5 * the width and 0.5 * the height of the layer. If you want to have the same behavior as WebRCS, you have to set the Anchor X and/or Anchor Y to 0.5. The Anchor will be positioned where X Position and Y Position points to.  
-	If you want for example left align a layer with the screen use 0 for the X Position and also 0 for the Anchor X.  
-	Furthermore you can use variables in the input fields and the input fields can be used with an expression like syntax. The functions of the Companion expressions can't be used but all operators like +, -, *, /, (), %, ternary ? : and so on are working. That means you can use something like "$(internal:custom_var1) + 0.5 * $(internal:custom_var2)".  
+	For each layer to touch, you can choose which parameters to act on: vertical and horizontal position, width and height. If you e.g. include x Position but not Y Position, the layer will only be touched in horizontal position and the vertical position will stay the same.
+	Unlike WebRCS this action does not always refer the layer position from the center of the layer but offers detailed settings for the anchor point in X and Y direction inside or outside of the layer.
+
+	All input fields of this action support Companion variables can even be used with an expression like syntax. The functions of the Companion expressions can't be used but all operators like +, -, *, /, (), %, ternary ? : and so on are working. That means you can use something like "$(internal:custom_var1) + 0.5 * $(internal:custom_var2)".  
 	There are several special keywords available to be placed in an expression. If you use a keyword, it will be replaced with the actual values at runtime for each individual layer. The keywords are:  
 	- sw - screen width
 	- sh - screen height
-	- lw - layer width
-	- lh - layer height
+	- sa - screen aspect ratio
 	- lx - position of left edge of the layer within screen
 	- ly - position of the top edge of the layer within screen
-	- sa - aspect ratio of the screen
-	- la - current aspect ratio or the layer
+	- lw - layer width
+	- lh - layer height
+	- la - current aspect ratio of the layer
+	- bx - position of left edge of the bounding box of all selected layers within current screen
+	- by - position of the top edge of the bounding box of all selected layers within current screen
+	- bw - width of the bounding box of all selected layers within current screen
+	- bh - height of the bounding box of all selected layers within current screen
+	- ba - aspect ratio of the bounding box of all selected layers within current screen
+	- iw - width of the source currently assigned to the layer, 0 if empty
+	- ih - height of the source currently assigned to the layer, 0 if empty
+	- ia - aspect ratio of the source currently assigned to the layer, none if empty
 	- screen - name of the screen, e.g. S2
 	- layer - name of the layer, e.g. 3 for layer three
 	- index - the index of the layer being adjusted. Will be 0 for one layer but if you have a selection of multiple layers it will show you which one is processed right now.
 
+	For the anchor point you will usually want the center of the layer, this is the same behavior as WebRCS and given as default entries. The anchor points have to be entered in pixels as well and so the horizontal center is to be calculated by the layer x position + half of the layer width. The expression is 'lx + 0.5 * lw'. For the vertical anchor it is 'ly + 0.5 * lh'.
+	If you do only resizing, the anchor position stays at the same spot and everything else will be resized. If your anchor position is outside of the layer area, the layer will also appear to move. Think of it as also scaling the distance from the anchor point to the layer.  
+
 	All results positioning expressions will be rounded to full integer before being sent to the device as AWJ does not support positioning by floating point numbers. That is also a little problem when resizing a layer because the wanted aspect ratio can not always be reached exactly with integer numbers. If you want to retrieve the current aspect ratio, you have two options:  
-	1. calculate it yourself by using lw / lh. You'll get the correct actual aspect ratio of the layer.
-	2. use the keywords la or sa. These values are calculated by an algorithm which compares the the actual aspect ratio to several common aspect ratios and if the actual aspect ratio is very close to a common aspect ratio but a tiny bit off because off a rounding error, it will return the common aspect ratio. For example if your layer is 1000px wide and should be 16/9, the height would need to be 562.5px. You can only enter heights of 563px or 562px, which would both give different aspect ratios from 16/9. The algorith detects that your ar is close enough to 16/9 and that there is no way to have exactly 16/9, so it assumes you wanted the ar to be exactly 16/9 and gives that as a result. The algorithm is smart enough to only detect the nearest possible pixels, e.g. 999/563 will not be replaced by 16/9.  
+	1. calculate it yourself by using lw / lh. You'll get the de facto aspect ratio of the layer.
+	2. use the keywords la, sa, ba or ia. These values are calculated by an algorithm which compares the the actual aspect ratio to several common aspect ratios and if the actual aspect ratio is very close to a common aspect ratio but a tiny bit off because of a rounding error, it will return the common aspect ratio. For example if your layer is 1000px wide and should be 16/9, the height would need to be 562.5px. You can only enter heights of 563px or 562px, which would both give different aspect ratios from 16/9. The algorithm detects that your ar is close enough to 16/9 and that there is no way to have exactly 16/9, so it assumes you wanted the ar to be exactly 16/9 and gives that as a result. The algorithm is smart enough to only detect the nearest possible pixels, e.g. 999/563 will not be replaced by 16/9.  
 	la is thus the preferred keyword to use for aspect ratio retaining resizing of layers. There will be no rounding error introduced as long as you are not working with tiny layer sizes.
 
-	With the keywords you can do many fancy things like right aligning a layer to the screen with X position of sw and Anchor X of 1. Or you can center the layer in the screen with X position of 0.5 * sw and Anchor X of 0.5. 
+	If you choose to touch x or y position, the anchor point will be positioned at the according value.
+	
+	With the keywords you can do many fancy things like right aligning a layer to the screen with X position of 'sw' and Anchor X of 'lx + lw'. Or you can center the layer in the screen with X position of '0.5 * sw' and Anchor X of 'lx + 0.5 * lw'. With the anchor you define the original position and with the x and y the position to go to.  
+	IF you want to scale many layers and want them to keep there relative positions, you have to use the keywords for the bounding box of the layers, e.g. you want them to be scaled up by 5% from the middle of the layers use 'bx + 0.5 * bw' for the Anchor X. For the width you can use 'lw * 1.05'
 
 	Even more, you can preceed your input field with "inc" for increase or "dec" for decrease. If you use one of these keywords the value will not be set in absolute fashion but it will be incremented. If you e.g. use inc 10 for X Position and 0.5 for Anchor X, the layer will move 10 pixels to the right with every execution of the action. If you use inc 0.05 * sw for X Position and 0.5 for Anchor X, the layer will move 5% of the screen to the right with every execution of the action.
 
-	The same syntax of the positioning inputs can also be used for width and height inputs. If you use both, width and height, the layer aspect ratio will be changed to whatever the result is. IF you use only one, width or height, you get the option how to treat aspect ratio of the layer.  
+	The same syntax of the positioning inputs can also be used for width and height inputs. If you use both, width and height, the layer aspect ratio will be changed to whatever the result is. If you use only one, width or height, you get the option how to treat aspect ratio of the layer.  
 	By default only the selected parameter will be changed and the other one will be left untouched, resulting in a change of aspect ratio. Write "keep" or "la" in the input field and the other parameter will be adjusted to keep the current aspect ratio. Write any number or a fraction like 16/9 to set the aspect ratio to that value. If you e.g. just want to fix the a/r without changing the current width, you can use lw for the width and 4/3 for the a/r. Additionally with the Anchor field you can set the direction where the layer should be extended.
 
 	Last, but not least the action also offers the learn button. Push it to get the position, size and aspect ratio of the selected or specified button. After learn X Position, Y Position, Width and Height are selected for a complete status of the layer. So aspect ratio is not visible but the field will be updated with a numerical representation of the aspect ratio. If you disable Width or Height you can see the field and use also a/r.  

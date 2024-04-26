@@ -1514,6 +1514,46 @@ export function getActions(instance: AWJinstance): any {
 	/**
 	 * MARK: Layer position and size
 	 */
+	const calculateAr = (widthOrAr: number, height?: number) => {
+		let ar: number
+		let lowerAr: number
+		let upperAr: number
+		const knownArs = [
+			{value: 16/9,  string:'16/9'},
+			{value: 16/10, string:'16/10'},
+			{value: 4/3,   string:'4/3'},
+			{value: 5/4,   string:'5/4'},
+			{value: 21/9,  string:'21/9'},
+			{value: 1,     string:'1/1'},
+			{value: 2/3,   string:'2/3'},
+			{value: 9/16,  string:'9/16'},
+			{value: 10/16, string:'10/16'},
+			{value: 32/9,  string:'32/9'},
+		]
+		if (typeof height !== 'number') {
+			ar = widthOrAr
+			lowerAr = 100 * ar - 0.5 / 100
+			upperAr = 100 * ar + 0.5 / 100
+		} else {
+			if (height == 0) return undefined
+			ar = widthOrAr / height
+			if (height < widthOrAr) {
+				lowerAr = widthOrAr / (height+0.5)
+				upperAr = widthOrAr / (height-0.5)  
+			} else {
+				lowerAr = (widthOrAr-0.5) / height
+				upperAr = (widthOrAr+0.5) / height
+			}
+		}
+		for (const knownAr of knownArs) {
+			if (knownAr.value >= lowerAr && knownAr.value <= upperAr) {
+				return knownAr
+			}	
+		}
+		return {value: ar, string: (Math.round(ar*100000000)/100000000).toString(10)}
+	
+	}
+
 	type DevicePositionSize = {screen: string, preset: string, layersel: string, parameters: string[], x: string, xAnchor: string, y: string, yAnchor: string, w: string, h: string, ar: string} & Record<string, string> 
 	if (state.platform.startsWith('livepremier')) {
 		//const regexNumber = `[+-]?\\d+(?:\\.\\d+)?`
@@ -1525,7 +1565,10 @@ start with "dec" to decrease by amount,
 otherwise set value.
 You can use expression syntax with operators like +, -, *, /, (), ?:,  ...
 You can use the following keywords to be replaced on execution time:
-sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: layer left edge, ly: layer top edge, la: layer aspect ratio, sa: screen aspect ratio, layer: layer name, screen: screen name`
+lw: layer width, lh: layer height, lx: layer left edge, ly: layer top edge, la: layer aspect ratio,
+bw: box width, bh: box height, bx: box left edge, by: box top edge, ba: box aspect ratio,
+iw: layer source width, ih: layer source height, ia: layer source aspect ratio,
+sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name, screen: screen name`
 		actions['devicePositionSize'] = {
 			name: 'Set Position and Size',
 			options: [
@@ -1618,18 +1661,18 @@ sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: laye
 				{
 					id: 'xAnchor',
 					type: 'textinput',
-					label: 'Anchor X position in layer (fraction)',
+					label: 'Anchor X position',
 					tooltip,
-					default: '0.5',
+					default: 'lx + 0.5 * lw',
 					useVariables: true,
 					isVisible: (options) => {return options.parameters.includes('x') || options.parameters.includes('w')},
 				},
 				{
 					id: 'yAnchor',
 					type: 'textinput',
-					label: 'Anchor Y position in layer (fraction)',
+					label: 'Anchor Y position',
 					tooltip,
-					default: '0.5',
+					default: 'ly + 0.5 * lh',
 					useVariables: true,
 					isVisible: (options) => {return options.parameters.includes('y') || options.parameters.includes('h')},
 				},
@@ -1669,8 +1712,8 @@ sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: laye
 				newoptions.screen = screen
 				newoptions.layersel = layer
 				newoptions.preset = state.getPresetSelection()
-				newoptions.xAnchor = '0.5'
-				newoptions.yAnchor = '0.5'
+				newoptions.xAnchor = 'lx + 0.5 * lw'
+				newoptions.yAnchor = 'ly + 0.5 * lh'
 				newoptions.parameters = ['x', 'y', 'w', 'h']
 				
 				const pathToLayer = ['device','screenList','items',screen,'presetList','items',state.getPreset(screen, newoptions.preset),'layerList','items',layer,'position','pp']
@@ -1681,7 +1724,7 @@ sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: laye
 				newoptions.x = state.get(['DEVICE', ...pathToLayer, 'posH']).toString()
 				newoptions.y = state.get(['DEVICE', ...pathToLayer, 'posV']).toString()
 				
-				newoptions.ar = h !== 0 ? (Math.round((w/h)*10000000)/10000000).toString() : ''
+				newoptions.ar = h !== 0 ? calculateAr(w,h)?.string ?? '' : ''
 
 				return newoptions
 			},
@@ -1702,6 +1745,7 @@ sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: laye
 				}
 
 				const preset = action.options.preset === 'sel' ? state.getPresetSelection('sel') : action.options.preset
+				console.log('layers before match', layers)
 				layers = layers.filter(layer => (!state.isLocked(layer.screenAuxKey, preset) && layer.layerKey.match(/^\d+$/))) // wipe out layers of locked screens and native layer
 				if (layers.length === 0) return
 
@@ -1729,33 +1773,29 @@ sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: laye
 					return 0
 				}
 
-				const calculateAr = (widthOrAr: number, height?: number) => {
-					let ar: number
-					let lowerAr: number
-					let upperAr: number
-					const knownArs = [16/9, 16/10, 4/3, 5/4, 21/9, 1, 2/3, 9/16]
-					if (typeof height !== 'number') {
-						ar = widthOrAr
-						lowerAr = 100 * ar - 0.5 / 100
-                        upperAr = 100 * ar + 0.5 / 100
-					} else {
-						if (height == 0) return undefined
-						ar = widthOrAr / height
-						if (height < widthOrAr) {
-							lowerAr = widthOrAr / (height+0.5)
-                            upperAr = widthOrAr / (height-0.5)  
-						} else {
-							lowerAr = (widthOrAr-0.5) / height
-                            upperAr = (widthOrAr+0.5) / height
-						}
-					}
-					for (const knownAr of knownArs) {
-						if (knownAr >= lowerAr && knownAr <= upperAr) {
-							return knownAr
-						}	
-					}
-					return ar
-				
+				const boundingBoxes = {}
+
+				for (const layerIndex in layers as {screenAuxKey: string, layerKey: string, x: number, y: number, w: number, h: number, [name: string]: number | string}[]) {
+					const layer: any = layers[layerIndex]
+					const presetKey = state.getPreset(layer.screenAuxKey, preset)
+					const pathToLayer = ['device','screenList','items',layer.screenAuxKey,'presetList','items',presetKey,'layerList','items',layer.layerKey]
+					layer.w = state.get(['DEVICE', ...pathToLayer,'position','pp', 'sizeH']) ?? 1920
+					layer.wOriginal = layer.w
+					layer.h = state.get(['DEVICE', ...pathToLayer,'position','pp', 'sizeV']) ?? 1080
+					layer.hOriginal = layer.h
+					layer.x = (state.get(['DEVICE', ...pathToLayer,'position','pp', 'posH']) ?? 0) - layer.w / 2
+					layer.xOriginal = layer.x
+					layer.y = (state.get(['DEVICE', ...pathToLayer,'position','pp', 'posV']) ?? 0) - layer.h / 2
+					layer.yOriginal = layer.y
+
+					if (boundingBoxes[layer.screenAuxKey] === undefined ) boundingBoxes[layer.screenAuxKey] = {}
+					const box = boundingBoxes[layer.screenAuxKey]
+					if (box.x === undefined  || layer.x < box.x) box.x = layer.x
+					if (box.y === undefined  || layer.y < box.y) box.y = layer.y
+					if (box.w === undefined  || layer.x + layer.w > box.x + box.w) 
+						box.w = layer.x + layer.w - box.x
+					if (box.h === undefined  || layer.y + layer.h > box.y + box.h) 
+						box.h = layer.y + layer.h - box.y
 				}
 
 				for (const layerIndex in layers as {screenAuxKey: string, layerKey: string, x: number, y: number, w: number, h: number, [name: string]: number | string}[]) {
@@ -1764,25 +1804,39 @@ sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: laye
 					const screenWidth = state.get(`DEVICE/device/screenList/items/${layer.screenAuxKey}/status/size/pp/sizeH`)
 					const screenHeight = state.get(`DEVICE/device/screenList/items/${layer.screenAuxKey}/status/size/pp/sizeV`)
 					
-					const pathToLayer = ['device','screenList','items',layer.screenAuxKey,'presetList','items',presetKey,'layerList','items',layer.layerKey,'position','pp']
-					layer.w = state.get(['DEVICE', ...pathToLayer, 'sizeH']) ?? 1920
-					layer.wOriginal = layer.w
-					layer.h = state.get(['DEVICE', ...pathToLayer, 'sizeV']) ?? 1080
-					layer.hOriginal = layer.h
-					layer.x = (state.get(['DEVICE', ...pathToLayer, 'posH']) ?? 0) - layer.w / 2
-					layer.xOriginal = layer.x
-					layer.y = (state.get(['DEVICE', ...pathToLayer, 'posV']) ?? 0) - layer.h / 2
-					layer.yOriginal = layer.y
+					const pathToLayer = ['device','screenList','items',layer.screenAuxKey,'presetList','items',presetKey,'layerList','items',layer.layerKey]
+
+					layer.input = state.get(['DEVICE', ...pathToLayer,'source','pp','inputNum']) ?? 'NONE'
+					//console.log('layer before match', layer)
+					if (layer.input?.match(/^IN/)) {
+						layer.inPlug = state.get(`DEVICE/device/inputList/items/${layer.input}/control/pp/plug`) || '1'
+						layer.inWidth = state.get(`DEVICE/device/inputList/items/${layer.input}/plugList/items/${layer.inPlug}/status/signal/pp/imageWidth`) || 0
+						layer.inHeight = state.get(`DEVICE/device/inputList/items/${layer.input}/plugList/items/${layer.inPlug}/status/signal/pp/imageHeight`) || 0
+					} else {
+						layer.inWidth = 0
+						layer.inHeight = 0
+					}
+					
+					const boxWidth = boundingBoxes[layer.screenAuxKey]?.w ?? layer.w
+					const boxHeight = boundingBoxes[layer.screenAuxKey]?.h ?? layer.h
 
 					const context = {
 						sw: screenWidth,
 						sh: screenHeight,
+						sa: calculateAr(screenWidth, screenHeight)?.value ?? 0,
 						lw: layer.w,
 						lh: layer.h,
 						lx: layer.x,
 						ly: layer.y,
-						la: calculateAr(layer.w, layer.h) ?? 0,
-						sa: calculateAr(screenWidth, screenHeight) ?? 0,
+						la: calculateAr(layer.w, layer.h)?.value ?? 0,
+						bx: boundingBoxes[layer.screenAuxKey]?.x ?? layer.x,
+						by: boundingBoxes[layer.screenAuxKey]?.y ?? layer.y,
+						bw: boxWidth,
+						bh: boxHeight,
+						ba: calculateAr(boxWidth, boxHeight)?.value ?? 0,
+						iw: layer.inWidth,
+						ih: layer.inHeight,
+						ia: calculateAr(layer.inWidth, layer.inHeight)?.value ?? 0,
 						screen: layer.screenAuxKey,
 						layer: layer.layerKey,
 						index: layerIndex
@@ -1807,9 +1861,9 @@ sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: laye
 
 					let ar: number | undefined
 					if (action.options.ar.match(/keep/i)) {
-						ar = calculateAr(layer.w, layer.h)
+						ar = calculateAr(layer.w, layer.h)?.value ?? 0
 					} else {
-						ar = parseExpressionString(arP, context, calculateAr(layer.w, layer.h))
+						ar = parseExpressionString(arP, context, calculateAr(layer.w, layer.h)?.value)
 					}
 
 					let xChange = false
@@ -1818,6 +1872,7 @@ sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: laye
 					// do resizing
 					if (action.options.parameters.includes('w') && action.options.parameters.includes('h')) {
 						// set new width and height
+						console.log('set new width and height')
 						layer.w = widthInput
 						layer.h = heightInput
 					} else if (action.options.parameters.includes('w')) {
@@ -1830,44 +1885,49 @@ sw: screen width, sh: screen height, lw: layer width, lh: layer height, lx: laye
 						if (ar !== undefined) layer.w = layer.h * ar
 					}
 
-					// do positioning
-					if (action.options.parameters.includes('x')) {
-						layer.x = xPos - layer.w * xAnchor
-					} else if (layer.w !== layer.wOriginal) {
-						const anchorPos = layer.xOriginal + layer.wOriginal * xAnchor
-						layer.x = anchorPos - layer.w * xAnchor
+					// adjust position according anchor
+					if (layer.w !== layer.wOriginal && xAnchor !== (layer.xOriginal + 0.5 * layer.wOriginal)) {
+						layer.x = layer.xOriginal - ((xAnchor - layer.xOriginal) * (layer.w / layer.wOriginal)) + (xAnchor - layer.xOriginal)
 						xChange = true
 					}
-					if (action.options.parameters.includes('y')) {
-						layer.y = yPos - layer.h * yAnchor
-					} else if (layer.h !== layer.hOriginal) {
-						const anchorPos = layer.yOriginal + layer.hOriginal * yAnchor
-						layer.y = anchorPos - layer.h * yAnchor
+					if (layer.h !== layer.hOriginal && yAnchor !== (layer.yOriginal + 0.5 * layer.hOriginal)) {
+						layer.y = layer.yOriginal - ((yAnchor - layer.yOriginal) * (layer.h / layer.hOriginal)) + (yAnchor - layer.yOriginal)
 						yChange = true
 					}
+
+					// do positioning
+					if (action.options.parameters.includes('x')) {
+						layer.x += xPos - xAnchor
+					} 
+					if (action.options.parameters.includes('y')) {
+						layer.y += yPos - yAnchor
+					}
+
+
+					console.log('layer', {...layer, xAnchor, yAnchor, context})
 
 					// send values
 					if (layer.x !== layer.xOriginal || xChange) {
 						device.sendWSmessage(
-							[...pathToLayer, 'posH'],
+							[...pathToLayer,'position','pp', 'posH'],
 							Math.round(layer.x + layer.w / 2)
 						)
 					}
 					if (layer.y !== layer.yOriginal || yChange) {
 						device.sendWSmessage(
-							[...pathToLayer, 'posV'],
+							[...pathToLayer,'position','pp', 'posV'],
 							Math.round(layer.y + layer.h / 2)
 						)
 					}
 					if (layer.w !== layer.wOriginal) {
 						device.sendWSmessage(
-							[...pathToLayer, 'sizeH'],
+							[...pathToLayer,'position','pp', 'sizeH'],
 							Math.round(layer.w)
 						)
 					}
 					if (layer.h !== layer.hOriginal) {
 						device.sendWSmessage(
-							[...pathToLayer, 'sizeV'],
+							[...pathToLayer,'position','pp', 'sizeV'],
 							Math.round(layer.h)
 						)
 					}

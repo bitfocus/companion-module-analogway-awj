@@ -1,13 +1,18 @@
 import { AWJinstance } from './index.js'
 import * as dgram from 'dgram'
 import * as net from 'net'
-import URI from 'urijs'
 import ky from 'ky'
+import URI from 'urijs'
 import WebSocket from 'ws'
 import { State } from './state.js'
 import { checkSubscriptions, initSubscriptions } from './subscriptions.js'
 import { mapOut, updateMappings } from './mappings.js'
 import { InstanceStatus } from '@companion-module/base'
+
+const fetchDefaultParameters = {
+	retry: 2,
+	timeout: 15000
+}
 
 
 class AWJdevice {
@@ -280,7 +285,7 @@ class AWJdevice {
 						headers: {
 							cookie: this.authcookie
 						},
-						retry: 2,
+						...fetchDefaultParameters,
 						onDownloadProgress: (progress, _chunk) => {
 							const newDownloaded = Math.floor(progress.transferredBytes / 1024000)
 							if (newDownloaded !== downloaded) {
@@ -299,14 +304,16 @@ class AWJdevice {
 
 			try {
 				const authResponse = await ky.get(`${urlObj.protocol()}://${urlObj.host()}/auth/status`, {
-					retry: 2	
+					...fetchDefaultParameters,
 				}).json<{[name: string]: any}>()
+				console.log('auth response', authResponse)
 				const isAuth = authResponse.authentication?.isAuthenticationEnabled
-				const device = authResponse.devices?.leader?.reference?.enum ?? authResponse.devices?.leader?.reference?.enum
-				const swVerMajor = authResponse.devices?.leader?.version?.major ?? authResponse.devices?.leader?.version?.major
-				const swVerMinor = authResponse.devices?.leader?.version?.minor ?? authResponse.devices?.leader?.version?.minor
-				const swVerPatch = authResponse.devices?.leader?.version?.patch ?? authResponse.devices?.leader?.version?.patch
-				if (isAuth !== undefined && device !== undefined && swVerMajor !== undefined && swVerMinor !== undefined && swVerPatch !== undefined) {
+				const deviceObj = authResponse.device || authResponse.devices?.leader || undefined
+				// const device = authResponse.devices?.leader?.reference?.enum ?? authResponse.devices?.leader?.reference?.enum
+				// const swVerMajor = authResponse.devices?.leader?.version?.major ?? authResponse.devices?.leader?.version?.major
+				// const swVerMinor = authResponse.devices?.leader?.version?.minor ?? authResponse.devices?.leader?.version?.minor
+				// const swVerPatch = authResponse.devices?.leader?.version?.patch ?? authResponse.devices?.leader?.version?.patch
+				if (isAuth !== undefined && deviceObj !== undefined) {
 					// it seems we are speaking to an AWJ device
 
 					if (authResponse?.authentication.isAuthenticationEnabled === true) {
@@ -333,6 +340,10 @@ class AWJdevice {
 						// no Password required
 						getState()
 					}
+				} else {
+					this.instance.updateStatus(InstanceStatus.ConnectionFailure, 'No AWJ device')
+					this.instance.log('error', 'Connected to a device, but it is no compatible AWJ device, disconnecting now.')
+					this.disconnect()
 				}
 			} catch (error) {
 				console.log(`Can't connect to device webserver.`, error)
@@ -410,7 +421,7 @@ class AWJdevice {
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				retry: 2,
+				...fetchDefaultParameters,
 				redirect: 'error'
 			})
 				//.ok((res) => res.status < 400)
@@ -427,7 +438,7 @@ class AWJdevice {
 					'Content-Type': 'application/json',
 					'Cookie': this.authcookie
 				},
-				retry: 2,
+				...fetchDefaultParameters,
 				redirect: 'error'
 			})
 				//.ok((res) => res.status < 400)
@@ -443,7 +454,7 @@ class AWJdevice {
 				headers: {
 					'Content-Type': 'application/json',
 				},
-				retry: 2,
+				...fetchDefaultParameters,
 				redirect: 'error'
 			})
 				//.ok((res) => res.status < 400)
@@ -459,7 +470,7 @@ class AWJdevice {
 						'Content-Type': 'application/json',
 						'Cookie': this.authcookie
 					},
-					retry: 2,
+					...fetchDefaultParameters,
 					redirect: 'error'
 					})
 					.then((res) => {
@@ -519,7 +530,7 @@ class AWJdevice {
 	sendRawWSmessage(message: string): void {
 		if (this.websocket?.readyState === 1) {
 			this.websocket?.send(message)
-			// console.log('sendig WS message', this.websocket.url ,message)
+			console.log('sendig WS message', this.websocket.url ,message)
 		}
 	}
 
