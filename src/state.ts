@@ -1,8 +1,8 @@
 import {AWJinstance} from './index.js'
-import { checkForAction, Subscription } from './subscriptions.js'
+import { checkForAction, Subscription } from './awjdevice/subscriptions.js'
 import { mapIn, mapOut, MapItem } from './mappings.js'
 //import { InputValue } from './../../../instance_skel_types'
-import { Choicemeta, getAuxArray, getScreensArray } from './choices.js'
+import { Choicemeta, getAuxArray, getScreensArray } from './awjdevice/choices.js'
 import { Config } from './config.js'
 
 type Channel = 'REMOTE' | 'DEVICE' | 'LOCAL'
@@ -22,12 +22,12 @@ class State {
 			presetMode: 'PREVIEW',
 			presetModeLock: {
 				PROGRAM: {
-					...Object.fromEntries(Array.from({length: 24}, (_,b) => {return [`S${b+1}` , false]})),
-					...Object.fromEntries(Array.from({length: 96}, (_,b) => {return [`A${b+1}` , false]})),
+					...Object.fromEntries(Array.from({ length: 24 }, (_, b) => { return [`S${b + 1}`, false] })),
+					...Object.fromEntries(Array.from({ length: 96 }, (_, b) => { return [`A${b + 1}`, false] })),
 				},
 				PREVIEW: {
-					...Object.fromEntries(Array.from({length: 24}, (_,b) => {return [`S${b+1}` , false]})),
-					...Object.fromEntries(Array.from({length: 96}, (_,b) => {return [`A${b+1}` , false]})),
+					...Object.fromEntries(Array.from({ length: 24 }, (_, b) => { return [`S${b + 1}`, false] })),
+					...Object.fromEntries(Array.from({ length: 96 }, (_, b) => { return [`A${b + 1}`, false] })),
 				},
 			},
 			layerIds: [],
@@ -36,14 +36,14 @@ class State {
 			mappings: [] as MapItem[],
 			config: {} as Config
 		},
-	}
-	private lastMsgTimer: NodeJS.Timeout | undefined = undefined
+	};
+	private lastMsgTimer: NodeJS.Timeout | undefined = undefined;
 
 	constructor(instance: AWJinstance) {
 		this.instance = instance
 	}
 
-	public getUnmapped(path?: string | string[] | undefined, root?: any): any { 
+	public getUnmapped(path?: string | string[] | undefined, root?: any): any {
 		if (path === undefined) {
 			return this.stateobj
 		}
@@ -54,8 +54,7 @@ class State {
 		let first: string
 		let patharray: string[]
 		if (typeof path === 'string') {
-			const npath = path.replace(/^\//, '')
-			;[first, ...patharray] = npath.split('/')
+			const npath = path.replace(/^\//, '');[first, ...patharray] = npath.split('/')
 		} else {
 			[first, ...patharray] = path
 		}
@@ -78,21 +77,30 @@ class State {
 		return mapIn(this.stateobj.LOCAL.mappings, mapped.path, val).value
 	}
 
-	concat(first: string | string[], second: string | string[]): string | string[] {
-		const trimend = (str: string) => {
-			return str.replace(/\/$/, '')
+	/**
+	 * concatenates parts of paths
+	 * preserves a leading or trailing `/` only if all arguments are strings
+	 * @param args can be strings or arrays of strings or any combination
+	 * @returns a string if all arguments are strings or otherwise an array with the parts
+	 */
+	concat(...args: (string | any[])[]): string | string[] {
+		if (args.length === 0) return []
+		const onlyStrings = args.every(arg => typeof arg === 'string')
+		args = args.flat(Infinity)
+		if (args.length === 1) return args[0] as string[]
+		let lead: string[] = [], trail: string[] = []
+
+		if (onlyStrings) {
+			const first = args[0] as string // needed to avoid error without conditional type predicate
+			if (first.charAt(0) === '/') lead = ['']
+			if (args[args.length - 1].slice(-1) === '/') trail = ['']
 		}
-		const trimstart = (str: string) => {
-			return str.replace(/^\//, '')
-		}
-		if (typeof first === 'string' && typeof second === 'string') {
-			return trimend(first) + '/' + trimstart(second)
-		} else if (typeof first === 'string' && Array.isArray(second)) {
-			return [ ...trimend(first).split('/'), ...second]
-		} else if (typeof second === 'string' && Array.isArray(first)) {
-			return [...first, ...trimstart(second).split('/')]
+
+		args = args.map(part => part.toString().replaceAll(/^\/|\/$/g, '').split('/'))
+		if (onlyStrings) {
+			return [...lead, ...args.flat(Infinity), ...trail].join('/')
 		} else {
-			return [...first, ...second]
+			return args.flat(Infinity)
 		}
 	}
 
@@ -100,7 +108,7 @@ class State {
 	 * Stores the last message to the state with a locking mechanism. Message is only stored if there not had been an attempt to call this function in the last 800ms
 	 * @param msg The message object
 	 */
-	private storeLastMsg(msg: { path: unknown, value: unknown }): void {
+	private storeLastMsg(msg: { path: unknown; value: unknown} ): void {
 		if (this.lastMsgTimer && this.lastMsgTimer.hasRef()) { // there is a running timer
 			this.lastMsgTimer.refresh()
 		} else if (this.lastMsgTimer && this.lastMsgTimer.hasRef() === false) { // there is an elapsed timer
@@ -110,14 +118,19 @@ class State {
 		} else { // there is no timer
 			this.setUnmapped('LOCAL/lastMsg', msg)
 			clearTimeout(this.lastMsgTimer)
-			this.lastMsgTimer = setTimeout(() => { this.lastMsgTimer?.unref()  }, 800)
+			this.lastMsgTimer = setTimeout(() => { this.lastMsgTimer?.unref() }, 800)
 		}
-	} 
+	}
 
 	public clearTimers() {
 		clearTimeout(this.lastMsgTimer)
 	}
 
+	/**
+	 * Handles a received object describing a state change, applies it to the local state storage, runs any needed subscriptions, checks feedbacks and eventually handles action recording
+	 * @param obj the AWJ object to apply
+	 * @returns
+	 */
 	public apply(obj: any): void {
 		if (obj.channel === undefined || obj.data === undefined) return
 		const channel: Channel = obj.channel
@@ -131,7 +144,7 @@ class State {
 			if (channel === 'DEVICE' && !data.path.toString().endsWith(',pp,xUpdate')) {
 				this.storeLastMsg({ path: data.path, value: data.value })
 				if (this.instance.isRecording && JSON.stringify(data.value).length <= 132) {
-					const newoptions = { xUpdate: false}
+					const newoptions = { xUpdate: false }
 					newoptions['path'] = this.instance.jsonToAWJpath(data.path)
 					switch (typeof data.value) {
 						case 'string':
@@ -169,7 +182,7 @@ class State {
 						xUpdate: true
 					}
 				})
-			} 
+			}
 		} else if (data?.channel === 'PATCH' && data.patch) {
 			const mapped = mapIn(this.stateobj.LOCAL.mappings, this.concat(channel, data.patch.path), data.patch.value)
 			if (data.patch.op === 'replace') {
@@ -224,13 +237,12 @@ class State {
 		}
 	}
 
-	public setUnmapped(path: string | string[], value: any, root: any = this.stateobj): void { 
+	public setUnmapped(path: string | string[], value: any, root: any = this.stateobj): void {
 		const obj: any = root
 		let first: string
 		let patharray: string[]
 		if (typeof path === 'string') {
-			const npath = path.replace(/^\//, '')
-			;[first, ...patharray] = npath.split('/')
+			const npath = path.replace(/^\//, '');[first, ...patharray] = npath.split('/')
 		} else {
 			[first, ...patharray] = path
 		}
@@ -282,8 +294,7 @@ class State {
 		let first: string
 		let patharray: string[]
 		if (typeof path === 'string') {
-			const npath = path.replace(/^\//, '')
-			;[first, ...patharray] = npath.split('/')
+			const npath = path.replace(/^\//, '');[first, ...patharray] = npath.split('/')
 		} else {
 			[first, ...patharray] = path
 		}
@@ -372,7 +383,7 @@ class State {
 		}
 	}
 
-	
+
 
 	/**
 	 * Returns the actual preset (A or B) representing program or preview of the given input or of the selection
@@ -384,7 +395,7 @@ class State {
 		if (screen.match(/^S|A\d+$/) === null) return ''
 		if (preset.match(/^A|B|PGM|PVW|SEL$/i) === null) return ''
 		if (preset.toLowerCase() === 'sel') {
-			preset = this.getPresetSelection()
+			preset = this.instance.device.getPresetSelection()
 		}
 		let ret: string
 		if (preset.match(/^A|B$/i)) {
@@ -426,7 +437,7 @@ class State {
 		let screens: string[] = []
 		// get screens to check
 		if (input.includes('all')) {
-			getScreensArray(this).forEach((screen: Choicemeta) => screens.push('S'+ screen.index))
+			getScreensArray(this).forEach((screen: Choicemeta) => screens.push('S' + screen.index))
 		} else if (input.includes('sel')) {
 			screens = [...input]
 			screens.splice(screens.indexOf('sel'), 1)
@@ -453,7 +464,7 @@ class State {
 		let screens: string[] = []
 		// get screens to check
 		if (input.includes('all')) {
-			getAuxArray(this).forEach((screen: Choicemeta) => screens.push('A'+ screen.index))
+			getAuxArray(this).forEach((screen: Choicemeta) => screens.push('A' + screen.index))
 		} else if (input.includes('sel')) {
 			screens = [...input]
 			screens.splice(screens.indexOf('sel'), 1)
@@ -506,7 +517,7 @@ class State {
 		return [...this.get(path)]
 	}
 
-	public getSelectedLayers(): { screenAuxKey: string; layerKey: string }[] {
+	public getSelectedLayers(): { screenAuxKey: string; layerKey: string} [] {
 		let path = 'LOCAL/layerIds'
 		if (this.syncSelection) {
 			path = 'REMOTE/live/screens/layerSelection/layerIds'

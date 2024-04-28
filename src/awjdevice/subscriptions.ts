@@ -1,6 +1,5 @@
 import { InstanceStatus } from '@companion-module/base'
-import { AWJdevice } from './connection.js'
-import {AWJinstance} from './index.js'
+import {AWJinstance} from '../index.js'
 // import { DeviceMap, DeviceMappingFunction } from '../types/DeviceMap';
 
 export type Subscription = {
@@ -838,13 +837,13 @@ const midraSubscriptions: Record<string, Subscription> = {
  * Combines the common subscriptions with the platform specific ones
  * @param platform 
  */
-export function initSubscriptions(connection: AWJdevice): void {
-	if (connection.state.platform.startsWith('livepremier')) {
-		connection.state.set('LOCAL/subscriptions', { ...livepremierSubscriptions, ...commonSubscriptions })
-	} else if (connection.state.platform === 'alta') {
-		connection.state.set('LOCAL/subscriptions', { ...midraSubscriptions, ...commonSubscriptions })
-	} else if (connection.state.platform === 'midra') {
-		connection.state.set('LOCAL/subscriptions', { ...midraSubscriptions, ...commonSubscriptions })
+export function initSubscriptions(instance: AWJinstance): void {
+	if (instance.state.platform.startsWith('livepremier')) {
+		instance.state.set('LOCAL/subscriptions', { ...livepremierSubscriptions, ...commonSubscriptions })
+	} else if (instance.state.platform === 'alta') {
+		instance.state.set('LOCAL/subscriptions', { ...midraSubscriptions, ...commonSubscriptions })
+	} else if (instance.state.platform === 'midra') {
+		instance.state.set('LOCAL/subscriptions', { ...midraSubscriptions, ...commonSubscriptions })
 	}
 }
 

@@ -1,5 +1,4 @@
-import {AWJinstance, regexAWJpath} from './index.js'
-import { State } from './state.js'
+import {AWJinstance, regexAWJpath} from '../index.js'
 import {
 	Choicemeta,
 	choicesBackgroundSources,
@@ -21,9 +20,10 @@ import {
 } from './choices.js'
 import { combineRgb, CompanionFeedbackBooleanEvent, CompanionFeedbackDefinitions } from '@companion-module/base'
 
-export function getFeedbacks(instance: AWJinstance, state: State): CompanionFeedbackDefinitions {
+export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinitions {
 	const feedbacks = {}
 	const config = instance.config
+	const state = instance.state
 
 	// MARK: syncselection
 	feedbacks['syncselection'] = {

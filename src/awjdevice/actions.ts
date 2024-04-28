@@ -1,5 +1,5 @@
-import {AWJinstance} from './index.js'
-import { State } from './state.js'
+import {AWJinstance} from '../index.js'
+import { State } from './../state.js'
 
 import {
 	choicesBackgroundSourcesPlusNone,
@@ -39,10 +39,11 @@ import {
 	DropdownChoiceId,
 	SomeCompanionActionInputField,
 } from '@companion-module/base'
-import { Config } from './config.js'
+import { Config } from '../config.js'
 import { compileExpression } from '@nx-js/compiler-util'
-import { AWJdevice } from './connection.js'
+import { AWJconnection } from '../connection.js'
 import { InstanceStatus, splitRgb } from '@companion-module/base'
+import { AWJdevice } from './awjdevice.js'
 
 /**
  * T = Object like {option1id: type, option2id: type}
@@ -86,6 +87,7 @@ type Dropdown<t> = {id: t, label: string}
  */
 export function getActions(instance: AWJinstance): any {
 	const state: State = instance.state
+	const connection: AWJconnection = instance.connection
 	const device: AWJdevice = instance.device
 	const config: Config = instance.config
 	const actions: {[id: string]: AWJaction<any> | undefined} = {}
@@ -128,10 +130,10 @@ export function getActions(instance: AWJinstance): any {
 		],
 		callback: (action) => {
 			const screens = state.getChosenScreenAuxes(action.options.screens)
-			const preset = state.getPresetSelection(action.options.preset, true)
+			const preset = device.getPresetSelection(action.options.preset, true)
 			for (const screen of screens) {
 				if (state.isLocked(screen, preset)) continue
-				device.sendWSmessage(
+				connection.sendWSmessage(
 					[
 						'device',
 						'presetBank',
@@ -151,7 +153,7 @@ export function getActions(instance: AWJinstance): any {
 					],
 					false
 				)
-				device.sendWSmessage(
+				connection.sendWSmessage(
 					[
 						'device',
 						'presetBank',
@@ -176,7 +178,7 @@ export function getActions(instance: AWJinstance): any {
 
 				if (action.options.selectScreens) {
 					if (state.syncSelection) {
-						device.sendRawWSmessage(
+						connection.sendRawWSmessage(
 							`{"channel":"REMOTE","data":{"name":"replace","path":"/live/screens/screenAuxSelection","args":[${JSON.stringify(
 								screens
 							)}]}}`
@@ -222,10 +224,10 @@ export function getActions(instance: AWJinstance): any {
 		],
 		callback: (action) => {
 			const screens = state.getChosenScreens(action.options.screens)
-			const preset = state.getPresetSelection(action.options.preset, true)
+			const preset = device.getPresetSelection(action.options.preset, true)
 			for (const screen of screens) {
 				if (state.isLocked(screen, preset)) continue
-				device.sendWSmessage(
+				connection.sendWSmessage(
 					[
 						'device',
 						'presetBank',
@@ -245,7 +247,7 @@ export function getActions(instance: AWJinstance): any {
 					],
 					false
 				)
-				device.sendWSmessage(
+				connection.sendWSmessage(
 					[
 						'device',
 						'presetBank',
@@ -270,7 +272,7 @@ export function getActions(instance: AWJinstance): any {
 
 				if (action.options.selectScreens) {
 					if (state.syncSelection) {
-						device.sendWSdata('REMOTE', 'replace', 'live/screens/screenAuxSelection', [screens])
+						connection.sendWSdata('REMOTE', 'replace', 'live/screens/screenAuxSelection', [screens])
 					} else {
 						state.set('LOCAL/screenAuxSelection/keys', screens)
 						instance.checkFeedbacks('liveScreenSelection')
@@ -317,10 +319,10 @@ export function getActions(instance: AWJinstance): any {
 		],
 		callback: (action) => {
 			const screens = state.getChosenAuxes(action.options.screens as string[])
-			const preset = state.getPresetSelection(action.options.preset as string, true)
+			const preset = device.getPresetSelection(action.options.preset as string, true)
 			for (const screen of screens) {
 				if (state.isLocked(screen, preset)) continue
-				device.sendWSmessage(
+				connection.sendWSmessage(
 					[
 						'device',
 						'preset',
@@ -341,7 +343,7 @@ export function getActions(instance: AWJinstance): any {
 					],
 					false
 				)
-				device.sendWSmessage(
+				connection.sendWSmessage(
 					[
 						'device',
 						'preset',
@@ -367,7 +369,7 @@ export function getActions(instance: AWJinstance): any {
 
 				if (action.options.selectScreens) {
 					if (state.syncSelection) {
-						device.sendWSdata('REMOTE', 'replace', 'live/screens/screenAuxSelection', [screens])
+						connection.sendWSdata('REMOTE', 'replace', 'live/screens/screenAuxSelection', [screens])
 					} else {
 						state.set('LOCAL/screenAuxSelection/keys', screens)
 						instance.checkFeedbacks('liveScreenSelection')
@@ -407,7 +409,7 @@ export function getActions(instance: AWJinstance): any {
 			},
 		],
 		callback: (action) => {
-			const preset = state.getPresetSelection(action.options.preset, true)
+			const preset = device.getPresetSelection(action.options.preset, true)
 			let screens: string[] = []
 
 			let bankpath = ['device', 'masterPresetBank']
@@ -458,7 +460,7 @@ export function getActions(instance: AWJinstance): any {
 				return // TODO: resembles original WebRCS behavior, but could be also individual screen handling
 			}
 			// if (state.isLocked(layer.screenAuxKey, preset)) continue
-			device.sendWSmessage(
+			connection.sendWSmessage(
 				[
 					...bankpath,
 					...loadpath,
@@ -474,14 +476,14 @@ export function getActions(instance: AWJinstance): any {
 
 			if (action.options.selectScreens) {
 				if (state.syncSelection) {
-					device.sendWSdata('REMOTE', 'replace', 'live/screens/screenAuxSelection', [screens])
+					connection.sendWSdata('REMOTE', 'replace', 'live/screens/screenAuxSelection', [screens])
 				} else {
 					state.set('LOCAL/screenAuxSelection/keys', screens)
 					instance.checkFeedbacks('liveScreenSelection')
 				}
 			}
 
-			device.sendWSmessage(
+			connection.sendWSmessage(
 				[
 					...bankpath,
 					...loadpath,
@@ -560,18 +562,18 @@ export function getActions(instance: AWJinstance): any {
 			let preset: string
 			if (action.options.method === 'sel') {
 				layers = state.getSelectedLayers() ?? []
-				preset = state.getPresetSelection('sel', true)
+				preset = device.getPresetSelection('sel', true)
 			} else {
 				for (const screen of action.options.screen) {
 					for (const layer of action.options.layer) {
 						layers.push({ screenAuxKey: screen, layerKey: layer })
 					}
 				}
-				preset = state.getPresetSelection(action.options.preset, true)
+				preset = device.getPresetSelection(action.options.preset, true)
 			}
 			for (const layer of layers) {
 				if (state.isLocked(layer.screenAuxKey, preset)) continue
-				device.sendWSmessage(
+				connection.sendWSmessage(
 					[
 						'device',
 						'layerBank',
@@ -594,7 +596,7 @@ export function getActions(instance: AWJinstance): any {
 					],
 					false
 				)
-				device.sendWSmessage(
+				connection.sendWSmessage(
 					[
 						'device',
 						'layerBank',
@@ -640,7 +642,7 @@ export function getActions(instance: AWJinstance): any {
 		],
 		callback: (action) => {
 			for (const mv of action.options.multiviewer) {
-				device.sendWSmessage(
+				connection.sendWSmessage(
 					[
 						'device',
 						'monitoringBank',
@@ -657,7 +659,7 @@ export function getActions(instance: AWJinstance): any {
 					],
 					false
 				)
-				device.sendWSmessage(
+				connection.sendWSmessage(
 					[
 						'device',
 						'monitoringBank',
@@ -724,7 +726,7 @@ export function getActions(instance: AWJinstance): any {
 						dir = 'xTakeDown'
 					}
 				}
-				device.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', dir], true)
+				connection.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', dir], true)
 			}
 		},
 	} as AWJaction<DeviceTakeScreen>
@@ -746,7 +748,7 @@ export function getActions(instance: AWJinstance): any {
 		],
 		callback: (action: any) => {
 			for (const screen of state.getChosenScreenAuxes(action.options.screens)) {
-				device.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'xCut'], true)
+				connection.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'xCut'], true)
 			}
 		},
 	} as AWJaction<DeviceCutScreen>
@@ -802,7 +804,7 @@ export function getActions(instance: AWJinstance): any {
 				}
 				const tbarint = Math.round(value * tbarmax)
 				for (const screen of state.getChosenScreenAuxes(action.options.screens)) {
-					device.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'tbarPosition'], tbarint)
+					connection.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'tbarPosition'], tbarint)
 				}
 			}
 		},
@@ -850,14 +852,14 @@ export function getActions(instance: AWJinstance): any {
 					(action.options.preset === 'pgm' && presetPgm === 'A') ||
 					(action.options.preset === 'pvw' && presetPgm === 'B')
 				) {
-					device.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeDownTime'], time)
+					connection.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeDownTime'], time)
 				}
 				if (
 					action.options.preset === 'all' ||
 					(action.options.preset === 'pvw' && presetPgm === 'A') ||
 					(action.options.preset === 'pgm' && presetPgm === 'B')
 				) {
-					device.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'], time)
+					connection.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'], time)
 				}
 			})
 		},
@@ -894,7 +896,7 @@ export function getActions(instance: AWJinstance): any {
 		callback: (action) => {
 			const time = action.options.time * 10
 			state.getChosenScreenAuxes(action.options.screens).forEach((screen) =>
-				device.sendWSmessage(['device', 'transition', 'screenList', 'items', screen, 'control', 'pp', 'takeTime'], time)
+				connection.sendWSmessage(['device', 'transition', 'screenList', 'items', screen, 'control', 'pp', 'takeTime'], time)
 			)
 		},
 	}
@@ -953,7 +955,7 @@ export function getActions(instance: AWJinstance): any {
 							if (layer === 'NATIVE') {
 								sourcetype = 'sourceNative'
 							}
-							device.sendWSmessage([
+							connection.sendWSmessage([
 								'device', 'screenList', 'items', screen,
 								'presetList', 'items', state.getPreset(screen, action.options.preset),
 								'layerList', 'items', layer,
@@ -963,7 +965,7 @@ export function getActions(instance: AWJinstance): any {
 					}
 				}
 				else if (action.options.method === 'sel') {
-					const preset = state.getPresetSelection('sel')
+					const preset = device.getPresetSelection('sel')
 					state.getSelectedLayers()
 						.filter((selection) => state.isLocked(selection.screenAuxKey, preset) === false)
 						.forEach((layer) => {
@@ -984,7 +986,7 @@ export function getActions(instance: AWJinstance): any {
 								action.options['sourceBack'] !== 'keep'
 							) source = action.options['sourceBack']
 							if (source !== 'keep'){
-								device.sendWSmessage([
+								connection.sendWSmessage([
 									'device', 'screenList', 'items', layer.screenAuxKey,
 									'presetList', 'items', state.getPreset(layer.screenAuxKey, preset),
 									'layerList', 'items', layer.layerKey,
@@ -1114,33 +1116,33 @@ export function getActions(instance: AWJinstance): any {
 						const presetpath = ['device', 'screenList', 'items', screen, 'presetList', 'items', state.getPreset(screen, action.options.preset)]
 						if (screen.startsWith('A') && action.options['sourceBack'] !== 'keep')
 							// on Midra on aux there is only background, so we don't show a layer dropdown and just set the background
-							device.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'content'], action.options['sourceBack'])
+							connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'content'], action.options['sourceBack'])
 						else
 							// else decide which dropdown to use for which layer
 							for (const layer of action.options[`layer${screen}`]) {
 								if (layer === 'NATIVE' && action.options['sourceNative'] !== 'keep') {
-									device.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'set'], action.options['sourceNative'].replace(/\D/g, ''))
+									connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'set'], action.options['sourceNative'].replace(/\D/g, ''))
 								} else if (layer === 'TOP' && action.options['sourceFront'] !== 'keep') {
-									device.sendWSmessage([...presetpath, 'top', 'source', 'pp', 'frame'], action.options['sourceFront'].replace(/\D/g, ''))
+									connection.sendWSmessage([...presetpath, 'top', 'source', 'pp', 'frame'], action.options['sourceFront'].replace(/\D/g, ''))
 								} else if ( action.options['sourceLayer'] !== 'keep') {
-									device.sendWSmessage([...presetpath, 'liveLayerList', 'items', layer, 'source', 'pp', 'input'], action.options['sourceLayer'])
+									connection.sendWSmessage([...presetpath, 'liveLayerList', 'items', layer, 'source', 'pp', 'input'], action.options['sourceLayer'])
 								}
 							}
 					}
 				} else if (action.options.method === 'sel') {
-					const preset = state.getPresetSelection('sel')
+					const preset = device.getPresetSelection('sel')
 					state.getSelectedLayers()
 						.filter((selection) => state.isLocked(selection.screenAuxKey, preset) === false)
 						.forEach((layer) => {
 							const presetpath = ['device', 'screenList', 'items', layer.screenAuxKey, 'presetList', 'items', state.getPreset(layer.screenAuxKey, 'sel')]
 							if (layer.layerKey === 'BKG' && layer.screenAuxKey.startsWith('S') && action.options['sourceNative'] !== 'keep') {
-									device.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'set'], action.options['sourceNative'].replace(/\D/g, ''))
+									connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'set'], action.options['sourceNative'].replace(/\D/g, ''))
 								} else if (layer.layerKey === 'BKG' && layer.screenAuxKey.startsWith('A') && action.options['sourceBack'] !== 'keep') {
-									device.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'content'], action.options['sourceBack'])
+									connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'content'], action.options['sourceBack'])
 								} else if (layer.layerKey === 'TOP' && action.options['sourceFront'] !== 'keep') {
-									device.sendWSmessage([...presetpath, 'top', 'source', 'pp', 'frame'], action.options['sourceFront'].replace(/\D/g, ''))
+									connection.sendWSmessage([...presetpath, 'top', 'source', 'pp', 'frame'], action.options['sourceFront'].replace(/\D/g, ''))
 								} else if ( action.options['sourceLayer'] !== 'keep') {
-									device.sendWSmessage([...presetpath, 'liveLayerList', 'items', layer.layerKey, 'source', 'pp', 'input'], action.options['sourceLayer'])
+									connection.sendWSmessage([...presetpath, 'liveLayerList', 'items', layer.layerKey, 'source', 'pp', 'input'], action.options['sourceLayer'])
 								}
 						})
 				}
@@ -1249,7 +1251,7 @@ export function getActions(instance: AWJinstance): any {
 			name: 'Set Input Plug',
 			options: [],
 			callback: (action) => {
-				device.sendWSmessage([
+				connection.sendWSmessage([
 					'device', 'inputList', 'items',
 					action.options.input ?? '',
 					'control', 'pp', 'plug'
@@ -1333,7 +1335,7 @@ export function getActions(instance: AWJinstance): any {
 			},
 		],
 		callback: (action) => {
-			device.sendWSmessage(
+			connection.sendWSmessage(
 				[
 					'device',
 					'inputList',
@@ -1388,7 +1390,7 @@ export function getActions(instance: AWJinstance): any {
 			} else if (action.options.mode === 2) {
 				val = !state.get('DEVICE/device/inputList/items/' + input + '/control/pp/freeze')
 			}
-			device.sendWSmessage(['device', 'inputList', 'items', input, 'control', 'pp', 'freeze'], val)
+			connection.sendWSmessage(['device', 'inputList', 'items', input, 'control', 'pp', 'freeze'], val)
 		},
 	} as AWJaction<DeviceInputFreeze>
 
@@ -1456,7 +1458,7 @@ export function getActions(instance: AWJinstance): any {
 						} else if (action.options.mode === 2) {
 							val = !state.get(['DEVICE', ...path])
 						}
-						device.sendWSmessage(path, val)
+						connection.sendWSmessage(path, val)
 					}
 				}				
 			},
@@ -1505,7 +1507,7 @@ export function getActions(instance: AWJinstance): any {
 					} else if (action.options.mode === 2) {
 						val = !state.getUnmapped(['DEVICE', ...path])
 					}
-					device.sendWSmessage(path, val)	
+					connection.sendWSmessage(path, val)	
 				}				
 			},
 		} as AWJaction<DeviceScreenFreeze>
@@ -1711,7 +1713,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				
 				newoptions.screen = screen
 				newoptions.layersel = layer
-				newoptions.preset = state.getPresetSelection()
+				newoptions.preset = device.getPresetSelection()
 				newoptions.xAnchor = 'lx + 0.5 * lw'
 				newoptions.yAnchor = 'ly + 0.5 * lh'
 				newoptions.parameters = ['x', 'y', 'w', 'h']
@@ -1744,7 +1746,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					}
 				}
 
-				const preset = action.options.preset === 'sel' ? state.getPresetSelection('sel') : action.options.preset
+				const preset = action.options.preset === 'sel' ? device.getPresetSelection('sel') : action.options.preset
 				console.log('layers before match', layers)
 				layers = layers.filter(layer => (!state.isLocked(layer.screenAuxKey, preset) && layer.layerKey.match(/^\d+$/))) // wipe out layers of locked screens and native layer
 				if (layers.length === 0) return
@@ -1908,25 +1910,25 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 
 					// send values
 					if (layer.x !== layer.xOriginal || xChange) {
-						device.sendWSmessage(
+						connection.sendWSmessage(
 							[...pathToLayer,'position','pp', 'posH'],
 							Math.round(layer.x + layer.w / 2)
 						)
 					}
 					if (layer.y !== layer.yOriginal || yChange) {
-						device.sendWSmessage(
+						connection.sendWSmessage(
 							[...pathToLayer,'position','pp', 'posV'],
 							Math.round(layer.y + layer.h / 2)
 						)
 					}
 					if (layer.w !== layer.wOriginal) {
-						device.sendWSmessage(
+						connection.sendWSmessage(
 							[...pathToLayer,'position','pp', 'sizeH'],
 							Math.round(layer.w)
 						)
 					}
 					if (layer.h !== layer.hOriginal) {
-						device.sendWSmessage(
+						connection.sendWSmessage(
 							[...pathToLayer,'position','pp', 'sizeV'],
 							Math.round(layer.h)
 						)
@@ -1957,11 +1959,11 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 		callback: (action) => {
 			for (const screen of state.getChosenScreenAuxes(action.options.screens)) {
 				if (state.isLocked(screen, 'PREVIEW')) return
-				device.sendWSmessage(
+				connection.sendWSmessage(
 					['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'xCopyProgramToPreview'],
 					false
 				)
-				device.sendWSmessage(
+				connection.sendWSmessage(
 					['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'xCopyProgramToPreview'],
 					true
 				)
@@ -2002,9 +2004,9 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				else action = 'on'
 			}
 			if (action === 'on') allscreens.forEach((screen: string) =>
-				device.sendWSmessage('device/screenGroupList/items/' + screen + '/control/pp/' + property, invert ? false : true))
+				connection.sendWSmessage('device/screenGroupList/items/' + screen + '/control/pp/' + property, invert ? false : true))
 			if (action === 'off') allscreens.forEach((screen: string) =>
-				device.sendWSmessage('device/screenGroupList/items/' + screen + '/control/pp/' + property, invert ? true : false))
+				connection.sendWSmessage('device/screenGroupList/items/' + screen + '/control/pp/' + property, invert ? true : false))
 		}
 	} as AWJaction<DevicePresetToggle>
 
@@ -2070,8 +2072,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			}
 
 			if (state.syncSelection) {
-				if (state.platform.startsWith('livepremier')) device.sendWSdata('REMOTE', 'replace', 'live/multiviewers/widgetSelection', [widgetSelection])
-				if (state.platform === 'midra') device.sendWSdata('REMOTE', 'replace', 'live/multiviewer/widgetSelection', [widgetSelection.map((itm: {widgetKey: string}) => itm.widgetKey)])
+				if (state.platform.startsWith('livepremier')) connection.sendWSdata('REMOTE', 'replace', 'live/multiviewers/widgetSelection', [widgetSelection])
+				if (state.platform === 'midra') connection.sendWSdata('REMOTE', 'replace', 'live/multiviewer/widgetSelection', [widgetSelection.map((itm: {widgetKey: string}) => itm.widgetKey)])
 			} else {
 				state.set('LOCAL/widgetSelection/widgetIds', widgetSelection)
 				instance.checkFeedbacks('remoteWidgetSelection')
@@ -2118,7 +2120,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				]
 			}
 			for (const widget of widgetSelection) {
-				device.sendWSmessage(
+				connection.sendWSmessage(
 					[
 						'device',
 						'monitoringList',
@@ -2215,16 +2217,16 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			if (state.syncSelection) {
 				switch (sel) {
 					case 0:
-						device.sendWSdata('REMOTE', 'remove', 'live/screens/screenAuxSelection', [screen])
+						connection.sendWSdata('REMOTE', 'remove', 'live/screens/screenAuxSelection', [screen])
 						break
 					case 1:
-						device.sendWSdata('REMOTE', 'add', 'live/screens/screenAuxSelection', [screen])
+						connection.sendWSdata('REMOTE', 'add', 'live/screens/screenAuxSelection', [screen])
 						break
 					case 2:
-						device.sendWSdata('REMOTE', 'replace', 'live/screens/screenAuxSelection', [[screen]])
+						connection.sendWSdata('REMOTE', 'replace', 'live/screens/screenAuxSelection', [[screen]])
 						break
 					case 3:
-						device.sendWSdata('REMOTE', 'toggle', 'live/screens/screenAuxSelection', [screen])
+						connection.sendWSdata('REMOTE', 'toggle', 'live/screens/screenAuxSelection', [screen])
 						break
 				}
 			} else {
@@ -2310,7 +2312,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			if (state.syncSelection) {
 				if (action.options.lock === 'lock' || action.options.lock === 'unlock') {
 					const screen = state.getChosenScreenAuxes(screens)
-					device.sendWSdata(
+					connection.sendWSdata(
 						'REMOTE',
 						action.options.lock + 'ScreenAuxes' + pst,
 						'live/screens/presetModeLock',
@@ -2327,7 +2329,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						if (allLocked) {
 							lock = 'unlock'
 						}
-						device.sendWSdata(
+						connection.sendWSdata(
 							'REMOTE',
 							lock + 'ScreenAuxes' + pst,
 							'live/screens/presetModeLock',
@@ -2335,7 +2337,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						)
 					} else {
 						for (const screen of state.getChosenScreenAuxes(screens)) {
-							device.sendWSdata(
+							connection.sendWSdata(
 								'REMOTE',
 								'toggle',
 								'live/screens/presetModeLock/' + action.options.preset,
@@ -2404,17 +2406,17 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			if (state.syncSelection) {
 				switch (action.options.mode) {
 					case 'pgm':
-						device.sendRawWSmessage(
+						connection.sendRawWSmessage(
 							'{"channel":"REMOTE","data":{"name":"set","path":"/live/screens/presetModeSelection","args":["PROGRAM"]}}'
 						)
 						break
 					case 'pvw':
-						device.sendRawWSmessage(
+						connection.sendRawWSmessage(
 							'{"channel":"REMOTE","data":{"name":"set","path":"/live/screens/presetModeSelection","args":["PREVIEW"]}}'
 						)
 						break
 					case 'tgl':
-						device.sendRawWSmessage(
+						connection.sendRawWSmessage(
 							'{"channel":"REMOTE","data":{"name":"toggle","path":"/live/screens/presetModeSelection","args":[]}}'
 						)
 						break
@@ -2529,7 +2531,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				}
 			}
 			if (state.syncSelection) {
-				device.sendWSdata('REMOTE', 'replace', 'live/screens/layerSelection', [ret])
+				connection.sendWSdata('REMOTE', 'replace', 'live/screens/layerSelection', [ret])
 			} else {
 				state.set('LOCAL/layerIds', ret)
 				instance.checkFeedbacks('remoteLayerSelection')
@@ -2613,7 +2615,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					break
 			}
 			state.set('LOCAL/syncSelection', syncstate)
-			device.sendRawWSmessage(
+			connection.sendRawWSmessage(
 				`{"channel":"REMOTE","data":{"name":"enableRemoteSelection","path":"/system/network/websocketServer/clients/${myindex}","args":[${syncstate}]}}`
 			)
 			instance.checkFeedbacks(
@@ -2667,10 +2669,10 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				}
 			}
 			if (action === 'on') {
-				device.sendWSmessage('device/streaming/control/pp/start', true)				
+				connection.sendWSmessage('device/streaming/control/pp/start', true)				
 			}
 			if (action === 'off') {
-				device.sendWSmessage('device/streaming/control/pp/start', false)				
+				connection.sendWSmessage('device/streaming/control/pp/start', false)				
 			}
 		}
 	} as AWJaction<DeviceStreamControl>
@@ -2698,8 +2700,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				if (state.getUnmapped('DEVICE/device/streaming/control/audio/live/pp/mute')) action = 'on'
 				else action = 'off'
 			}
-			if (action === 'on') device.sendWSmessage('device/streaming/control/audio/live/pp/mute', false)
-			if (action === 'off') device.sendWSmessage('device/streaming/control/audio/live/pp/mute', true)
+			if (action === 'on') connection.sendWSmessage('device/streaming/control/audio/live/pp/mute', false)
+			if (action === 'off') connection.sendWSmessage('device/streaming/control/audio/live/pp/mute', true)
 		}
 	} as AWJaction<DeviceStreamAudioMute>
 
@@ -2771,7 +2773,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						'pp',
 						'source',
 					]
-					device.sendWSmessage(path, audioInputChoices[instart === 0 ? 0 : instart + s].id)
+					connection.sendWSmessage(path, audioInputChoices[instart === 0 ? 0 : instart + s].id)
 				}
 			}
 	}
@@ -2812,7 +2814,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						'pp',
 						'channelMapping',
 					]
-					device.sendWSmessage(path, routings[block])
+					connection.sendWSmessage(path, routings[block])
 				})
 			} else {
 				console.error("%s can't be found in available outputs or %s can't be found in available inputs", action.options.out, action.options.in)
@@ -2867,7 +2869,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						'pp',
 						'source',
 					]
-					device.sendWSmessage(path, action.options.in[s])
+					connection.sendWSmessage(path, action.options.in[s])
 				}
 			}
 		} else {
@@ -2885,7 +2887,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				'pp',
 				'source',
 			]
-			device.sendWSmessage(path, audioInputChoices[0]?.id)
+			connection.sendWSmessage(path, audioInputChoices[0]?.id)
 		}
 	}
 	if (state.platform === 'midra') actions['deviceAudioRouteChannels'].callback = (action: ActionEvent<DeviceAudioRouteChannels>) => {
@@ -2922,7 +2924,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					'pp',
 					'channelMapping',
 				]
-				device.sendWSmessage(path, routings[block])
+				connection.sendWSmessage(path, routings[block])
 			})
 		}
 	}
@@ -2997,17 +2999,17 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			},
 		],
 		callback: (action) => {
-			device.sendWSmessage(
+			connection.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'pp', 'type'],
 				action.options.type
 			)
 			if (action.options.type === 'CURRENTTIME') {
-				device.sendWSmessage(
+				connection.sendWSmessage(
 					['device', 'timerList', 'items', action.options.timer, 'control', 'pp', 'currentTimeMode'],
 					action.options.currentTimeMode
 				)
 			} else {
-				device.sendWSmessage(
+				connection.sendWSmessage(
 					['device', 'timerList', 'items', action.options.timer, 'control', 'pp', 'unitMode'],
 					action.options.unitMode
 				)
@@ -3015,35 +3017,35 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			instance.log('debug', action.options.fg_color.toString())
 			instance.log('debug', JSON.stringify(splitRgb(action.options.fg_color).a))
 			if (state.platform === 'midra') return // color handling is not available at midra
-			device.sendWSmessage(
+			connection.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'background', 'color', 'pp', 'red'],
 				splitRgb(action.options.bg_color).r
 			)
-			device.sendWSmessage(
+			connection.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'background', 'color', 'pp', 'green'],
 				splitRgb(action.options.bg_color).g
 			)
-			device.sendWSmessage(
+			connection.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'background', 'color', 'pp', 'blue'],
 				splitRgb(action.options.bg_color).b
 			)
-			device.sendWSmessage(
+			connection.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'background', 'color', 'pp', 'alpha'],
 				Math.round((splitRgb(action.options.bg_color).a || 1) * 255)
 			)
-			device.sendWSmessage(
+			connection.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'text', 'color', 'pp', 'red'],
 				splitRgb(action.options.fg_color).r
 			)
-			device.sendWSmessage(
+			connection.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'text', 'color', 'pp', 'green'],
 				splitRgb(action.options.fg_color).g
 			)
-			device.sendWSmessage(
+			connection.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'text', 'color', 'pp', 'blue'],
 				splitRgb(action.options.fg_color).b
 			)
-			device.sendWSmessage(
+			connection.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'text', 'color', 'pp', 'alpha'],
 				Math.round((splitRgb(action.options.fg_color).a || 1) * 255)
 			)
@@ -3105,7 +3107,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			} else {
 				time = 0
 			}
-			device.sendWSmessage(
+			connection.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'pp', timetype],
 				time
 			)
@@ -3182,8 +3184,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					cmd = 'xStart'
 				}
 			}
-			device.sendWSmessage(['device', 'timerList', 'items', action.options.timer, 'control', 'pp', cmd], false)
-			device.sendWSmessage(['device', 'timerList', 'items', action.options.timer, 'control', 'pp', cmd], true)
+			connection.sendWSmessage(['device', 'timerList', 'items', action.options.timer, 'control', 'pp', cmd], false)
+			connection.sendWSmessage(['device', 'timerList', 'items', action.options.timer, 'control', 'pp', cmd], true)
 		},
 	} as AWJaction<DeviceTimerTransport>
 
@@ -3438,14 +3440,14 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				.forEach((group) => {
 					deviceTestpatternsOptions.find((option) => option.id === group.id)?.choices
 					.forEach((choice) => {
-						device.sendWSmessage(['device', group.id, 'items', choice.id, 'pattern', 'control', 'pp', 'inhibit'], true)
-						device.sendWSmessage(['device', group.id, 'items', choice.id, 'pattern', 'control', 'pp', 'type'],
+						connection.sendWSmessage(['device', group.id, 'items', choice.id, 'pattern', 'control', 'pp', 'inhibit'], true)
+						connection.sendWSmessage(['device', group.id, 'items', choice.id, 'pattern', 'control', 'pp', 'type'],
 							deviceTestpatternsOptions.find((option) => option.id === group.id + 'Pat')?.choices[0]?.id ?? ''
 						)
 					} )
 				})
 			} else {
-				device.sendWSmessage(
+				connection.sendWSmessage(
 					[
 						'device',
 						action.options.group,
@@ -3463,7 +3465,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					action.options[`${action.options.group}Pat`] === 'NO_PATTERN'
 						? true
 						: false
-				device.sendWSmessage(
+				connection.sendWSmessage(
 					[
 						'device',
 						action.options.group,
@@ -3565,7 +3567,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				//const obj = JSON.parse(action.options.command) // check if the data is a valid json TODO: further validation
 				const path = instance.AWJtoJsonPath(await instance.parseVariablesInString(action.options.path))
 				if (path.length > 1) {
-					device.sendWSmessage(path, value)
+					connection.sendWSmessage(path, value)
 					//device.sendRawWSmessage(`{"channel":"DEVICE","data":{"path":${JSON.stringify(path)},"value":${value}}}`)
 				}
 				if (action.options.xUpdate) {
@@ -3723,7 +3725,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					'activate',
 				])
 			}
-			device.sendWSmessage(
+			connection.sendWSmessage(
 				['device', 'gpio', 'gpoList', 'items', action.options.gpo.toString(), 'control', 'pp', 'activate'],
 				newstate
 			)
@@ -3763,32 +3765,32 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 
 			if (action.options.action === 'on') {
 				const mac = instance.config.macaddress.split(/[,:-_.\s]/).join('')
-				device.wake(mac)
-				device.resetReconnectInterval()
+				connection.wake(mac)
+				connection.resetReconnectInterval()
 			}
 			if (action.options.action === 'wake' && state.platform === 'midra') {
-				device.restPOST(instance.config.deviceaddr + '/api/tpp/v1/system/wakeup', '')
-				device.resetReconnectInterval()
+				connection.restPOST(instance.config.deviceaddr + '/api/tpp/v1/system/wakeup', '')
+				connection.resetReconnectInterval()
 			}
 			if (action.options.action === 'standby' && state.platform === 'midra') {
-				device.sendWSmessage(path, 'STANDBY')
+				connection.sendWSmessage(path, 'STANDBY')
 				instance.updateStatus(InstanceStatus.Ok, 'Standby')
 			}
 			if (action.options.action === 'off' && state.platform.startsWith('livepremier')) {
 				// device.sendWSmessage(path + 'pp/wakeOnLan', true)
 				// device.sendWSmessage(path + 'pp/xRequest', false)
 				// device.sendWSmessage(path + 'pp/xRequest', true)
-				device.sendWSmessage(path, 'SHUTDOWN')
+				connection.sendWSmessage(path, 'SHUTDOWN')
 			}
 			if (action.options.action === 'off' && state.platform === 'midra') {
-				device.sendWSmessage(path, 'SWITCH_OFF')
+				connection.sendWSmessage(path, 'SWITCH_OFF')
 			}
 			if (action.options.action === 'reboot' && state.platform.startsWith('livepremier')) {
-				device.sendWSmessage(path, 'REBOOT')
+				connection.sendWSmessage(path, 'REBOOT')
 			}
 			if (action.options.action === 'reboot' && state.platform === 'midra') {
-				device.sendWSmessage('device/system/shutdown/pp/xReboot', false)
-				device.sendWSmessage('device/system/shutdown/pp/xReboot', true)
+				connection.sendWSmessage('device/system/shutdown/pp/xReboot', false)
+				connection.sendWSmessage('device/system/shutdown/pp/xReboot', true)
 			}
 		},
 	} as AWJaction<DevicePower>

@@ -1,4 +1,4 @@
-import { State } from './state.js'
+import { State } from './../state'
 
 type Dropdown<t> = {id: t, label: string}
 

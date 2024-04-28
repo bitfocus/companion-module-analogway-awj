@@ -7,15 +7,14 @@ import {
 	runEntrypoint,
 	SomeCompanionConfigField,
 } from '@companion-module/base'
-import { getActions } from './actions.js'
+import { AWJconnection } from './connection.js'
+import { AWJdevice } from './awjdevice/awjdevice.js'
 import { Config, GetConfigFields } from './config.js'
-import { AWJdevice } from './connection.js'
-import { State } from './state.js'
-import { getFeedbacks } from './feedback.js'
-import { getPresets } from './presets.js'
 import { initVariables } from './variables.js'
-import { Subscription } from './subscriptions.js'
+import { State } from './state.js'
+import { initSubscriptions, Subscription } from './awjdevice/subscriptions.js'
 import { UpgradeScripts } from './upgrades.js'
+import { updateMappings } from './mappings.js'
 
 export const regexAWJpath = '^DeviceObject(?:\\/(@items|@props|\\$?[A-Za-z0-9_-]+))+$'
 
@@ -27,7 +26,8 @@ export class AWJinstance extends InstanceBase<Config> {
 	 * Create an instance of an AWJ module.
 	 */
 	public state!: State
-	public device!: AWJdevice
+	public connection: AWJconnection
+	public device: AWJdevice
 	private variables!: (CompanionVariableDefinition & { id?: string })[]
 	public config!: Config
 	private oldlabel = ''
@@ -43,12 +43,12 @@ export class AWJinstance extends InstanceBase<Config> {
 	 * is OK to start doing things.
 	 */
 	public async init(config: Config): Promise<void> {
-		this.updateStatus(InstanceStatus.Disconnected) //(this.STATUS_UNKNOWN)
+		this.updateStatus(InstanceStatus.Disconnected)
 
 		this.config = config
 		this.variables = []
 		this.state = new State(this)
-		this.device = new AWJdevice(this)
+		this.connection = new AWJconnection(this)
 		this.oldlabel = this.label
 
 		if (this.config.deviceaddr === undefined) {
@@ -71,14 +71,53 @@ export class AWJinstance extends InstanceBase<Config> {
 		}
 		this.state.setUnmapped('LOCAL/config', this.config)
 
-		this.setFeedbackDefinitions(getFeedbacks(this, this.state)) 
 		this.variables = initVariables(this)
 		this.updateVariableDefinitions(this.variables)
 		this.setVariableValues({connectionLabel: this.label})
-		this.subscribeFeedbacks()
-		this.device.connect(this.config.deviceaddr)
+
+		this.connection.onMessage((data) => {
+			if (
+				data &&
+				data.match(/"op":"replace","path":"\/system\/status\/current(Device)?Time","value":/) === null &&
+				data.match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
+				data.match(/"device","system",("deviceList","items","[1-4]",)?"temperature",/) === null
+			) {
+				this.state.apply(JSON.parse(data))
+			}
+		})
+
+		this.connection.connect(this.config.deviceaddr)
+		//this.device = new AWJdevice(this.state, this.connection)
+
+
 
 		// void this.updateInstance()
+	}
+
+	/**
+	 * Creates a new AWJdevice instance and sets it up 
+	 * @param platform 
+	 */
+	createDevice(platform: string) {
+		switch (platform) {
+			case 'livepremier':
+				this.device = new AWJdevice(this.state, this.connection)
+				break
+		
+			default:
+				this.device = new AWJdevice(this.state, this.connection) // TODO: branch here
+				break
+		}
+		try {
+			updateMappings(this) // TODO: remove
+		} catch (error) {
+			this.log('error', 'update Mappings failed ' + error) 
+		}
+		try {
+			initSubscriptions(this) // TODO: move into device
+		} catch (error) {
+			this.log('error', 'init Subscriptions failed ' + error) 
+		}
 	}
 
 	/**
@@ -86,7 +125,7 @@ export class AWJinstance extends InstanceBase<Config> {
 	 */
 	public async destroy(): Promise<void> {
 		this.state.clearTimers()
-		this.device.destroy()
+		this.connection.destroy()
 
 		this.log('debug' ,'destroy '+this.id)
 	}
@@ -110,8 +149,8 @@ export class AWJinstance extends InstanceBase<Config> {
 		if (this.config.deviceaddr !== oldconfig.deviceaddr) {
 			// new address, reconnect
 			this.updateStatus(InstanceStatus.Connecting)
-			this.device.disconnect()
-			this.device.connect(this.config.deviceaddr)
+			this.connection.disconnect()
+			this.connection.connect(this.config.deviceaddr)
 		}
 		if (
 			this.label !== this.oldlabel ||
@@ -154,10 +193,11 @@ export class AWJinstance extends InstanceBase<Config> {
 	 */
 	public async updateInstance(): Promise<void> {
 
-		this.setFeedbackDefinitions(getFeedbacks(this, this.state))
-		this.setActionDefinitions(getActions(this) as CompanionActionDefinitions)
-		this.setPresetDefinitions(getPresets(this))
+		this.setFeedbackDefinitions(this.device.getFeedbackDefinitions(this))
+		this.setActionDefinitions(this.device.getActionDefinitions(this) as CompanionActionDefinitions)
+		this.setPresetDefinitions(this.device.getPresetDefinitions(this))
 		this.setVariableValues({ connectionLabel: this.label })
+		this.subscribeFeedbacks()
 		let preset: string,
 				vartext = 'PGM'
 		if (this.state.syncSelection) {
@@ -177,7 +217,7 @@ export class AWJinstance extends InstanceBase<Config> {
 
 	connectDevice(): void {
 		const address = this.config.deviceaddr
-		this.device.connect(address)
+		this.connection.connect(address)
 	}
 
 	handleStartStopRecordActions(isRecording: boolean): void {
@@ -329,7 +369,7 @@ export class AWJinstance extends InstanceBase<Config> {
 				break
 		}
 		this.state.setUnmapped('LOCAL/syncSelection', syncstate)
-		this.device.sendRawWSmessage(
+		this.connection.sendRawWSmessage(
 			`{"channel":"REMOTE","data":{"name":"enableRemoteSelection","path":"/system/network/websocketServer/clients/${myindex}","args":[${syncstate}]}}`
 		)
 	}

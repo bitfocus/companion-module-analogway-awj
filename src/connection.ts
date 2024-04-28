@@ -5,8 +5,8 @@ import ky from 'ky'
 import URI from 'urijs'
 import WebSocket from 'ws'
 import { State } from './state.js'
-import { checkSubscriptions, initSubscriptions } from './subscriptions.js'
-import { mapOut, updateMappings } from './mappings.js'
+import { checkSubscriptions } from './awjdevice/subscriptions.js'
+import { mapOut } from './mappings.js'
 import { InstanceStatus } from '@companion-module/base'
 
 const fetchDefaultParameters = {
@@ -15,7 +15,7 @@ const fetchDefaultParameters = {
 }
 
 
-class AWJdevice {
+class AWJconnection {
 	instance: AWJinstance
 	public state: State
 	tcpsocket: net.Socket | undefined
@@ -33,51 +33,32 @@ class AWJdevice {
 	buffer = ''
 	shouldBeConnected: boolean
 	hadError: boolean
+	#messageHandler: (arg: string) => any = () => undefined
 
 	constructor(instance: AWJinstance) {
 		this.instance = instance
 		this.state = instance.state
-		//this.tcpsocket = new net.Socket()
 		this.hadError = false
 		this.shouldBeConnected = false
-		//this.tcpsocket.setNoDelay(true)
-		//this.tcpsocket.setKeepAlive(true, 2500)
-		//this.tcpsocket.setEncoding('utf8')
-		//this.tcpsocket.on('ready', () => {
-		//	this.instance.updateStatus(this.instance.STATUS_OK)
-		//})
+	}
 
-		// this.tcpsocket.on('close', () => {
-		// 	console.log('AWJ Client closed')
-		// 	if (this.shouldBeConnected) {
-		// 		this.instance.updateStatus(this.instance.STATUS_ERROR)
-		// 		console.log('Retry AWJ connection in 2s')
-		// 		// setTimeout(() => this.connect(this.host, this.port), 2000)
-		// 	}
-		// })
+	/**
+	 * Handle messages received from device
+	 * @param callback function to call for received data. Data will be passed in Argument as string.
+	 */
+	onMessage(callback: (arg: string) => any) {
+		if (callback === undefined) {
+			this.#messageHandler = () => undefined
+		} else {
+			this.#messageHandler = callback
+		}
 
-	// 	this.tcpsocket.on('data', (data: string) => {
-	// 		this.bufferFragment(data)
-	// 		let message: string | null = null
-	// 		// eslint-disable-next-line no-cond-assign
-	// 		while ((message = this.getNextMessage())) {
-	// 			// check if there is data followed by a delimiter
-	// 			console.log('AWJ received ', message)
-	// 			let obj = {}
-	// 			try {
-	// 				obj = JSON.parse(message) // check if the data is a valid json, could be only a fragment
-	// 			} catch (error) {
-	// 				console.log('Received data is no valid JSON')
-	// 				continue
-	// 			}
-	// 			if (Object.prototype.hasOwnProperty.call(obj, 'path') && Object.prototype.hasOwnProperty.call(obj, 'value')) {
-	// 				// check if json has the properties of AWJ
-	// 				console.log('Received valid:', obj)
-	// 			} else {
-	// 				console.log('Received data does not contain required properties', obj)
-	// 			}
-	// 		}
-	// 	})
+		if (this.websocket) this.websocket.on('message', (data, isBinary) => {
+			//console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
+			if (!isBinary) {
+				this.#messageHandler(data.toString())
+			}
+		})
 	}
 
 	bufferFragment(data: string): void {
@@ -166,8 +147,10 @@ class AWJdevice {
 						const major = parseInt(fwVersion.split('.')[0])
 						if (!isNaN(major) && major >= 0) {
 							this.state.setUnmapped('LOCAL/platform', `livepremier${major}`)
+							this.instance.createDevice(`livepremier${major}`)
 						} else {
 							this.state.setUnmapped('LOCAL/platform', 'livepremier')
+							this.instance.createDevice(`livepremier`)
 						}
 					} else if (device.match(/^EIKOS/)) {
 						this.instance.updateStatus(InstanceStatus.Ok)
@@ -176,6 +159,7 @@ class AWJdevice {
 							'Connected to Eikos 4k' + serialAndFirmware()
 						)
 						this.state.setUnmapped('LOCAL/platform', 'midra')
+						this.instance.createDevice('midra')
 					} else if (device.match(/^PULSE/)) {
 						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
@@ -183,6 +167,7 @@ class AWJdevice {
 							'Connected to Pulse 4k' + serialAndFirmware()
 						)
 						this.state.setUnmapped('LOCAL/platform', 'midra')
+						this.instance.createDevice('midra')
 					} else if (device.match(/^QMX/)) {
 						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
@@ -190,6 +175,7 @@ class AWJdevice {
 							'Connected to QuikMatrix 4k' + serialAndFirmware()
 						)
 						this.state.setUnmapped('LOCAL/platform', 'midra')
+						this.instance.createDevice('midra')
 					} else if (device.match(/^QVU/)) {
 						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
@@ -197,6 +183,7 @@ class AWJdevice {
 							'Connected to QuickVu 4k' + serialAndFirmware()
 						)
 						this.state.setUnmapped('LOCAL/platform', 'midra')
+						this.instance.createDevice('midra')
 					} else if (device.match(/^ZEN100/)) {
 						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
@@ -204,6 +191,7 @@ class AWJdevice {
 							'Connected to Zenith 100' + serialAndFirmware()
 						)
 						this.state.setUnmapped('LOCAL/platform', 'midra')
+						this.instance.createDevice('midra')
 					} else if (device.match(/^ZEN200/)) {
 						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
@@ -211,6 +199,7 @@ class AWJdevice {
 							'Connected to Zenith 200' + serialAndFirmware()
 						)
 						this.state.setUnmapped('LOCAL/platform', 'midra')
+						this.instance.createDevice('midra')
 					} else if (device.match(/^DBG/)) {
 						this.instance.updateStatus(InstanceStatus.Ok)
 						this.instance.log(
@@ -218,20 +207,11 @@ class AWJdevice {
 							'Connected to MNG_DEBUG' + serialAndFirmware()
 						)
 						this.state.setUnmapped('LOCAL/platform', 'midra')
+						this.instance.createDevice('midra')
 					} else {
 						this.instance.updateStatus(InstanceStatus.ConnectionFailure)
 						this.instance.log('error', `Connected to an AWJ device of type '${device}', firmware '${fwVersion}'. Device type or firmware can not be determined or is not compatible with this module`)
 						return
-					}
-					try {
-						updateMappings(this.instance)
-					} catch (error) {
-						this.instance.log('error', 'update Mappings failed ' + error)
-					}
-					try {
-						initSubscriptions(this)
-					} catch (error) {
-						this.instance.log('error', 'init Subscriptions failed ' + error)
 					}
 
 					if (this.instance.config.sync === true && this.hadError === false) {
@@ -393,18 +373,21 @@ class AWJdevice {
 			}
 		})
 
-		this.websocket.on('message', (data, isBinary) => {
-			//console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
-			if (
-				isBinary != true &&
-				data.toString().match(/"op":"replace","path":"\/system\/status\/current(Device)?Time","value":/) === null &&
-				data.toString().match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
-				data.toString().match(/"device","system",("deviceList","items","[1-4]",)?"temperature",/) === null
-			) {
-				// console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
-				this.state.apply(JSON.parse(data.toString()))
-			}
-		})
+		this.onMessage(this.#messageHandler)
+
+		// this.websocket.on('message', (data, isBinary) => {
+		// 	//console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
+		// 	if (
+		// 		isBinary != true &&
+		// 		data.toString().match(/"op":"replace","path":"\/system\/status\/current(Device)?Time","value":/) === null &&
+		// 		data.toString().match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
+		// 		data.toString().match(/"device","system",("deviceList","items","[1-4]",)?"temperature",/) === null
+		// 	) {
+		// 		// console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
+		// 		this.#messageHandler(data.toString())
+		// 		this.state.apply(JSON.parse(data.toString()))
+		// 	}
+		// })
 		
 	}
 
@@ -507,22 +490,6 @@ class AWJdevice {
 		this.instance.log('debug', 'Connection has been destroyed due to removal or disable by user')
 	}
 
-	// async sendRawTCPmessage(message: string): Promise<void> {
-	// 	// if (this.tcpsocket.readyState === 'open')
-	// 	return new Promise((resolve, reject) => {
-	// 		this.tcpsocket?.write(message)
-
-	// 		this.tcpsocket?.on('data', (data: void | PromiseLike<void>): void => {
-	// 			resolve(data)
-	// 		})
-
-	// 		this.tcpsocket?.on('error', (err: unknown) => {
-	// 			reject(err)
-	// 			this.instance.updateStatus(this.instance.STATUS_ERROR)
-	// 		})
-	// 	})
-	// }
-
 	/**
 	 * Sends a raw text message to the device via websocket connection
 	 * @param message the message string to send
@@ -621,36 +588,6 @@ class AWJdevice {
 		this.sendRawWSmessage(JSON.stringify(obj))
 	}
 
-	// sendAWJmessage(_op: string, _path: string, _value: string): void
-	// sendAWJmessage(_op: string, _path: string, _value: number): void
-	// sendAWJmessage(_op: string, _path: string, _value: boolean): void
-	// sendAWJmessage(op: string, path: string, value: string | number | boolean): void {
-	// 	if (typeof value === 'string')
-	// 		return void this.sendRawTCPmessage(`{"op":"${op}, "path":"${path}", "value":"${value}"}${this.delimiter}`)
-	// 	if (typeof value === 'number' || typeof value === 'boolean')
-	// 		return void this.sendRawTCPmessage(
-	// 			`{"op":"${op}, "path":"${path}", "value":${value.toString()}}${this.delimiter}`
-	// 		)
-	// }
-
-	/**
-	 * Sends a global update command
-	 * @param platform 
-	 */
-	sendXupdate(platform?: string): void {
-		if (!platform) platform = this.state.platform
-		const updates: Record<string, string> = {
-			livepremier: '{"channel":"DEVICE","data":{"path":["device","screenGroupList","control","pp","xUpdate"],"value":',
-			midra: '{"channel":"DEVICE","data":{"path":["device","preset","control","pp","xUpdate"],"value":'
-		}
-		const xUpdate = updates[platform]
-		if (xUpdate) {
-			this.sendRawWSmessage(xUpdate + 'false}}')
-			this.sendRawWSmessage(xUpdate + 'true}}')
-		}
-
-	}
-
 	/**
 	 * createMagicPacket
 	 */
@@ -688,4 +625,4 @@ class AWJdevice {
 	}
 }
 
-export { AWJdevice }
+export { AWJconnection }

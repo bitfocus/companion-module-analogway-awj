@@ -1,4 +1,4 @@
-import {AWJinstance} from './index.js'
+import {AWJinstance} from '../index.js'
 import {
 	choicesBackgroundSources,
 	choicesBackgroundSourcesPlusNone,
