@@ -1,4 +1,5 @@
 import {AWJinstance, regexAWJpath} from '../index.js'
+import { StateMachine } from '../state.js'
 import {
 	Choicemeta,
 	choicesBackgroundSources,
@@ -23,7 +24,7 @@ import { combineRgb, CompanionFeedbackBooleanEvent, CompanionFeedbackDefinitions
 export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinitions {
 	const feedbacks = {}
 	const config = instance.config
-	const state = instance.state
+	const state: StateMachine = instance.device
 
 	// MARK: syncselection
 	feedbacks['syncselection'] = {
@@ -198,7 +199,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 				id: 'screens',
 				type: 'dropdown',
 				label: 'Screens / Auxscreens',
-				choices: [{ id: 'all', label: 'Any' }, ...getScreenAuxChoices(instance.state)],
+				choices: [{ id: 'all', label: 'Any' }, ...getScreenAuxChoices(state)],
 				multiple: true,
 				default: ['all'],
 			},
@@ -208,7 +209,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 				id: 'screens',
 				type: 'dropdown',
 				label: 'Screens',
-				choices: [{ id: 'all', label: 'Any' }, ...getScreenChoices(instance.state)],
+				choices: [{ id: 'all', label: 'Any' }, ...getScreenChoices(state)],
 				multiple: true,
 				tags: true,
 				regex: '/^S([1-9]|[1-3][0-9]|4[0-8])$/',
@@ -230,7 +231,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 				id: 'screens',
 				type: 'dropdown',
 				label: 'Aux Screens',
-				choices: [{ id: 'all', label: 'Any' }, ...getAuxChoices(instance.state)],
+				choices: [{ id: 'all', label: 'Any' }, ...getAuxChoices(state)],
 				multiple: true,
 				tags: true,
 				regex: '/^S([1-9]|[1-3][0-9]|4[0-8])$/',
@@ -321,7 +322,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 				id: 'screens',
 				type: 'dropdown',
 				label: 'Screens / Auxscreens',
-				choices: [{ id: 'all', label: 'Any' }, ...getScreenAuxChoices(instance.state)],
+				choices: [{ id: 'all', label: 'Any' }, ...getScreenAuxChoices(state)],
 				multiple: true,
 				tags: true,
 				regex: '/^(S|A)([1-9]|[1-3][0-9]|4[0-8])$/',
@@ -462,7 +463,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 				id: 'screens',
 				type: 'dropdown',
 				label: 'Screens / Auxscreens',
-				choices: [{ id: 'all', label: 'Any' }, ...getScreenAuxChoices(instance.state)],
+				choices: [{ id: 'all', label: 'Any' }, ...getScreenAuxChoices(state)],
 				multiple: true,
 				tags: true,
 				regex: '/^(S|A)([1-9]|[1-3][0-9]|4[0-8])$/',
@@ -498,7 +499,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 				id: 'screen',
 				type: 'dropdown',
 				label: 'Screen / Auxscreen',
-				choices: getScreenAuxChoices(instance.state),
+				choices: getScreenAuxChoices(state),
 			},
 		],
 		callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screen: string } }) => {
@@ -593,14 +594,14 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 				id: 'screen',
 				type: 'dropdown',
 				label: 'Screen / Auxscreen',
-				choices: getScreenAuxChoices(instance.state),
-				default: getScreenAuxChoices(instance.state)[0]?.id,
+				choices: getScreenAuxChoices(state),
+				default: getScreenAuxChoices(state)[0]?.id,
 			},
 			{
 				id: 'layer',
 				type: 'dropdown',
 				label: 'Layer',
-				choices: [{ id: 'all', label: 'Any' }, ...getLayerChoices(instance.state, 48, true)],
+				choices: [{ id: 'all', label: 'Any' }, ...getLayerChoices(state, 48, true)],
 				default: 'all',
 			},
 			{
@@ -834,10 +835,10 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 		},
 	}
 
-	// MARK: timerState
-	feedbacks['timerState'] = {
+	// MARK: timerStateMachine
+	feedbacks['timerStateMachine'] = {
 		type: 'boolean',
-		name: 'Timer State',
+		name: 'Timer StateMachine',
 		description: 'Shows wether a timer is currently stopped or running',
 		defaultStyle: {
 			color: config.color_dark,
@@ -854,7 +855,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 			{
 				id: 'state',
 				type: 'dropdown',
-				label: 'State',
+				label: 'StateMachine',
 				choices: [
 					{ id: 'RUNNING', label: 'Running' },
 					{ id: 'PAUSED', label: 'Paused' },
@@ -876,7 +877,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 	// MARK: deviceGpioOut
 	if (state.platform.startsWith('livepremier')) feedbacks['deviceGpioOut'] = {
 		type: 'boolean',
-		name: 'GPO State',
+		name: 'GPO StateMachine',
 		description: 'Shows wether a general purpose output is currently active',
 		defaultStyle: {
 			color: config.color_dark,
@@ -895,7 +896,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 			{
 				id: 'state',
 				type: 'dropdown',
-				label: 'State',
+				label: 'StateMachine',
 				choices: [
 					{ id: 0, label: 'GPO is off' },
 					{ id: 1, label: 'GPO is on' },
@@ -925,7 +926,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 	// MARK: deviceGpioIn
 	if (state.platform.startsWith('livepremier')) feedbacks['deviceGpioIn'] = {
 		type: 'boolean',
-		name: 'GPI State',
+		name: 'GPI StateMachine',
 		description: 'Shows wether a general purpose input is currently active',
 		defaultStyle: {
 			color: config.color_dark,
@@ -944,7 +945,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 			{
 				id: 'state',
 				type: 'dropdown',
-				label: 'State',
+				label: 'StateMachine',
 				choices: [
 					{ id: 0, label: 'GPI is off' },
 					{ id: 1, label: 'GPI is on' },
@@ -974,7 +975,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 	// MARK: deviceStreaming
 	if (state.platform === 'midra') feedbacks['deviceStreaming'] = {
 		type: 'boolean',
-		name: 'Stream Runnning State',
+		name: 'Stream Runnning StateMachine',
 		description: 'Shows status of streaming',
 		defaultStyle: {
 			color: config.color_dark,
@@ -984,7 +985,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 			{
 				id: 'state',
 				type: 'dropdown',
-				label: 'State',
+				label: 'StateMachine',
 				choices: [
 					{ id: 'NONE', label: 'Stream is off' },
 					{ id: 'LIVE', label: 'Stream is on' },
@@ -1146,7 +1147,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 			if (path.length < 2) {
 				return false
 			}
-			const value = instance.state.get(['DEVICE', ...path])
+			const value = state.get(['DEVICE', ...path])
 			let varId = feedback.options.variable.replace(/[^A-Za-z0-9_-]/g, '')
 			if (varId === '') varId = feedback.options.path.replace(/\//g, '_').replace(/[^A-Za-z0-9_-]/g, '')
 

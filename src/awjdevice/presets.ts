@@ -38,7 +38,7 @@ function inverseColorBW(color: number): number {
 
 
 export function getPresets(instance: AWJinstance): CompanionPresetDefinitions {
-	const state = instance.state
+	const state = instance.device
 	const ilabel = instance.label
 	const config = instance.config
 	const allscreens = state.getChosenScreenAuxes('all')

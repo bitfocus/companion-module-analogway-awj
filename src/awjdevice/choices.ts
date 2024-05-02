@@ -1,4 +1,4 @@
-import { State } from './../state'
+import { StateMachine } from './../state'
 
 type Dropdown<t> = {id: t, label: string}
 
@@ -30,11 +30,11 @@ export const choicesBackgroundSourcesPlusNone: Dropdown<string>[] = [
 	...choicesBackgroundSources,
 ]
 
-export function getScreensAuxArray(state: State, getAlsoDisabled = false): Choicemeta[] {
+export function getScreensAuxArray(state: StateMachine, getAlsoDisabled = false): Choicemeta[] {
 	return [...getScreensArray(state, getAlsoDisabled), ...getAuxArray(state, getAlsoDisabled)]
 }
 
-export function getScreensArray(state: State, getAlsoDisabled = false): Choicemeta[] {
+export function getScreensArray(state: StateMachine, getAlsoDisabled = false): Choicemeta[] {
 	const ret: Choicemeta[] = []
 	if (state.platform.startsWith('livepremier')) {
 		const screens = state.get('DEVICE/device/screenList/items')
@@ -71,7 +71,7 @@ export function getScreensArray(state: State, getAlsoDisabled = false): Choiceme
 	return ret
 }
 
-export function getScreenChoices(state: State): Dropdown<string>[] {
+export function getScreenChoices(state: StateMachine): Dropdown<string>[] {
 
 	return getScreensArray(state).map((scr: Choicemeta) => {
 		return {
@@ -81,7 +81,7 @@ export function getScreenChoices(state: State): Dropdown<string>[] {
 	})
 }
 
-export function getAuxArray(state: State, getAlsoDisabled = false ): Choicemeta[] {
+export function getAuxArray(state: StateMachine, getAlsoDisabled = false ): Choicemeta[] {
 	const ret: Choicemeta[] = []
 	if (state.platform.startsWith('livepremier')) {
 		const screens = (state.platform === 'livepremier4')
@@ -120,7 +120,7 @@ export function getAuxArray(state: State, getAlsoDisabled = false ): Choicemeta[
 	return ret
 }
 
-export function getAuxChoices(state: State): Dropdown<string>[] {
+export function getAuxChoices(state: StateMachine): Dropdown<string>[] {
 
 	return getAuxArray(state).map((scr: Choicemeta) => {
 		return {
@@ -130,7 +130,7 @@ export function getAuxChoices(state: State): Dropdown<string>[] {
 	})
 }
 
-export function getScreenAuxChoices(state: State): Dropdown<string>[] {
+export function getScreenAuxChoices(state: StateMachine): Dropdown<string>[] {
 	return [
 		...getScreensArray(state).map((scr: Choicemeta) => {
 		return {
@@ -147,7 +147,7 @@ export function getScreenAuxChoices(state: State): Dropdown<string>[] {
 	]
 }
 
-export function getPlatformScreenChoices(state: State): Dropdown<string>[] {
+export function getPlatformScreenChoices(state: StateMachine): Dropdown<string>[] {
 	if (state.platform.startsWith('livepremier'))
 		return [
 			...getScreensArray(state).map((scr: Choicemeta) => {
@@ -175,7 +175,7 @@ export function getPlatformScreenChoices(state: State): Dropdown<string>[] {
 	else return []
 }
 
-export function getLiveInputArray(state: State, prefix?: string): Choicemeta[] {
+export function getLiveInputArray(state: StateMachine, prefix?: string): Choicemeta[] {
 	const ret: Choicemeta[] = []
 	if (state.platform.startsWith('livepremier')) {
 		if(prefix == undefined) prefix = 'IN'
@@ -212,7 +212,7 @@ export function getLiveInputArray(state: State, prefix?: string): Choicemeta[] {
 	return ret
 }
 
-export function getLiveInputChoices(state: State, prefix?: string): Dropdown<string>[] {
+export function getLiveInputChoices(state: StateMachine, prefix?: string): Dropdown<string>[] {
 	const ret: Dropdown<string>[] = []
 	const inputs = getLiveInputArray(state, prefix)
 
@@ -235,7 +235,7 @@ export function getLiveInputChoices(state: State, prefix?: string): Dropdown<str
 	return ret
 }
 
-export function getAuxBackgroundChoices(state: State): Dropdown<string>[] {
+export function getAuxBackgroundChoices(state: StateMachine): Dropdown<string>[] {
 	if (state.platform.startsWith('livepremier')) return []
 	return [
 		{id: 'NONE', label: 'None'},
@@ -257,7 +257,7 @@ export const choicesForegroundImagesSource: Dropdown<string>[] = [
 	{ id: 'TOP_4', label: 'Foreground Image 4' },
 ]
 
-export function getStillsArray(state: State): Choicemeta[] {
+export function getStillsArray(state: StateMachine): Choicemeta[] {
 	const bankpath = 'DEVICE/device/stillList/'
 	return (
 		state.get(state.concat(bankpath, 'itemKeys'))?.filter((itm: string) => {
@@ -271,7 +271,7 @@ export function getStillsArray(state: State): Choicemeta[] {
 	)
 }
 
-export function getSourceChoices(state: State): Dropdown<string>[] {
+export function getSourceChoices(state: StateMachine): Dropdown<string>[] {
 	// first add None and Color which are always available
 	const ret:Dropdown<string>[] = [
 		{ id: 'NONE', label: 'None' },
@@ -295,7 +295,7 @@ export function getSourceChoices(state: State): Dropdown<string>[] {
 	return ret
 }
 
-export function getAuxSourceChoices(state: State): Dropdown<string>[] {
+export function getAuxSourceChoices(state: StateMachine): Dropdown<string>[] {
 	// first add None and Color which are always available
 	const ret: Dropdown<string>[] = [
 		{ id: 'NONE', label: 'None' },
@@ -327,7 +327,7 @@ export function getAuxSourceChoices(state: State): Dropdown<string>[] {
 	return ret
 }
 
-export function getPlugChoices(state: State, input: string): Dropdown<string>[] {
+export function getPlugChoices(state: StateMachine, input: string): Dropdown<string>[] {
 	const plugtype = {
 		HDMI: 'HDMI',
 		SDI: 'SDI',
@@ -353,7 +353,7 @@ export function getPlugChoices(state: State, input: string): Dropdown<string>[] 
 	) ?? []
 }
 
-export function getMasterMemoryArray(state: State): Choicemeta[] {
+export function getMasterMemoryArray(state: StateMachine): Choicemeta[] {
 	let bankpath = 'DEVICE/device/masterPresetBank/bankList'
 	if (state.platform === 'midra') {
 		bankpath = 'DEVICE/device/preset/masterBank/slotList'
@@ -370,7 +370,7 @@ export function getMasterMemoryArray(state: State): Choicemeta[] {
 	)
 }
 
-export function getMasterMemoryChoices(state: State): Dropdown<string>[] {
+export function getMasterMemoryChoices(state: StateMachine): Dropdown<string>[] {
 
 	return getMasterMemoryArray(state).map((mem: Choicemeta) => {
 		return {
@@ -380,7 +380,7 @@ export function getMasterMemoryChoices(state: State): Dropdown<string>[] {
 	})
 }
 
-export function getScreenMemoryArray(state: State): Choicemeta[] {
+export function getScreenMemoryArray(state: StateMachine): Choicemeta[] {
 	let bankpath = 'DEVICE/device/presetBank/bankList'
 	if (state.platform === 'midra') {
 		bankpath = 'DEVICE/device/preset/bank/slotList'
@@ -398,7 +398,7 @@ export function getScreenMemoryArray(state: State): Choicemeta[] {
 	)
 }
 
-export function getScreenMemoryChoices(state: State): Dropdown<string>[] {
+export function getScreenMemoryChoices(state: StateMachine): Dropdown<string>[] {
 
 	return getScreenMemoryArray(state).map((mem: Choicemeta) => {
 		return {
@@ -408,7 +408,7 @@ export function getScreenMemoryChoices(state: State): Dropdown<string>[] {
 	})
 }
 
-export function getAuxMemoryArray(state: State): Choicemeta[] {
+export function getAuxMemoryArray(state: StateMachine): Choicemeta[] {
 	const bankpath = 'DEVICE/device/preset/auxBank/slotList'
 	return (
 		state.get(state.concat(bankpath, 'itemKeys'))?.filter((mem: string) => {
@@ -422,7 +422,7 @@ export function getAuxMemoryArray(state: State): Choicemeta[] {
 	)
 }
 
-export function getAuxMemoryChoices(state: State): Dropdown<string>[] {
+export function getAuxMemoryChoices(state: StateMachine): Dropdown<string>[] {
 
 	return getAuxMemoryArray(state).map((mem: Choicemeta) => {
 		return {
@@ -432,7 +432,7 @@ export function getAuxMemoryChoices(state: State): Dropdown<string>[] {
 	})
 }
 
-export function getLayerMemoryArray(state: State): string[] {
+export function getLayerMemoryArray(state: StateMachine): string[] {
 	return (
 		state.get('DEVICE/device/layerBank/bankList/itemKeys')?.filter((mem: string) => {
 			return state.get(['DEVICE', 'device', 'layerBank', 'bankList', 'items', mem, 'status', 'pp', 'isValid'])
@@ -440,7 +440,7 @@ export function getLayerMemoryArray(state: State): string[] {
 	)
 }
 
-export function getLayerMemoryChoices(state: State): Dropdown<string>[] {
+export function getLayerMemoryChoices(state: StateMachine): Dropdown<string>[] {
 	const ret: Dropdown<string>[] = []
 	for (const memory of getLayerMemoryArray(state)) {
 		const label = state.get(['DEVICE', 'device', 'layerBank', 'bankList', 'items', memory, 'control', 'pp', 'label'])
@@ -452,7 +452,7 @@ export function getLayerMemoryChoices(state: State): Dropdown<string>[] {
 	return ret
 }
 
-export function getMultiviewerMemoryArray(state: State): Choicemeta[] {
+export function getMultiviewerMemoryArray(state: StateMachine): Choicemeta[] {
 	const bankpath = 'DEVICE/device/monitoringBank/bankList'
 	return (
 		state.get(bankpath + '/itemKeys')?.filter((mem: string) => {
@@ -466,7 +466,7 @@ export function getMultiviewerMemoryArray(state: State): Choicemeta[] {
 	)
 }
 
-export function getMultiviewerMemoryChoices(state: State): Dropdown<string>[] {
+export function getMultiviewerMemoryChoices(state: StateMachine): Dropdown<string>[] {
 
 	return getMultiviewerMemoryArray(state).map((mem: Choicemeta) => {
 		return {
@@ -476,7 +476,7 @@ export function getMultiviewerMemoryChoices(state: State): Dropdown<string>[] {
 	})
 }
 
-export function getMultiviewerArray(state: State): string[] {
+export function getMultiviewerArray(state: StateMachine): string[] {
 	return (
 		state.get('DEVICE/device/monitoringList/itemKeys')?.filter((mvKey: string) => {
 			return state.get(['DEVICE', 'device', 'monitoringList', 'items', mvKey, 'status', 'pp', 'isEnabled'])
@@ -484,7 +484,7 @@ export function getMultiviewerArray(state: State): string[] {
 	)
 }
 
-export function getMultiviewerChoices(state: State): Dropdown<string>[] {
+export function getMultiviewerChoices(state: StateMachine): Dropdown<string>[] {
 	const ret: Dropdown<string>[] = []
 	for (const multiviewer of getMultiviewerArray(state)) {
 		const label = state.get(['DEVICE', 'device', 'monitoringList', 'items', multiviewer, 'control', 'pp', 'label'])
@@ -496,7 +496,7 @@ export function getMultiviewerChoices(state: State): Dropdown<string>[] {
 	return ret
 }
 
-export function getWidgetChoices(state: State): Dropdown<string>[] {
+export function getWidgetChoices(state: StateMachine): Dropdown<string>[] {
 	const ret: Dropdown<string>[] = []
 	if (state.platform.startsWith('livepremier')) {
 		for (const multiviewer of getMultiviewerArray(state)) {
@@ -528,7 +528,7 @@ export function getWidgetChoices(state: State): Dropdown<string>[] {
 	return ret
 }
 
-export function getWidgetSourceChoices(state: State): Dropdown<string>[] {
+export function getWidgetSourceChoices(state: StateMachine): Dropdown<string>[] {
 	// first add None which is always available
 	const ret: Dropdown<string>[] = [{ id: 'NONE', label: 'None' }]
 
@@ -582,7 +582,7 @@ export function getWidgetSourceChoices(state: State): Dropdown<string>[] {
 	return ret
 }
 
-export function getLayersAsArray(state: State, param: string | number, bkg?: boolean): string[] {
+export function getLayersAsArray(state: StateMachine, param: string | number, bkg?: boolean): string[] {
 	const ret: string[] = []
 	let layercount = 0
 	if (typeof param === 'number') {
@@ -623,7 +623,7 @@ export function getLayersAsArray(state: State, param: string | number, bkg?: boo
  * @param param if it is a number that number of layer choices are returned, if it is a string the layers of the screen are returned
  * @param bkg wether to include only live layers (false) or also background and eventually foreground layer (true or omitted) 
  */
-export function getLayerChoices(state: State, param: string | number, bkg?: boolean): Dropdown<string>[] {
+export function getLayerChoices(state: StateMachine, param: string | number, bkg?: boolean): Dropdown<string>[] {
 	const ret: Dropdown<string>[] = []
 	let layercount = 0
 	if (typeof param === 'number') {
@@ -659,7 +659,7 @@ export function getLayerChoices(state: State, param: string | number, bkg?: bool
 	return ret
 }
 
-export function getOutputArray(state: State): Choicemeta[] {
+export function getOutputArray(state: StateMachine): Choicemeta[] {
 	return state.get('DEVICE/device/outputList/itemKeys')?.filter((itm: string) => {
 		return state.get('DEVICE/device/outputList/items/'+itm+'/status/pp/isAvailable') === true
 	}).map((itm: string) => {
@@ -671,7 +671,7 @@ export function getOutputArray(state: State): Choicemeta[] {
 
 }
 
-export function getOutputChoices(state: State): Dropdown<string>[] {
+export function getOutputChoices(state: StateMachine): Dropdown<string>[] {
 	return getOutputArray(state).map((itm: Choicemeta) => {
 		return {
 			id: itm.id,
@@ -686,7 +686,7 @@ export function getOutputChoices(state: State): Dropdown<string>[] {
  * @param device optional number of device to return outputs for
  * @returns array of output describing objects
  */
-export function getAudioOutputsArray(state: State, _device?: number): Choicemeta[] {
+export function getAudioOutputsArray(state: StateMachine, _device?: number): Choicemeta[] {
 	const ret: Choicemeta[] = []
 	if (state.platform.startsWith('livepremier')) {
 		const outputs = state.get('DEVICE/device/audio/control/txList/itemKeys') ?? []
@@ -731,7 +731,7 @@ export function getAudioOutputsArray(state: State, _device?: number): Choicemeta
 	return ret
 }
 
-export function getAudioOutputChoices(state: State): Dropdown<string>[] { 
+export function getAudioOutputChoices(state: StateMachine): Dropdown<string>[] { 
 	if (state.platform === 'midra') {
 		return getAudioOutputChoicesMidra(state)
 	} else {
@@ -740,7 +740,7 @@ export function getAudioOutputChoices(state: State): Dropdown<string>[] {
 
 }
 
-export function getAudioOutputChoicesLivePremier(state: State): Dropdown<string>[] {
+export function getAudioOutputChoicesLivePremier(state: StateMachine): Dropdown<string>[] {
 	const ret: Dropdown<string>[] = []
 	for (const out of getAudioOutputsArray(state)) {
 		const channels = state.get(`DEVICE/device/audio/control/txList/items/${out.id}/channelList/itemKeys`) ?? []
@@ -772,7 +772,7 @@ export function getAudioOutputChoicesLivePremier(state: State): Dropdown<string>
 	return ret
 }
 
-export function getAudioOutputChoicesMidra(state: State): Dropdown<string>[] {
+export function getAudioOutputChoicesMidra(state: StateMachine): Dropdown<string>[] {
 	const ret: Dropdown<string>[] = []
 	for (const out of getAudioOutputsArray(state)) {
 		const outarr = /\d*$/.exec(out.id)
@@ -821,7 +821,7 @@ export function getAudioCustomBlockChoices(): Dropdown<string>[] {
 	return ret
 }
 
-export function getAudioInputChoices(state: State): Dropdown<string>[] { 
+export function getAudioInputChoices(state: StateMachine): Dropdown<string>[] { 
 	if (state.platform === 'midra') {
 		return getAudioInputChoicesMidra(state)
 	} else {
@@ -830,7 +830,7 @@ export function getAudioInputChoices(state: State): Dropdown<string>[] {
 
 }
 
-export function getAudioInputChoicesLivePremier(state: State): Dropdown<string>[] {
+export function getAudioInputChoicesLivePremier(state: StateMachine): Dropdown<string>[] {
 	const ret = [{ id: 'NONE', label: 'No Source' }]
 	const inputs = state.get('DEVICE/device/audio/control/rxList/itemKeys') ?? []
 	for (const input of inputs) {
@@ -858,7 +858,7 @@ export function getAudioInputChoicesLivePremier(state: State): Dropdown<string>[
 	return ret
 }
 
-export function getAudioInputChoicesMidra(state: State): Dropdown<string>[] {
+export function getAudioInputChoicesMidra(state: StateMachine): Dropdown<string>[] {
 	const ret = [{ id: 'NONE', label: 'No Source' }]
 	for (const input of state.getUnmapped('DEVICE/device/audio/inputList/itemKeys') ?? []) {
 		let inputtype = '', inputnum = '', inputplug = '', channelstart = 0
@@ -901,7 +901,7 @@ export function getAudioInputChoicesMidra(state: State): Dropdown<string>[] {
 	return ret
 }
 
-export function getAudioSourceChoicesMidra(state: State): Dropdown<string>[] {
+export function getAudioSourceChoicesMidra(state: StateMachine): Dropdown<string>[] {
 	return state.get('DEVICE/device/audio/sourceList/itemKeys').filter((itm: string) => {
 		return state.get('DEVICE/device/audio/sourceList/items/'+itm+'/status/pp/isAvailable')
 	}).map((itm: string) => {
@@ -920,7 +920,7 @@ export function getAudioSourceChoicesMidra(state: State): Dropdown<string>[] {
 	}) ?? []
 }
 
-export function getTimerArray(state: State): Choicemeta[] {
+export function getTimerArray(state: StateMachine): Choicemeta[] {
 	const ret: Choicemeta[] = []
 	const timers = state.get('DEVICE/device/timerList/items') ?? {}
 	for (const timer of Object.keys(timers)) {
@@ -933,7 +933,7 @@ export function getTimerArray(state: State): Choicemeta[] {
 	return ret
 }
 
-export function getTimerChoices(state: State): Dropdown<string>[] {
+export function getTimerChoices(state: StateMachine): Dropdown<string>[] {
 
 	return getTimerArray(state).map((itm: Choicemeta) => {
 		return {

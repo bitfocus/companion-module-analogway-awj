@@ -11,12 +11,32 @@ import { AWJconnection } from './connection.js'
 import { AWJdevice } from './awjdevice/awjdevice.js'
 import { Config, GetConfigFields } from './config.js'
 import { initVariables } from './variables.js'
-import { State } from './state.js'
-import { initSubscriptions, Subscription } from './awjdevice/subscriptions.js'
+import { checkSubscriptions, initSubscriptions, Subscription } from './awjdevice/subscriptions.js'
 import { UpgradeScripts } from './upgrades.js'
 import { updateMappings } from './mappings.js'
+import { StateMachine } from './state.js'
 
 export const regexAWJpath = '^DeviceObject(?:\\/(@items|@props|\\$?[A-Za-z0-9_-]+))+$'
+
+/**
+ * This the general setup of this module:
+ * 1. When module is instanciated, init is called
+ * 2. in init an AWJconnection is created and AWJconnection.connect is called
+ * 3. AWJconnection tries to connect and if it succeeds it calls AWJinstance.handleApiStateResponse
+ * 4. in AWJinstance.handleApiStateResponse the decision is made which device type we have and AWJinstance.createDevice is called along with the initial state
+ * 5. AWJinstance.createDevice instanciates a new AWJdevice and connects the callback of the connection to the device
+ * 6. the device will setup all Companion stuff at creation and get incoming messages from the connection, state is stored in the AWJdevice instance
+ * Done
+ * 
+ * This module uses several classes:
+ * @class AWJinstance - the Companion class for the module instance derived from InstanceBase
+ * @class AWJconnection - methods for connecting to an AWJ device with REST and websocket
+ * @class AWJState - methods of holding and manipulating state
+ * @class AWJdevice - actually doing all the stuff needed for Companion, derived from State
+ * @class AWJLivePremier - derived from AWJdevice, overriding some stuff for LivePremier devices up to v3
+ * @class AWJLivePremier4 - derived from AWJdevice, overriding some stuff for LivePremier devices with v4
+ * @class AWJMidra - derived from AWJdevice, overriding some stuff for Midra and Alta devices
+ */
 
 /**
  * Companion instance class for the Analog Way AWJ API products.
@@ -25,7 +45,7 @@ export class AWJinstance extends InstanceBase<Config> {
 	/**
 	 * Create an instance of an AWJ module.
 	 */
-	public state!: State
+	//public state!: State
 	public connection: AWJconnection
 	public device: AWJdevice
 	private variables!: (CompanionVariableDefinition & { id?: string })[]
@@ -47,7 +67,6 @@ export class AWJinstance extends InstanceBase<Config> {
 
 		this.config = config
 		this.variables = []
-		this.state = new State(this)
 		this.connection = new AWJconnection(this)
 		this.oldlabel = this.label
 
@@ -69,22 +88,10 @@ export class AWJinstance extends InstanceBase<Config> {
 			this.config.color_redgrey = combineRgb(79,31,31)		
 			this.saveConfig(this.config)
 		}
-		this.state.setUnmapped('LOCAL/config', this.config)
 
 		this.variables = initVariables(this)
 		this.updateVariableDefinitions(this.variables)
 		this.setVariableValues({connectionLabel: this.label})
-
-		this.connection.onMessage((data) => {
-			if (
-				data &&
-				data.match(/"op":"replace","path":"\/system\/status\/current(Device)?Time","value":/) === null &&
-				data.match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
-				data.match(/"device","system",("deviceList","items","[1-4]",)?"temperature",/) === null
-			) {
-				this.state.apply(JSON.parse(data))
-			}
-		})
 
 		this.connection.connect(this.config.deviceaddr)
 		//this.device = new AWJdevice(this.state, this.connection)
@@ -98,14 +105,14 @@ export class AWJinstance extends InstanceBase<Config> {
 	 * Creates a new AWJdevice instance and sets it up 
 	 * @param platform 
 	 */
-	createDevice(platform: string) {
+	createDevice(platform: string, initialState?: {[name: string]: any}): AWJdevice {
 		switch (platform) {
 			case 'livepremier':
-				this.device = new AWJdevice(this.state, this.connection)
+				this.device = new AWJdevice(this, initialState)
 				break
 		
 			default:
-				this.device = new AWJdevice(this.state, this.connection) // TODO: branch here
+				this.device = new AWJdevice(this, initialState) // TODO: branch here
 				break
 		}
 		try {
@@ -118,13 +125,142 @@ export class AWJinstance extends InstanceBase<Config> {
 		} catch (error) {
 			this.log('error', 'init Subscriptions failed ' + error) 
 		}
+		this.connection.onMessage((data) => {
+			if (
+				data &&
+				data.match(/"op":"replace","path":"\/system\/status\/current(Device)?Time","value":/) === null &&
+				data.match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
+				data.match(/"device","system",("deviceList","items","[1-4]",)?"temperature",/) === null
+			) {
+				this.device.apply(JSON.parse(data))
+			}
+		})
+		return this.device
+	}
+
+	/**
+	 * Handle the initial download of the device object from the machine 
+	 * @param res 
+	 * @returns 
+	 */
+	handleApiStateResponse (res: {[name: string]: any}): StateMachine | undefined {
+		if (res.device) {
+			this.device.setUnmapped('DEVICE', res)
+			//console.log('rest get API device state result')
+
+			const system = res.device.system // this.state.getUnmapped('DEVICE/device/system')
+			const device = system.pp?.dev ?? system.deviceList?.items?.['1']?.pp?.dev ?? null
+			const fwVersion = system.version?.pp?.updater ?? system.deviceList?.items?.['1']?.version?.pp?.updater ?? '0.0.0' // this.state.getUnmapped('DEVICE/device/system/version/pp/updater') ?? this.state.getUnmapped('DEVICE/device/system/deviceList/items/1/version/pp/updater') ?? '0.0.0'
+
+			const serialAndFirmware = (): string => {
+				const sn = system.serial?.pp?.serialNumber ?? system.deviceList?.items?.['1']?.serial?.pp?.serialNumber ?? 'unknown'
+				if (sn.startsWith('ZZ99')) return ` Simulator, fw ${fwVersion}`
+				else return `, S/N: ${sn}, fw ${fwVersion}`
+			}
+
+			if (device) {
+				if (device.substring(0, 3) === 'NLC') {
+					this.updateStatus(InstanceStatus.Ok)
+					this.log(
+						'info',
+						'Connected to ' +
+						device.replace('NLC_', 'Aquilon ') + serialAndFirmware()
+					)
+				} else if (device.match(/^EIKOS/)) {
+					this.updateStatus(InstanceStatus.Ok)
+					this.log(
+						'info',
+						'Connected to Eikos 4k' + serialAndFirmware()
+					)
+				} else if (device.match(/^PULSE/)) {
+					this.updateStatus(InstanceStatus.Ok)
+					this.log(
+						'info',
+						'Connected to Pulse 4k' + serialAndFirmware()
+					)
+				} else if (device.match(/^QMX/)) {
+					this.updateStatus(InstanceStatus.Ok)
+					this.log(
+						'info',
+						'Connected to QuikMatrix 4k' + serialAndFirmware()
+					)
+				} else if (device.match(/^QVU/)) {
+					this.updateStatus(InstanceStatus.Ok)
+					this.log(
+						'info',
+						'Connected to QuickVu 4k' + serialAndFirmware()
+					)
+				} else if (device.match(/^ZEN100/)) {
+					this.updateStatus(InstanceStatus.Ok)
+					this.log(
+						'info',
+						'Connected to Zenith 100' + serialAndFirmware()
+					)
+				} else if (device.match(/^ZEN200/)) {
+					this.updateStatus(InstanceStatus.Ok)
+					this.log(
+						'info',
+						'Connected to Zenith 200' + serialAndFirmware()
+					)
+				} else if (device.match(/^DBG/)) {
+					this.updateStatus(InstanceStatus.Ok)
+					this.log(
+						'info',
+						'Connected to MNG_DEBUG' + serialAndFirmware()
+					)
+				} else {
+					this.updateStatus(InstanceStatus.ConnectionFailure)
+					this.log('error', `Connected to an AWJ device of type '${device}', firmware '${fwVersion}'. Device type or firmware can not be determined or is not compatible with this module`)
+					return undefined
+				}
+
+				if (this.config.sync === true && this.connection.hadError === false) {
+					console.log('switching sync on because of config')
+					this.switchSync(1)
+				} else if (this.connection.hadError === true) {
+					this.switchSync(3)
+					console.log('setting sync again after reconnection')
+				} else {
+					this.switchSync(0)
+					console.log('setting sync off by default')
+				}
+				this.connection.hadError = false
+				try {
+					checkSubscriptions(this)
+				} catch (error: any) {
+					this.log('error', 'initializing subscriptions failed ' + error + ' ' + error.trace)
+				}
+				try {
+					const deviceMacaddr = this.device.getMACfromDevice()
+					const configMacaddr = this.config.macaddress.split(/[,:-_.\s]/).join(':')
+					if (configMacaddr !== deviceMacaddr) {
+						this.config.macaddress = deviceMacaddr
+						this.saveConfig(this.config)
+					}
+				} catch (error) {
+					this.log('error', 'getting MAC address from device failed ' + error)
+				}
+				try {
+					void this.updateInstance()
+				} catch (error) {
+					this.log('error', 'initializing Instance failed ' + error)
+				}
+				return this.device
+			} else {
+				this.updateStatus(InstanceStatus.ConnectionFailure)
+				this.log('error', 'Connected to an Analog Way device but device type is not compatible with this module')
+			}
+		} else {
+			this.log('error', 'Got malformed state from device ' + res)
+		}
+		return undefined
 	}
 
 	/**
 	 * Clean up the instance before it is destroyed.
 	 */
 	public async destroy(): Promise<void> {
-		this.state.clearTimers()
+		this.device?.clearTimers()
 		this.connection.destroy()
 
 		this.log('debug' ,'destroy '+this.id)
@@ -144,7 +280,6 @@ export class AWJinstance extends InstanceBase<Config> {
 		console.log('Config Update called', this.oldlabel, this.label)
 		const oldconfig = {  ...this.config }
 		this.config = config
-		this.state.setUnmapped('LOCAL/config', this.config)
 
 		if (this.config.deviceaddr !== oldconfig.deviceaddr) {
 			// new address, reconnect
@@ -172,23 +307,6 @@ export class AWJinstance extends InstanceBase<Config> {
 	}
 
 	/**
-	 * get MAC address and store it in config for WOL
-	 */
-	public getMACfromDevice(): void {
-		const deviceMacaddr = `${this.state
-			.get('DEVICE/device/system/network/adapter/pp/macAddress')
-			.map((elem: number) => {
-				return elem.toString(16).padStart(2,'0')
-			})
-			.join(':')}`
-		const configMacaddr = this.config.macaddress.split(/[,:-_.\s]/).join(':')
-		if (configMacaddr !== deviceMacaddr) {
-			this.config.macaddress = deviceMacaddr
-			this.saveConfig(this.config)
-		}
-	}
-
-	/**
 	 * @description sets actions, variables, presets and feedbacks available for this instance
 	 */
 	public async updateInstance(): Promise<void> {
@@ -200,10 +318,10 @@ export class AWJinstance extends InstanceBase<Config> {
 		this.subscribeFeedbacks()
 		let preset: string,
 				vartext = 'PGM'
-		if (this.state.syncSelection) {
-			preset = this.state.get('REMOTE/live/screens/presetModeSelection/presetMode')
+		if (this.device.syncSelection) {
+			preset = this.device.get('REMOTE/live/screens/presetModeSelection/presetMode')
 		} else {
-			preset = this.state.get('LOCAL/presetMode')
+			preset = this.device.get('LOCAL/presetMode')
 		}
 		if (preset === 'PREVIEW') {
 			vartext = 'PVW'
@@ -281,12 +399,12 @@ export class AWJinstance extends InstanceBase<Config> {
 	 */
 	public addSubscriptions(subscriptions: Record<string, Subscription>): void {
 		Object.keys(subscriptions).forEach(subscription => {
-			this.state.subscriptions[subscription] = subscriptions[subscription]
+			this.device.subscriptions[subscription] = subscriptions[subscription]
 		})
 	}
 
 	public removeSubscription(subscriptionId: string): void {
-		delete this.state.subscriptions[subscriptionId]
+		delete this.device.subscriptions[subscriptionId]
 	}
 
 	public timeToSeconds(timestring: string): number {
@@ -333,9 +451,10 @@ export class AWJinstance extends InstanceBase<Config> {
 	 * @param action 0: switch off, 1: switch on, 2: toggle, 3: resend local sync state
 	 */
 	public switchSync(action: number): void {
-		const clients = this.state.getUnmapped('REMOTE/system/network/websocketServer/clients')
+		const clients = this.device.getUnmapped('REMOTE/system/network/websocketServer/clients')
+		// this.log('debug', 'REMOTE ' + JSON.stringify(this.device.getUnmapped('REMOTE')))
 		let syncstate: boolean
-		const myid: string = this.state.getUnmapped('LOCAL/socketId')
+		const myid: string = this.device.getUnmapped('LOCAL/socketId')
 		const myindex = clients.findIndex((elem: Record<string, unknown>) => {
 			if (elem.id === myid) {
 				return true
@@ -351,14 +470,14 @@ export class AWJinstance extends InstanceBase<Config> {
 				syncstate = true
 				break
 			case 2:
-				if (this.state.getUnmapped(`REMOTE/system/network/websocketServer/clients/${myindex}/isRemoteSelectionEnabled`)) {
+				if (this.device.getUnmapped(`REMOTE/system/network/websocketServer/clients/${myindex}/isRemoteSelectionEnabled`)) {
 					syncstate = false
 				} else {
 					syncstate = true
 				}
 				break
 			case 3:
-				if (this.state.syncSelection) {
+				if (this.device.syncSelection) {
 					syncstate = true
 				} else {
 					syncstate = false
@@ -368,7 +487,7 @@ export class AWJinstance extends InstanceBase<Config> {
 				syncstate = false
 				break
 		}
-		this.state.setUnmapped('LOCAL/syncSelection', syncstate)
+		this.device.setUnmapped('LOCAL/syncSelection', syncstate)
 		this.connection.sendRawWSmessage(
 			`{"channel":"REMOTE","data":{"name":"enableRemoteSelection","path":"/system/network/websocketServer/clients/${myindex}","args":[${syncstate}]}}`
 		)
@@ -398,9 +517,9 @@ export class AWJinstance extends InstanceBase<Config> {
 			parts[5] === 'items' &&
 			parts[6].toLowerCase() === 'pgm'
 		) {
-			if (this.state.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pgm/preset`)) {
-				parts[6] = this.state.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pgm/preset`)
-				if (this.state.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
+			if (this.device.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pgm/preset`)) {
+				parts[6] = this.device.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pgm/preset`)
+				if (this.device.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
 			}
 		} else if (
 			parts[1] === 'screenList' &&
@@ -409,9 +528,9 @@ export class AWJinstance extends InstanceBase<Config> {
 			parts[5] === 'items' &&
 			parts[6].toLowerCase() === 'pvw'
 		) {
-			if (this.state.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pvw/preset`)) {
-				parts[6] = this.state.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pvw/preset`)
-				if (this.state.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
+			if (this.device.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pvw/preset`)) {
+				parts[6] = this.device.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pvw/preset`)
+				if (this.device.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
 			}
 		} else if (
 			parts[1] === 'auxiliaryScreenList' &&
@@ -420,9 +539,9 @@ export class AWJinstance extends InstanceBase<Config> {
 			parts[5] === 'items' &&
 			parts[6].toLowerCase() === 'pgm'
 		) {
-			if (this.state.get(`LOCAL/screens/A${parts[3].replace(/\D/g, '')}/pgm/preset`)) {
-				parts[6] = this.state.get(`LOCAL/screens/A${parts[3].replace(/\D/g, '')}/pgm/preset`)
-				if (this.state.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
+			if (this.device.get(`LOCAL/screens/A${parts[3].replace(/\D/g, '')}/pgm/preset`)) {
+				parts[6] = this.device.get(`LOCAL/screens/A${parts[3].replace(/\D/g, '')}/pgm/preset`)
+				if (this.device.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
 			}
 		} else if (
 			parts[1] === 'auxiliaryScreenList' &&
@@ -431,9 +550,9 @@ export class AWJinstance extends InstanceBase<Config> {
 			parts[5] === 'items' &&
 			parts[6].toLowerCase() === 'pvw'
 		) {
-			if (this.state.get(`LOCAL/screens/A${parts[3].replace(/\D/g, '')}/pvw/preset`)) {
-				parts[6] = this.state.get(`LOCAL/screens/A${parts[3].replace(/\D/g, '')}/pvw/preset`)
-				if (this.state.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
+			if (this.device.get(`LOCAL/screens/A${parts[3].replace(/\D/g, '')}/pvw/preset`)) {
+				parts[6] = this.device.get(`LOCAL/screens/A${parts[3].replace(/\D/g, '')}/pvw/preset`)
+				if (this.device.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
 			}
 		}
 		return parts
@@ -457,7 +576,7 @@ export class AWJinstance extends InstanceBase<Config> {
 		tpath = tpath.replace(/^device\//, 'DeviceObject/')
 		const apath = tpath.split('/')
 		if (apath[1] === '$screen' && apath[2] === '@items' && apath[4] === '$preset' && apath[5] === '@items') {
-			if (this.state.get(`LOCAL/screens/${apath[3]}/pgm/preset`) === apath[6]) {
+			if (this.device.get(`LOCAL/screens/${apath[3]}/pgm/preset`) === apath[6]) {
 				apath[6] = 'pgm'
 			} else {
 				apath[6] = 'pvw'

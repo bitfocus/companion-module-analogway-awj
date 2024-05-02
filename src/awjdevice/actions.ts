@@ -1,5 +1,4 @@
 import {AWJinstance} from '../index.js'
-import { State } from './../state.js'
 
 import {
 	choicesBackgroundSourcesPlusNone,
@@ -86,7 +85,7 @@ type Dropdown<t> = {id: t, label: string}
  * @returns action object
  */
 export function getActions(instance: AWJinstance): any {
-	const state: State = instance.state
+	const state: AWJdevice = instance.device
 	const connection: AWJconnection = instance.connection
 	const device: AWJdevice = instance.device
 	const config: Config = instance.config

@@ -1,15 +1,14 @@
-import {AWJinstance} from './index.js'
+import { AWJinstance } from './index.js'
 import { checkForAction, Subscription } from './awjdevice/subscriptions.js'
 import { mapIn, mapOut, MapItem } from './mappings.js'
-//import { InputValue } from './../../../instance_skel_types'
 import { Choicemeta, getAuxArray, getScreensArray } from './awjdevice/choices.js'
 import { Config } from './config.js'
 
 type Channel = 'REMOTE' | 'DEVICE' | 'LOCAL'
 
-class State {
+class StateMachine {
 	instance: AWJinstance
-	stateobj = {
+	state = {
 		REMOTE: {},
 		DEVICE: {},
 		LOCAL: {
@@ -39,16 +38,19 @@ class State {
 	};
 	private lastMsgTimer: NodeJS.Timeout | undefined = undefined;
 
-	constructor(instance: AWJinstance) {
+	constructor(instance: AWJinstance, initialState?: {[name: string]: any}) {
 		this.instance = instance
+		if (initialState) {
+			this.setUnmapped('DEVICE', initialState)
+		}
 	}
 
 	public getUnmapped(path?: string | string[] | undefined, root?: any): any {
 		if (path === undefined) {
-			return this.stateobj
+			return this.state
 		}
 		if (root === undefined) {
-			root = this.stateobj
+			root = this.state
 		}
 		const obj: any = root
 		let first: string
@@ -72,9 +74,9 @@ class State {
 	}
 
 	public get(path?: string | string[] | undefined, root?: any): any {
-		const mapped = mapOut(this.stateobj.LOCAL.mappings, path, null)
+		const mapped = mapOut(this.state.LOCAL.mappings, path, null)
 		const val = this.getUnmapped(mapped.path, root) // TODO: root mapping
-		return mapIn(this.stateobj.LOCAL.mappings, mapped.path, val).value
+		return mapIn(this.state.LOCAL.mappings, mapped.path, val).value
 	}
 
 	/**
@@ -138,8 +140,8 @@ class State {
 		let feedbacks: any
 		// eslint-disable-next-line no-prototype-builtins
 		if (data.hasOwnProperty('path') && data.hasOwnProperty('value')) {
-			this.setUnmapped(data.path, data.value, this.stateobj[channel])
-			const mapped = mapIn(this.stateobj.LOCAL.mappings, this.concat(channel, data.path), data.value)
+			this.setUnmapped(data.path, data.value, this.state[channel])
+			const mapped = mapIn(this.state.LOCAL.mappings, this.concat(channel, data.path), data.value)
 			feedbacks = checkForAction(this.instance, mapped.path, mapped.value)
 			if (channel === 'DEVICE' && !data.path.toString().endsWith(',pp,xUpdate')) {
 				this.storeLastMsg({ path: data.path, value: data.value })
@@ -184,10 +186,10 @@ class State {
 				})
 			}
 		} else if (data?.channel === 'PATCH' && data.patch) {
-			const mapped = mapIn(this.stateobj.LOCAL.mappings, this.concat(channel, data.patch.path), data.patch.value)
+			const mapped = mapIn(this.state.LOCAL.mappings, this.concat(channel, data.patch.path), data.patch.value)
 			if (data.patch.op === 'replace') {
 				try {
-					this.setUnmapped(data.patch.path, data.patch.value, this.stateobj[channel])
+					this.setUnmapped(data.patch.path, data.patch.value, this.state[channel])
 					feedbacks = checkForAction(this.instance, mapped.path, mapped.value)
 				} catch (error) {
 					console.log('could not replace JSON', error)
@@ -195,7 +197,7 @@ class State {
 			}
 			if (data.patch.op === 'add') {
 				try {
-					this.setUnmapped(data.patch.path, data.patch.value, this.stateobj[channel])
+					this.setUnmapped(data.patch.path, data.patch.value, this.state[channel])
 					feedbacks = checkForAction(this.instance, mapped.path, mapped.value)
 				} catch (error) {
 					console.log('could not add JSON', error)
@@ -203,7 +205,7 @@ class State {
 			}
 			if (data.patch.op === 'remove') {
 				try {
-					this.delete(data.patch.path, this.stateobj[channel])
+					this.delete(data.patch.path, this.state[channel])
 					feedbacks = checkForAction(this.instance, mapped.path)
 				} catch (error) {
 					console.log('could not remove element from JSON', error)
@@ -211,8 +213,8 @@ class State {
 			}
 		} else if (data?.channel === 'INIT') {
 			try {
-				this.stateobj.LOCAL.socketId = data.socketId
-				this.stateobj[channel] = { ...data.snapshot }
+				this.state.LOCAL.socketId = data.socketId
+				this.state[channel] = { ...data.snapshot }
 				feedbacks = checkForAction(this.instance)
 			} catch (error) {
 				this.instance.log('debug', 'could not set JSON while init ' + error)
@@ -237,7 +239,7 @@ class State {
 		}
 	}
 
-	public setUnmapped(path: string | string[], value: any, root: any = this.stateobj): void {
+	public setUnmapped(path: string | string[], value: any, root: any = this.state): void {
 		const obj: any = root
 		let first: string
 		let patharray: string[]
@@ -268,8 +270,8 @@ class State {
 	 * @param value is the value to set the node to
 	 * @param root is the root object from where the path applies, if not given defaults to the state object
 	 */
-	public set(path: string | string[], value: unknown, root: any = this.stateobj): void {
-		const mapped = mapIn(this.stateobj.LOCAL.mappings, path, value)
+	public set(path: string | string[], value: unknown, root: any = this.state): void {
+		const mapped = mapIn(this.state.LOCAL.mappings, path, value)
 		this.setUnmapped(mapped.path, mapped.value, root) // TODO: root mapping
 	}
 
@@ -289,7 +291,7 @@ class State {
 	 * @param path can be either a '/'-delimited string or a string array pointing to a node in JSON, similar to JSON-Path
 	 * @param root is the root object from where the path applies, if not given defaults to the state object
 	 */
-	public delete(path: string | string[], root: any = this.stateobj): void {
+	public delete(path: string | string[], root: any = this.state): void {
 		const obj: any = root
 		let first: string
 		let patharray: string[]
@@ -317,52 +319,22 @@ class State {
 	}
 
 	/**
-	 * Returns the currently selected preset or just the input if a specific preset is given.
-	 * @param preset if omitted or if 'sel' then the currently selected preset is returned
-	 * @param fullName if set to true the return value is PROGRAM/PREVIEW instead of pgm/pvw
-	 * @returns
-	 */
-	public getPresetSelection(preset?: string, fullName = false): 'pgm' | 'pvw' | 'PROGRAM' | 'PREVIEW' {
-		let pst = preset
-		if (preset === undefined || preset.match(/^sel$/i)) {
-			if (this.syncSelection) {
-				pst = this.get('REMOTE/live/screens/presetModeSelection/presetMode')
-			} else {
-				pst = this.get('LOCAL/presetMode')
-			}
-		}
-		if (pst && pst.match(/^pgm|program$/i) && !fullName) {
-			return 'pgm'
-		} else if (pst && pst.match(/^pvw|preview$/i) && !fullName) {
-			return 'pvw'
-		} else if (pst && pst.match(/^pgm|program$/i) && fullName) {
-			return 'PROGRAM'
-		} else if (pst && pst.match(/^pvw|preview$/i) && fullName) {
-			return 'PREVIEW'
-		} else if (fullName) {
-			return 'PREVIEW'
-		} else {
-			return 'pvw'
-		}
-	}
-
-	/**
 	 * Returnes the platform we are currently connected to
 	 */
 	public get platform(): string {
-		return this.stateobj.LOCAL.platform
+		return this.state.LOCAL.platform
 	}
 
 	public get syncSelection(): boolean {
-		return this.stateobj.LOCAL.syncSelection
+		return this.state.LOCAL.syncSelection
 	}
 
 	public get mappings(): MapItem[] {
-		return this.stateobj.LOCAL.mappings
+		return this.state.LOCAL.mappings
 	}
 
 	public get subscriptions(): Record<string, Subscription> {
-		return this.stateobj.LOCAL.subscriptions
+		return this.state.LOCAL.subscriptions
 	}
 
 	public isLocked(screen: string, preset: string): boolean {
@@ -526,4 +498,4 @@ class State {
 	}
 }
 
-export { State }
+export { StateMachine }

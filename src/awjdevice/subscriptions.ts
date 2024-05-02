@@ -51,9 +51,9 @@ const commonSubscriptions: Record<string, Subscription> = {
 		pat: '/live/screens/presetModeSelection/presetMode',
 		fbk: ['livePresetSelection', 'remoteLayerSelection'],
 		fun: (instance, path, _value) => {
-			if (instance.state.syncSelection) {
+			if (instance.device.syncSelection) {
 				instance.setVariableValues({
-					selectedPreset: instance.state.getUnmapped(path) === 'PREVIEW' ? 'PVW' : 'PGM'
+					selectedPreset: instance.device.getUnmapped(path) === 'PREVIEW' ? 'PVW' : 'PGM'
 				})
 			}
 			return false
@@ -70,7 +70,7 @@ const commonSubscriptions: Record<string, Subscription> = {
 		fun: (instance, path, _value) => {
 			if (!path) return false
 			const timer = path.toString().match(/(?<=TIMER_)(\d)\//) || ['0']
-			instance.setVariableValues({['timer' + timer[0] + '_status']:  instance.state.getUnmapped(path)})
+			instance.setVariableValues({['timer' + timer[0] + '_status']:  instance.device.getUnmapped(path)})
 			return false
 		},
 	},
@@ -86,8 +86,8 @@ const commonSubscriptions: Record<string, Subscription> = {
 		pat: 'DEVICE/device/screenGroupList/items/((?:S|A)\\d{1,3})/control/pp/take(?:Up|Down)?Time',
 		ini: (instance: AWJinstance):string[] => {
 			let presets: string[] = []
-			if (instance.state.platform.startsWith('livepremier')) presets = ['takeUpTime', 'takeDownTime']
-			if (instance.state.platform === 'midra') presets = ['takeTime']
+			if (instance.device.platform.startsWith('livepremier')) presets = ['takeUpTime', 'takeDownTime']
+			if (instance.device.platform === 'midra') presets = ['takeTime']
 			const screens: string[] = [
 				...Array.from({ length: maxScreens }, (_, i) => 'S' + (i + 1).toString()),
 				...Array.from({ length: maxAuxScreens }, (_, i) => 'A' + (i + 1).toString()),
@@ -102,23 +102,23 @@ const commonSubscriptions: Record<string, Subscription> = {
 			const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
 			if (pres === 'takeUpTime') {
-				const presname = 'B' === instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
+				const presname = 'B' === instance.device.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
 				instance.setVariableValues({
-					['screen' + screen + 'time' + presname]: instance.deciSceondsToString(instance.state.get(path))
+					['screen' + screen + 'time' + presname]: instance.deciSceondsToString(instance.device.get(path))
 				})
 			}
 			if (pres === 'takeDownTime') {
-				const presname = 'A' === instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
+				const presname = 'A' === instance.device.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
 				instance.setVariableValues({
-					['screen' + screen + 'time' + presname]: instance.deciSceondsToString(instance.state.get(path))
+					['screen' + screen + 'time' + presname]: instance.deciSceondsToString(instance.device.get(path))
 				})
 			}
 			if (pres === 'takeTime') {
 				instance.setVariableValues({
-					['screen' + screen + 'timePVW']: instance.deciSceondsToString(instance.state.get(path))
+					['screen' + screen + 'timePVW']: instance.deciSceondsToString(instance.device.get(path))
 				})
 				instance.setVariableValues({
-					['screen' + screen + 'timePGM']: instance.deciSceondsToString(instance.state.get(path))
+					['screen' + screen + 'timePGM']: instance.deciSceondsToString(instance.device.get(path))
 				})
 			}
 			
@@ -132,11 +132,11 @@ const commonSubscriptions: Record<string, Subscription> = {
 		fun: (instance, path, _value) => {
 			if (!path) return false
 			const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-			const label = memory.toString() !== '0' ? instance.state.get(path) : ''
+			const label = memory.toString() !== '0' ? instance.device.get(path) : ''
 			instance.setVariableValues({['screenMemory' + memory + 'label']:  label})
 			const pathTo = {
 				get id() {
-					if (instance.state.platform === 'midra') {
+					if (instance.device.platform === 'midra') {
 						return ['status','pp','memoryId']
 					} else {
 						return ['presetId','status','pp','id']
@@ -146,11 +146,11 @@ const commonSubscriptions: Record<string, Subscription> = {
 				midra: {id: ['status','pp','memoryId']}
 			}
 			let screens: string[] = []
-			if (instance.state.platform.startsWith('livepremier')) screens = instance.state.getChosenScreenAuxes('all')
-			if (instance.state.platform === 'midra') screens = instance.state.getChosenScreens('all')
+			if (instance.device.platform.startsWith('livepremier')) screens = instance.device.getChosenScreenAuxes('all')
+			if (instance.device.platform === 'midra') screens = instance.device.getChosenScreens('all')
 
 			for (const screen of screens) {
-				const pgmmem = instance.state.get([
+				const pgmmem = instance.device.get([
 					'DEVICE',
 					'device',
 					'screenList',
@@ -158,13 +158,13 @@ const commonSubscriptions: Record<string, Subscription> = {
 					screen,
 					'presetList',
 					'items',
-					instance.state.getUnmapped('LOCAL/screens/' + screen + '/pgm/preset'),
+					instance.device.getUnmapped('LOCAL/screens/' + screen + '/pgm/preset'),
 					...pathTo.id
 				])
 				if (memory == pgmmem) {
 					instance.setVariableValues({['screen' + screen + 'memoryLabelPGM']:  label})
 				}
-				const pvwmem = instance.state.get([
+				const pvwmem = instance.device.get([
 					'DEVICE',
 					'device',
 					'screenList',
@@ -172,7 +172,7 @@ const commonSubscriptions: Record<string, Subscription> = {
 					screen,
 					'presetList',
 					'items',
-					instance.state.getUnmapped('LOCAL/screens/' + screen + '/pvw/preset'),
+					instance.device.getUnmapped('LOCAL/screens/' + screen + '/pvw/preset'),
 					...pathTo.id
 				])
 				if (memory == pvwmem) {
@@ -192,7 +192,7 @@ const commonSubscriptions: Record<string, Subscription> = {
 		fun: (instance, path, _value) => {
 			if (!path) return false
 			const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-			instance.setVariableValues({['masterMemory' + memory + 'label']:  instance.state.get(path)})
+			instance.setVariableValues({['masterMemory' + memory + 'label']:  instance.device.get(path)})
 			return true
 		},
 	},
@@ -202,7 +202,7 @@ const commonSubscriptions: Record<string, Subscription> = {
 		fun: (instance, path, _value) => {
 			if (!path) return false
 			const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-			instance.setVariableValues({['multiviewerMemory' + memory + 'label']:  instance.state.get(path)})
+			instance.setVariableValues({['multiviewerMemory' + memory + 'label']:  instance.device.get(path)})
 			return true
 		},
 	},
@@ -212,7 +212,7 @@ const commonSubscriptions: Record<string, Subscription> = {
 		fun: (instance, path, _value) => {
 			if (!path) return false
 			const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-			instance.setVariableValues({['layerMemory' + memory + 'label']:  instance.state.get(path)})
+			instance.setVariableValues({['layerMemory' + memory + 'label']:  instance.device.get(path)})
 			return true
 		},
 	},
@@ -222,7 +222,7 @@ const commonSubscriptions: Record<string, Subscription> = {
 		fun: (instance, path, _value) => {
 			if (!path) return false
 			const input = Array.isArray(path) ? path[4] : path.split('/')[4]
-			instance.setVariableValues({['STILL_' + input + 'label']:  instance.state.get(path)})
+			instance.setVariableValues({['STILL_' + input + 'label']:  instance.device.get(path)})
 			return true
 		},
 	},
@@ -238,8 +238,8 @@ const commonSubscriptions: Record<string, Subscription> = {
 		fun: (instance, path, _value) => {
 			if (!path) return false
 			const input = Array.isArray(path) ? path[4] : path.split('/')[4]
-			instance.setVariableValues({[input.replace('S', 'SCREEN_') + 'label']:  instance.state.get(path)})
-			instance.setVariableValues({['screen' + input + 'label']:  instance.state.get(path)})
+			instance.setVariableValues({[input.replace('S', 'SCREEN_') + 'label']:  instance.device.get(path)})
+			instance.setVariableValues({['screen' + input + 'label']:  instance.device.get(path)})
 			return true
 		},
 	},
@@ -249,8 +249,8 @@ const commonSubscriptions: Record<string, Subscription> = {
 		fun: (instance, path, _value) => {
 			if (!path) return false
 			const input = Array.isArray(path) ? path[4] : path.split('/')[4]
-			instance.setVariableValues({[input.replace('A', 'AUXSCREEN_') + 'label']:  instance.state.get(path)})
-			instance.setVariableValues({['screen' + input + 'label']:  instance.state.get(path)})
+			instance.setVariableValues({[input.replace('A', 'AUXSCREEN_') + 'label']:  instance.device.get(path)})
+			instance.setVariableValues({['screen' + input + 'label']:  instance.device.get(path)})
 			return true
 		},
 	},
@@ -322,7 +322,7 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 		],
 		fun: (instance, path, _value) => {
 			const setMemoryVariables = (screen: string, preset: string, variableSuffix: string): void => {
-				const mem = instance.state.get([
+				const mem = instance.device.get([
 					'DEVICE',
 					'device',
 					'screenList',
@@ -336,7 +336,7 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 					'pp',
 					'id',
 				])
-				const unmodified = instance.state.get([
+				const unmodified = instance.device.get([
 					'DEVICE',
 					'device',
 					'screenList',
@@ -355,7 +355,7 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 				instance.setVariableValues({
 					['screen' + screen + 'memoryLabel' + variableSuffix]:
 					mem
-						? instance.state.getUnmapped(['DEVICE', 'device', 'presetBank', 'bankList', 'items', mem, 'control', 'pp', 'label'])
+						? instance.device.getUnmapped(['DEVICE', 'device', 'presetBank', 'bankList', 'items', mem, 'control', 'pp', 'label'])
 						: ''
 				})
 			}
@@ -367,24 +367,24 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 			} else {
 				return false
 			}
-			const val = instance.state.get(patharr)
+			const val = instance.device.get(patharr)
 			const screen = patharr[4]
 			let program = '', preview = ''
 			if (val === 'AT_UP') {
 				program = 'B'
 				preview = 'A'
-				instance.state.set(`LOCAL/screens/${screen}/pgm/preset`, program)
-				instance.state.set(`LOCAL/screens/${screen}/pvw/preset`, preview)
+				instance.device.set(`LOCAL/screens/${screen}/pgm/preset`, program)
+				instance.device.set(`LOCAL/screens/${screen}/pvw/preset`, preview)
 				instance.setVariableValues({
 					['screen' + screen + 'timePGM']:
 					instance.deciSceondsToString(
-						instance.state.get(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
+						instance.device.get(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
 					)
 				})
 				instance.setVariableValues({
 					['screen' + screen + 'timePVW']:
 					instance.deciSceondsToString(
-						instance.state.get([
+						instance.device.get([
 							'DEVICE',
 							'device',
 							'screenGroupList',
@@ -402,12 +402,12 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 			if (val === 'AT_DOWN') {
 				program = 'A'
 				preview = 'B'
-				instance.state.set(`LOCAL/screens/${screen}/pgm/preset`, program)
-				instance.state.set(`LOCAL/screens/${screen}/pvw/preset`, preview)
+				instance.device.set(`LOCAL/screens/${screen}/pgm/preset`, program)
+				instance.device.set(`LOCAL/screens/${screen}/pvw/preset`, preview)
 				instance.setVariableValues({
 					['screen' + screen + 'timePGM']:
 					instance.deciSceondsToString(
-						instance.state.get([
+						instance.device.get([
 							'DEVICE',
 							'device',
 							'screenGroupList',
@@ -422,7 +422,7 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 				instance.setVariableValues({
 					['screen' + screen + 'timePVW']:
 					instance.deciSceondsToString(
-						instance.state.get(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
+						instance.device.get(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
 					)
 				})
 				setMemoryVariables(screen, program, 'PGM')
@@ -439,19 +439,19 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 			if (!path) return false
 			const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
-			const presname = pres === instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW'
-			const memorystr = instance.state.get(path).toString() !== '0' ? 'M' + instance.state.get(path) : ''
+			const presname = pres === instance.device.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW'
+			const memorystr = instance.device.get(path).toString() !== '0' ?instance.device.get(path) : ''
 			instance.setVariableValues({['screen' + screen + 'memory' + presname]:  memorystr})
 			instance.setVariableValues({
 				['screen' + screen + 'memoryLabel' + presname]:
-				instance.state.get(path).toString() !== '0'
-					? instance.state.getUnmapped([
+				instance.device.get(path).toString() !== '0'
+					? instance.device.getUnmapped([
 							'DEVICE',
 							'device',
 							'presetBank',
 							'bankList',
 							'items',
-							instance.state.get(path).toString(),
+							instance.device.get(path).toString(),
 							'control',
 							'pp',
 							'label',
@@ -468,12 +468,12 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 			if (!path) return false
 			const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
-			const presname = pres === instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW'
+			const presname = pres === instance.device.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW'
 			instance.setVariableValues({
 				['screen' + screen + 'memoryModified' + presname]:
-				instance.state.get(
+				instance.device.get(
 					'DEVICE/device/screenList/items/' + screen + '/presetList/items/' + pres + '/presetId/status/pp/id'
-				) && !instance.state.get(path)
+				) && !instance.device.get(path)
 					? '*'
 					: ''
 			})
@@ -486,7 +486,7 @@ const livepremierSubscriptions: Record<string, Subscription> = {
 		fun: (instance, path, _value) => {
 			if (!path) return false
 			const input = Array.isArray(path) ? path[4] : path.split('/')[4]
-			instance.setVariableValues({[input.replace(/^\w+_/, 'INPUT_') + 'label']:  instance.state.get(path)})
+			instance.setVariableValues({[input.replace(/^\w+_/, 'INPUT_') + 'label']:  instance.device.get(path)})
 			return true
 		},
 	},
@@ -516,7 +516,7 @@ const midraSubscriptions: Record<string, Subscription> = {
 		],
 		fun: (instance, path, _value) => {
 			const setMemoryVariables = (screen: string, preset: string, variableSuffix: string): void => {
-				const mem = instance.state.get([
+				const mem = instance.device.get([
 					'DEVICE',
 					'device',
 					'screenList',
@@ -529,7 +529,7 @@ const midraSubscriptions: Record<string, Subscription> = {
 					'pp',
 					'memoryId',
 				])
-				const modified = instance.state.get([
+				const modified = instance.device.get([
 					'DEVICE',
 					'device',
 					'screenList',
@@ -547,7 +547,7 @@ const midraSubscriptions: Record<string, Subscription> = {
 				instance.setVariableValues({
 					['screen' + screen + 'memoryLabel' + variableSuffix]:
 					mem
-						? instance.state.get([
+						? instance.device.get([
 								'DEVICE',
 								'device',
 								'preset',
@@ -570,14 +570,14 @@ const midraSubscriptions: Record<string, Subscription> = {
 			} else {
 				return false
 			}
-			const val = instance.state.get(patharr)
+			const val = instance.device.get(patharr)
 			const screen = patharr[5]
 			let program = '', preview = '' 
 			if (val === 'AT_UP') {
 				program = 'B'
 				preview = 'A'
-				instance.state.setUnmapped(`LOCAL/screens/${screen}/pgm/preset`, program)
-				instance.state.setUnmapped(`LOCAL/screens/${screen}/pvw/preset`, preview)
+				instance.device.setUnmapped(`LOCAL/screens/${screen}/pgm/preset`, program)
+				instance.device.setUnmapped(`LOCAL/screens/${screen}/pvw/preset`, preview)
 
 				setMemoryVariables(screen, program, 'PGM')
 				setMemoryVariables(screen, preview, 'PVW')
@@ -585,8 +585,8 @@ const midraSubscriptions: Record<string, Subscription> = {
 			if (val === 'AT_DOWN') {
 				program = 'A'
 				preview = 'B'
-				instance.state.setUnmapped(`LOCAL/screens/${screen}/pgm/preset`, program)
-				instance.state.setUnmapped(`LOCAL/screens/${screen}/pvw/preset`, preview)
+				instance.device.setUnmapped(`LOCAL/screens/${screen}/pgm/preset`, program)
+				instance.device.setUnmapped(`LOCAL/screens/${screen}/pvw/preset`, preview)
 
 				setMemoryVariables(screen, program, 'PGM')
 				setMemoryVariables(screen, preview, 'PVW')
@@ -606,20 +606,20 @@ const midraSubscriptions: Record<string, Subscription> = {
 			if (!path) return false
 			const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
-			const presname = pres === instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW'
-			const memorystr = instance.state.get(path).toString() !== '0' ? 'M' + instance.state.get(path) : ''
+			const presname = pres === instance.device.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW'
+			const memorystr = instance.device.get(path).toString() !== '0' ?instance.device.get(path) : ''
 			instance.setVariableValues({['screen' + screen + 'memory' + presname]:  memorystr})
 			instance.setVariableValues({
 				['screen' + screen + 'memoryLabel' + presname]:
-				instance.state.get(path).toString() !== '0'
-					? instance.state.getUnmapped([
+				instance.device.get(path).toString() !== '0'
+					? instance.device.getUnmapped([
 							'DEVICE',
 							'device',
 							'preset',
 							'bank',
 							'slotList',
 							'items',
-							instance.state.get(path).toString(),
+							instance.device.get(path).toString(),
 							'control',
 							'pp',
 							'label',
@@ -636,12 +636,12 @@ const midraSubscriptions: Record<string, Subscription> = {
 			if (!path) return false
 			const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
-			const presname = pres === instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW'
+			const presname = pres === instance.device.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW'
 			instance.setVariableValues({
 				['screen' + screen + 'memoryModified' + presname]:
-				instance.state.get(
+				instance.device.get(
 					'DEVICE/device/screenList/items/' + screen + '/presetList/items/' + pres + '/status/pp/memoryId'
-				) && instance.state.get(path)
+				) && instance.device.get(path)
 					? '*'
 					: ''
 			})
@@ -654,10 +654,10 @@ const midraSubscriptions: Record<string, Subscription> = {
 		fun: (instance, path, _value) => {
 			if (!path) return false
 			const memory = Array.isArray(path) ? path[6] : path.split('/')[6]
-			const label = memory.toString() !== '0' ? instance.state.get(path) : ''
+			const label = memory.toString() !== '0' ? instance.device.get(path) : ''
 			instance.setVariableValues({['auxMemory' + memory + 'label']:  label})
-			for (const screen of instance.state.getChosenAuxes('all')) {
-				const pgmmem = instance.state.get([
+			for (const screen of instance.device.getChosenAuxes('all')) {
+				const pgmmem = instance.device.get([
 					'DEVICE',
 					'device',
 					'screenList',
@@ -665,7 +665,7 @@ const midraSubscriptions: Record<string, Subscription> = {
 					screen,
 					'presetList',
 					'items',
-					instance.state.getUnmapped('LOCAL/screens/' + screen + '/pgm/preset'),
+					instance.device.getUnmapped('LOCAL/screens/' + screen + '/pgm/preset'),
 					'status',
 					'pp',
 					'memoryId',
@@ -673,7 +673,7 @@ const midraSubscriptions: Record<string, Subscription> = {
 				if (memory == pgmmem) {
 					instance.setVariableValues({['screen' + screen + 'memoryLabelPGM']:  label})
 				}
-				const pvwmem = instance.state.get([
+				const pvwmem = instance.device.get([
 					'DEVICE',
 					'device',
 					'screenList',
@@ -681,7 +681,7 @@ const midraSubscriptions: Record<string, Subscription> = {
 					screen,
 					'presetList',
 					'items',
-					instance.state.getUnmapped('LOCAL/screens/' + screen + '/pvw/preset'),
+					instance.device.getUnmapped('LOCAL/screens/' + screen + '/pvw/preset'),
 					'status',
 					'pp',
 					'memoryId',
@@ -701,9 +701,9 @@ const midraSubscriptions: Record<string, Subscription> = {
 			const input = Array.isArray(path) ? path[4] : path.split('/')[4]
 			instance.setVariableValues({
 				[input.replace(/^\w+_/, 'INPUT_') + 'label']:
-				instance.state.get([
+				instance.device.get([
 					'DEVICE', 'device', 'inputList', 'items', input,
-					'plugList', 'items', instance.state.get(path),
+					'plugList', 'items', instance.device.get(path),
 					'control', 'pp', 'label'
 				])
 			})
@@ -716,12 +716,12 @@ const midraSubscriptions: Record<string, Subscription> = {
 			if (!path) return false
 			const input = Array.isArray(path) ? path[4] : path.split('/')[4]
 			const plug = Array.isArray(path) ? path[7] : path.split('/')[7]
-			if (instance.state.get([
+			if (instance.device.get([
 				'DEVICE', 'device', 'inputList', 'items', input, 'status', 'pp', 'plug'
 			]) == plug) {
 				instance.setVariableValues({
 					[input.replace(/^\w+_/, 'INPUT_') + 'label']:
-						instance.state.get(path)
+						instance.device.get(path)
 				})
 				return true
 			} else {
@@ -756,7 +756,7 @@ const midraSubscriptions: Record<string, Subscription> = {
 			} else if (value === false) {
 				instance.setVariableValues({[`frozen_${screen}_L${layer}`]: ' '})	
 			} else if (value === undefined) {
-				value = instance.state.get(path)
+				value = instance.device.get(path)
 				instance.setVariableValues({[`frozen_${screen}_L${layer}`]: value === true ? '*' : ' '})	
 			} else {
 				instance.setVariableValues({[`frozen_${screen}_L${layer}`]: '-'})
@@ -776,7 +776,7 @@ const midraSubscriptions: Record<string, Subscription> = {
 			} else if (value === false) {
 				instance.setVariableValues({[`frozen_${screen}_NATIVE`]: ' '})	
 			} else if (value === undefined) {
-				value = instance.state.get(path)
+				value = instance.device.get(path)
 				instance.setVariableValues({[`frozen_${screen}_NATIVE`]: value === true ? '*' : ' '})	
 			} else {
 				instance.setVariableValues({[`frozen_${screen}_NATIVE`]: '-'})
@@ -799,7 +799,7 @@ const midraSubscriptions: Record<string, Subscription> = {
 			} else if (value === false) {
 				instance.setVariableValues({[`frozen_${screen}`]: ' '})	
 			} else if (value === undefined) {
-				value = instance.state.get(path)
+				value = instance.device.get(path)
 				instance.setVariableValues({[`frozen_${screen}`]: value === true ? '*' : ' '})	
 			} else {
 				instance.setVariableValues({[`frozen_${screen}`]: '-'})
@@ -838,13 +838,16 @@ const midraSubscriptions: Record<string, Subscription> = {
  * @param platform 
  */
 export function initSubscriptions(instance: AWJinstance): void {
-	if (instance.state.platform.startsWith('livepremier')) {
-		instance.state.set('LOCAL/subscriptions', { ...livepremierSubscriptions, ...commonSubscriptions })
-	} else if (instance.state.platform === 'alta') {
-		instance.state.set('LOCAL/subscriptions', { ...midraSubscriptions, ...commonSubscriptions })
-	} else if (instance.state.platform === 'midra') {
-		instance.state.set('LOCAL/subscriptions', { ...midraSubscriptions, ...commonSubscriptions })
+	if (instance.device.platform.startsWith('livepremier')) {
+		instance.device.set('LOCAL/subscriptions', { ...livepremierSubscriptions, ...commonSubscriptions })
+	} else if (instance.device.platform === 'alta') {
+		instance.device.set('LOCAL/subscriptions', { ...midraSubscriptions, ...commonSubscriptions })
+	} else if (instance.device.platform === 'midra') {
+		instance.device.set('LOCAL/subscriptions', { ...midraSubscriptions, ...commonSubscriptions })
+	} else {
+		instance.device.set('LOCAL/subscriptions', {  ...commonSubscriptions })
 	}
+	console.log(instance.device.platform, 'subscriptions are now', instance.device.subscriptions)
 }
 
 /**
@@ -853,7 +856,7 @@ export function initSubscriptions(instance: AWJinstance): void {
  */
 function checkForAction(instance: AWJinstance, pat?: string | string[], value?: any): string | string[] | undefined {
 	// console.log('Checking for action', pat, value);
-	const subscriptions = instance.state.subscriptions
+	const subscriptions = instance.device.subscriptions
 	let path: string
 	if (pat === undefined) {
 		let update = false
@@ -882,7 +885,7 @@ function checkForAction(instance: AWJinstance, pat?: string | string[], value?: 
 	})
 	let ret: string[] = []
 	subscriptionlist.forEach((subscription) => {
-		// console.log('found subscription', subscription)
+		console.log('found subscription', subscription)
 		const subscriptionobj = subscriptions[subscription]
 		if (subscriptionobj.fun && typeof subscriptionobj.fun === 'function') {
 			// console.log('found subscription fun')
@@ -919,7 +922,7 @@ function checkForAction(instance: AWJinstance, pat?: string | string[], value?: 
  * @param subscription specific subscription or all subscriptions if omitted
  */
 export function checkSubscriptions(instance: AWJinstance, subscription?: string): void {
-	const subscriptions = instance.state.subscriptions
+	const subscriptions = instance.device.subscriptions
 	let update = false
 
 	const checkSub = (sub: string): boolean => {

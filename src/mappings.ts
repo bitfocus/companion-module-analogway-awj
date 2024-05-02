@@ -1,5 +1,5 @@
 import {AWJinstance} from './index.js'
-import { State } from './state.js'
+import { StateMachine } from './state.js'
 
 
 export type MapItem = {
@@ -290,14 +290,14 @@ const livePremier4Map: MapItem[] = [
  * @param connection 
  */
 export function updateMappings(instance: AWJinstance): void {
-	if (instance.state.platform === 'livepremier4') {
-		instance.state.set('LOCAL/mappings', livePremier4Map )
-	} else if (instance.state.platform.startsWith('livepremier')) {
-		instance.state.set('LOCAL/mappings', livePremier3Map )
-	} else if (instance.state.platform === 'alta') {
-		instance.state.set('LOCAL/mappings', midraMap )
-	} else if (instance.state.platform === 'midra') {
-		instance.state.set('LOCAL/mappings', midraMap )
+	if (instance.device.platform === 'livepremier4') {
+		instance.device.set('LOCAL/mappings', livePremier4Map )
+	} else if (instance.device.platform.startsWith('livepremier')) {
+		instance.device.set('LOCAL/mappings', livePremier3Map )
+	} else if (instance.device.platform === 'alta') {
+		instance.device.set('LOCAL/mappings', midraMap )
+	} else if (instance.device.platform === 'midra') {
+		instance.device.set('LOCAL/mappings', midraMap )
 	}
 }
 
@@ -369,7 +369,7 @@ export function mapOut(deviceMap: MapItem[], pat: string | string[] | undefined,
 }
 
 // this function is unused
-export function mapInit(deviceMap: MapItem[], state: State, path?: string): void {
+export function mapInit(deviceMap: MapItem[], state: StateMachine, path?: string): void {
 	if (path === undefined) {
 		const mapping = deviceMap.filter((itm) => {
 			return typeof itm.initfrom === 'string'
@@ -384,7 +384,7 @@ export function mapInit(deviceMap: MapItem[], state: State, path?: string): void
 }
 
 // this function is unused
-export function mapPath(deviceMap: MapItem[], state: State, path: string): void {
+export function mapPath(deviceMap: MapItem[], state: StateMachine, path: string): void {
 	const object = state.get('DEVICE/'+path)
 	//console.log('mapping', path, object)
 	const mapped = mapIn(deviceMap, path, object)

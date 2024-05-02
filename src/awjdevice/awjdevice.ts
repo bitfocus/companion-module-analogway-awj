@@ -1,9 +1,9 @@
 import { AWJinstance } from ".."
 import { AWJconnection } from "../connection"
-import { State } from "../state"
 import { getActions } from "./actions.js"
 import { getFeedbacks } from "./feedback.js"
 import { getPresets } from "./presets.js"
+import { StateMachine } from "../state.js"
 
 /**
  * This is the base class for providing action-, feedback- and preset-definitions, subscriptions for an AWJ device.
@@ -13,13 +13,24 @@ import { getPresets } from "./presets.js"
  * @class LivePremier4
  * @class Midra
  */
-class AWJdevice {
-    state: State
+class AWJdevice extends StateMachine{
+    instance: AWJinstance
     connection: AWJconnection
 
-    constructor(state: State, connection: AWJconnection) {
-        this.state = state
-        this.connection = connection
+    constructor(instance: AWJinstance, initialState?: {[name: string]: any}) {
+        super(instance, initialState)
+        this.instance = instance
+        this.connection = this.instance.connection
+
+        this.init()
+    }
+
+    /**
+     * setup some initial data
+     */
+    init() {
+        this.setUnmapped('LOCAL/config', this.instance.config)
+        this.setUnmapped('LOCAL/platform', 'genericAWJ')
     }
 
     /**
@@ -58,10 +69,10 @@ class AWJdevice {
 	getPresetSelection(preset?: string, fullName = false): 'pgm' | 'pvw' | 'PROGRAM' | 'PREVIEW' {
 		let pst = preset
 		if (preset === undefined || preset.match(/^sel$/i)) {
-			if (this.state.syncSelection) {
-				pst = this.state.get('REMOTE/live/screens/presetModeSelection/presetMode')
+			if (this.syncSelection) {
+				pst = this.get('REMOTE/live/screens/presetModeSelection/presetMode')
 			} else {
-				pst = this.state.get('LOCAL/presetMode')
+				pst = this.get('LOCAL/presetMode')
 			}
 		}
 		if (pst && pst.match(/^pgm|program$/i) && !fullName) {
@@ -80,11 +91,23 @@ class AWJdevice {
 	}
 
     /**
+	 * get MAC address for WOL
+	 */
+	public getMACfromDevice(): string {
+		return this
+			.get('DEVICE/device/system/network/adapter/pp/macAddress')
+			.map((elem: number) => {
+				return elem.toString(16).padStart(2,'0')
+			})
+			.join(':') ?? ''
+	}
+
+    /**
 	 * Sends a global update command
 	 * @param platform 
 	 */
 	sendXupdate(platform?: string): void {
-		if (!platform) platform = this.state.platform
+		if (!platform) platform = this.platform
 		const updates: Record<string, string> = {
 			livepremier: '{"channel":"DEVICE","data":{"path":["device","screenGroupList","control","pp","xUpdate"],"value":',
             livepremier4: '{"channel":"DEVICE","data":{"path":["device","screenGroupList","control","pp","xUpdate"],"value":',
@@ -98,8 +121,6 @@ class AWJdevice {
 
 	}
 
-
-    
     public get maxScreens() : number {
         return 24
     }
