@@ -4,6 +4,7 @@ import { commonSubscriptions } from "../awjdevice/subscriptions.js"
 import { livepremierSubscriptions } from './livepremierSubscriptions.js'
 import { getActions as getCommonActions} from "../awjdevice/actions.js"
 import { getActions as getLivepremierActions } from "./livepremierActions.js"
+import { getFeedbacks as getLivepremierFeedbacks } from "./livepremierFeedback.js"
 
 /**
  * This is the class for providing action-, feedback- and preset-definitions, subscriptions for an LivePremier device up to fw version 3.
@@ -36,6 +37,15 @@ class AWJLivePremier extends AWJdevice{
             ...getCommonActions(instance),
             ...getLivepremierActions(instance)
         } 
+    }
+
+    /**
+     * Returns the feedback definitions for this device
+     * @param instance 
+     * @returns 
+     */
+    override getFeedbackDefinitions(instance: AWJinstance) {
+        return getLivepremierFeedbacks(instance)
     }
 
     /**

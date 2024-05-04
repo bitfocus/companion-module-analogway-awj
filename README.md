@@ -23,7 +23,7 @@ Starting with release 2.4.0 this module supports also software version 4.x of th
 
 ### 2.4.0 (2024 upcoming)
 * Feature: add compatibility with LivePremier software version 4.x
-    Although this feature itself is not a breaking change, unfortunately some AWJ paths have been changed by Analog Way with LivePremier v4 and if you upgrade to v4 from an earlier version and use such a path, you will have to adjust your actions or feedbacks. 
+    Although this feature itself is not a breaking change, unfortunately many AWJ paths have been changed by Analog Way with LivePremier v4 and if you upgrade to v4 from an earlier version and use such a path, you will have to adjust your actions or feedbacks. 
     Affected:
     - Send custom AWJ replace command
     - Send custom AWJ get command
@@ -41,7 +41,9 @@ Starting with release 2.4.0 this module supports also software version 4.x of th
 * Feature: add support for colors with alpha at Setup Timer action for LivePremier
 * Feature: show more detailed status during connection and synchronization with download progress
 * Bugfix: input freeze presets were only generated for inputs with a name
-* Chore: update some isVisible functions to newly available syntax avoiding additional code evaluation
+* Bugfix: add default value for feedback showing preset selection
+* Bugfix: add default value for feedback showing screen selection
+* Chore: update isVisible functions to newly available syntax avoiding additional code evaluation
 * Chore: refactor from commonjs to ESM
 * Chore: replace superagent by ky
 * Chore: bump @companion-module/base from 1.2.1 to 1.7.0
