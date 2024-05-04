@@ -21,7 +21,7 @@ import {
 	getTimerChoices,
 	getWidgetChoices,
 	getWidgetSourceChoices,
-} from '../awjdevice/choices.js'
+} from './livepremierChoices.js'
 import {
 	CompanionActionEvent,
 	DropdownChoice,

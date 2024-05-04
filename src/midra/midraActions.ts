@@ -6,13 +6,10 @@ import {
 	choicesPreset,
 	getAudioCustomBlockChoices,
 	getAudioInputChoices,
-	getAudioOutputChoices,
 	getAuxBackgroundChoices,
 	getAuxChoices,
 	getAuxMemoryChoices,
-	getAuxSourceChoices,
 	getLayerChoices,
-	getLayerMemoryChoices,
 	getLiveInputArray,
 	getLiveInputChoices,
 	getMasterMemoryChoices,
@@ -30,10 +27,9 @@ import {
 	getTimerChoices,
 	getWidgetChoices,
 	getWidgetSourceChoices,
-} from './../awjdevice/choices.js'
+} from './midraChoices.js'
 import {
 	CompanionActionEvent,
-	CompanionInputFieldDropdown,
 	DropdownChoice,
 	DropdownChoiceId,
 	SomeCompanionActionInputField,
@@ -71,8 +67,6 @@ type ActionEvent<T> = Omit<CompanionActionEvent, 'options'> & {
 
 type AWJoptionValues<T> = T
 type AWJoptionValuesExtended<T> = T
-
-type Dropdown<t> = {id: t, label: string}
 
 // const XUPDATE = '{"channel":"DEVICE","data":{"path":"device/screenGroupList/control/pp/xUpdate","value":true}}'
 // const XUPDATEmidra = '{"channel":"DEVICE","data":{"path":"device/preset/control/pp/xUpdate","value":true}}'

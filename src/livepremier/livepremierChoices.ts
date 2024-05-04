@@ -35,40 +35,22 @@ export function getScreensAuxArray(state: StateMachine, getAlsoDisabled = false)
 }
 
 export function getScreensArray(state: StateMachine, getAlsoDisabled = false): Choicemeta[] {
-	const ret: Choicemeta[] = []
-	if (state.platform.startsWith('livepremier')) {
-		const screens = state.get('DEVICE/device/screenList/items')
-		if (screens) {
-			Object.keys(screens).forEach((key) => {
-				if (key.startsWith('S') && (getAlsoDisabled || screens[key].status.pp.mode != 'DISABLED')) {
-					ret.push({
-						id: key,
-						label: screens[key].control.pp.label,
-						index: key.slice(1)
-					})
-				}
-			})
-		} else {
-			ret.push({ id: 'S1', label: '(emulated)', index: '1' })
-			ret.push({ id: 'S2', label: '(emulated)', index: '2' })
-		}
-	} else if (state.platform === 'midra') {
-		const screens = state.get('DEVICE/device/screenList/itemKeys')
-		if (screens) {
-			for (const screen of screens) {
-				if (getAlsoDisabled || state.get('DEVICE/device/preconfig/status/stateList/items/CURRENT/screenList/items/' + screen + '/pp/enable') === true) {
-					ret.push({
-						id: 'S' + screen,
-						label: state.get('DEVICE/device/screenList/items/' + screen + '/control/pp/label'),
-						index: screen
-					})
-				}
-			}
-		} else {
-			ret.push({ id: 'S1', label: '(emulated)', index: '1' })
-		}
+
+	const screens = state.get('DEVICE/device/screenList/items')
+	if (screens) {
+		return Object.keys(screens)
+			.filter(key => key.startsWith('S') && (getAlsoDisabled || screens[key].status.pp.mode != 'DISABLED'))
+			.map(key => {return {
+				id: key,
+				label: screens[key].control.pp.label,
+				index: key.slice(1)
+			}})
+	} else {
+		return [
+			{ id: 'S1', label: '(emulated)', index: '1' },
+			{ id: 'S2', label: '(emulated)', index: '2' }
+		]
 	}
-	return ret
 }
 
 export function getScreenChoices(state: StateMachine): Dropdown<string>[] {
@@ -82,42 +64,23 @@ export function getScreenChoices(state: StateMachine): Dropdown<string>[] {
 }
 
 export function getAuxArray(state: StateMachine, getAlsoDisabled = false ): Choicemeta[] {
-	const ret: Choicemeta[] = []
-	if (state.platform.startsWith('livepremier')) {
-		const screens = (state.platform === 'livepremier4')
-			? state.getUnmapped('DEVICE/device/auxiliaryList/itemKeys')
-			: state.getUnmapped('DEVICE/device/screenList/itemKeys').filter((key: string) => key.startsWith('A'))
-		if (screens) {
-			screens.forEach((screen: string) => {
-				if (getAlsoDisabled || state.get('DEVICE/device/screenList/items/' + screen + '/status/pp/mode') != 'DISABLED') {
-					ret.push({
-						id: screen,
-						label: state.get('DEVICE/device/screenList/items/' + screen + '/control/pp/label'),
-						index: screen.replace(/\D/g, '')
-					})
-				}
-			})
-		} else {
-			ret.push({ id: 'A1', label: '(emulated)', index: '1' })
-			ret.push({ id: 'A2', label: '(emulated)', index: '2' })
-		}
-	} else if (state.platform === 'midra') {
-		const screens = state.getUnmapped('DEVICE/device/auxiliaryScreenList/itemKeys')
-		if (screens) {
-			for (const screen of screens) {
-				if (getAlsoDisabled || state.getUnmapped('DEVICE/device/preconfig/status/stateList/items/CURRENT/auxiliaryScreenList/items/' + screen + '/pp/mode') != 'DISABLE') {
-					ret.push({
-						id: 'A' + screen,
-						label: state.getUnmapped('DEVICE/device/auxiliaryScreenList/items/' + screen + '/control/pp/label'),
-						index: screen.replace(/\D/g, '')
-					})
-				}
-			}
-		} else {
-			ret.push({ id: 'A1', label: '(emulated)', index: '1' })
-		}
+
+	const screens = state.getUnmapped('DEVICE/device/screenList/itemKeys').filter((key: string) => key.startsWith('A'))
+	if (screens) {
+		return screens
+			.filter((screen: string) => getAlsoDisabled || state.get(`DEVICE/device/screenList/items/${ screen }/status/pp/mode`) != 'DISABLED')
+			.map((screen: string) => {return {
+				id: screen,
+				label: state.get(`DEVICE/device/screenList/items/${ screen }/control/pp/label`),
+				index: screen.slice(1)
+			}})
+
+	} else {
+		return [
+			{ id: 'A1', label: '(emulated)', index: '1' },
+			{ id: 'A2', label: '(emulated)', index: '2' }
+		]
 	}
-	return ret
 }
 
 export function getAuxChoices(state: StateMachine): Dropdown<string>[] {
@@ -148,68 +111,27 @@ export function getScreenAuxChoices(state: StateMachine): Dropdown<string>[] {
 }
 
 export function getPlatformScreenChoices(state: StateMachine): Dropdown<string>[] {
-	if (state.platform.startsWith('livepremier'))
-		return [
-			...getScreensArray(state).map((scr: Choicemeta) => {
-			return {
-				id: scr.id,
-				label: `S${scr.index}${scr.label === '' ? '' : ' - ' + scr.label}`
-			}
-			}),
-			...getAuxArray(state).map((scr: Choicemeta) => {
-			return {
-				id: scr.id,
-				label: `A${scr.index}${scr.label === '' ? '' : ' - ' + scr.label}`
-			}
-			})
-		]
-	else if (state.platform === 'midra')
-		return [
-			...getScreensArray(state).map((scr: Choicemeta) => {
-			return {
-				id: scr.id,
-				label: `S${scr.index}${scr.label === '' ? '' : ' - ' + scr.label}`
-			}
-			})
-		]
-	else return []
+	return getScreenAuxChoices(state) 
 }
 
 export function getLiveInputArray(state: StateMachine, prefix?: string): Choicemeta[] {
-	const ret: Choicemeta[] = []
-	if (state.platform.startsWith('livepremier')) {
-		if(prefix == undefined) prefix = 'IN'
-		const items = state.getUnmapped('DEVICE/device/inputList/itemKeys')
-		if (items) {
-			items.forEach((key: string) => {
-				if (state.getUnmapped('DEVICE/device/inputList/items/' + key + '/status/pp/isAvailable')
-					&& (state.getUnmapped('LOCAL/config/showDisabled') || state.getUnmapped('DEVICE/device/inputList/items/' + key + '/status/pp/isEnabled'))
-				) {
-					ret.push({
-						id: key.replace(/^\w+_/, prefix + '_'),
-						label: state.getUnmapped('DEVICE/device/inputList/items/' + key + '/control/pp/label'),
-						index: key.replace(/^\w+_/, '')
-					})
+
+	if(prefix == undefined) prefix = 'IN'
+	const items = state.getUnmapped('DEVICE/device/inputList/itemKeys')
+	if (items) {
+		return items
+			.filter((key: string) => state.getUnmapped(`DEVICE/device/inputList/items/${ key }/status/pp/isAvailable`)
+				&& (state.getUnmapped('LOCAL/config/showDisabled') || state.getUnmapped(`DEVICE/device/inputList/items/${ key }/status/pp/isEnabled`)))
+			.map((key: string) => { 
+				return {
+					id: key.replace(/^\w+_/, prefix + '_'),
+					label: state.getUnmapped(`DEVICE/device/inputList/items/${ key }/control/pp/label`),
+					index: key.replace(/^\w+_/, '')
 				}
 			})
-		}
-	} else if (state.platform === 'midra') {
-		if(prefix == undefined) prefix = 'INPUT'
-		const items = state.getUnmapped('DEVICE/device/inputList/itemKeys')
-		if (items) {
-			items.forEach((key: string) => {
-				if (state.getUnmapped('DEVICE/device/inputList/items/' + key + '/status/pp/isAvailable')) {
-					const plug = state.getUnmapped('DEVICE/device/inputList/items/' + key + '/control/pp/plug')
-					ret.push({
-						id: key.replace(/^\w+_/, prefix + '_'),
-						label: state.getUnmapped('DEVICE/device/inputList/items/' + key + '/plugList/items/' + plug + '/control/pp/label'),
-						index: key.replace(/^\w+_/, '')
-					})
-				}
-			})
-		}
 	}
-	return ret
+
+	return []
 }
 
 export function getLiveInputChoices(state: StateMachine, prefix?: string): Dropdown<string>[] {
@@ -226,27 +148,16 @@ export function getLiveInputChoices(state: StateMachine, prefix?: string): Dropd
 			})
 		}
 	} else {
-		if (prefix == undefined && state.platform == 'livepremier') prefix = 'IN'
-		if (prefix == undefined && state.platform == 'midra') prefix = 'INPUT'
-		for (let i = 1; i <= 8; i += 1) {
+		if (prefix == undefined) prefix = 'IN'
+		for (let i = 1; i <= 12; i += 1) {
 			ret.push({ id: `${prefix}_${i.toString()}`, label: `Input ${i.toString()} (emulated)` })
 		}
 	}
 	return ret
 }
 
-export function getAuxBackgroundChoices(state: StateMachine): Dropdown<string>[] {
-	if (state.platform.startsWith('livepremier')) return []
-	return [
-		{id: 'NONE', label: 'None'},
-		...getLiveInputChoices(state, 'INPUT'),
-		...getScreensArray(state).map((screen: Choicemeta): Dropdown<string> => {
-			return {
-				id: 'PROGRAM_' + screen.index,
-				label: screen.id + ' PGM' + (screen.label === '' ? '' : ' - ' + screen.label),
-			}
-		})
-	]
+export function getAuxBackgroundChoices(_state: StateMachine): Dropdown<string>[] {
+	return [] // not available at LivePremier
 }
 
 export const choicesForegroundImagesSource: Dropdown<string>[] = [
@@ -279,52 +190,41 @@ export function getSourceChoices(state: StateMachine): Dropdown<string>[] {
 	]
 
 	// next add live inputs
-	const prefix = state.platform === 'midra' ? 'INPUT' : 'LIVE'
-	ret.push( ...getLiveInputChoices(state, prefix) )
+	ret.push( ...getLiveInputChoices(state, 'LIVE') )
+	
+	// next add still images
+	ret.push(...getStillsArray(state).map((itm: Choicemeta) => {
+		return {
+			id: `STILL_${itm.id}`,
+			label: `Image ${itm.id}${itm.label === '' ? '' : ' - ' + itm.label}`,
+		}
+	}))
 
-	if (state.platform.startsWith('livepremier')) {
-		// next add still images
-		ret.push(...getStillsArray(state).map((itm: Choicemeta) => {
-			return {
-				id: `STILL_${itm.id}`,
-				label: `Image ${itm.id}${itm.label === '' ? '' : ' - ' + itm.label}`,
-			}
-		}))
-
-	}
 	return ret
 }
 
 export function getAuxSourceChoices(state: StateMachine): Dropdown<string>[] {
-	// first add None and Color which are always available
-	const ret: Dropdown<string>[] = [
-		{ id: 'NONE', label: 'None' },
-	]
-
-	// next add live inputs
-	const prefix = state.platform === 'midra' ? 'INPUT' : 'LIVE'
-	ret.push( ...getLiveInputChoices(state, prefix) )
-
-	if (state.platform.startsWith('livepremier')) {
-		// next add still images
-		ret.push(...getStillsArray(state).map((itm: Choicemeta) => {
+	
+	return [
+		{ id: 'NONE', label: 'None' }, // first add None and Color which are always available
+		...getLiveInputChoices(state, 'LIVE'), // next add live inputs
+		...getStillsArray(state).map((itm: Choicemeta) => { // next add still images
 			return {
 				id: `STILL_${itm.id}`,
 				label: `Image ${itm.id}${itm.label === '' ? '' : ' - ' + itm.label}`,
 			}
-		}))
-		// last add split-layer screen pgms for reinsertion
-		ret.push(...getScreensArray(state).filter((itm: Choicemeta) => {
-			return state.get('DEVICE/device/screenList/items/'+itm.id+'/status/pp/mixingMode') === 'SPLIT'
-		}).map((itm: Choicemeta) => {
-			return {
-				id: `SCREEN_${itm.index}`,
-				label: `Screen ${itm.index} PGM${itm.label === '' ? '' : ' - ' + itm.label}`
-			}
-		}) )
-
-	}
-	return ret
+		}),
+		...getScreensArray(state)
+			.filter((itm: Choicemeta) => { // last add split-layer screen pgms for reinsertion
+				return state.get(`DEVICE/device/screenList/items/${itm.id}/status/pp/mixingMode`) === 'SPLIT'
+			})
+			.map((itm: Choicemeta) => {
+				return {
+					id: `SCREEN_${itm.index}`,
+					label: `Screen ${itm.index} PGM${itm.label === '' ? '' : ' - ' + itm.label}`
+				}
+			})
+	]
 }
 
 export function getPlugChoices(state: StateMachine, input: string): Dropdown<string>[] {
@@ -347,17 +247,14 @@ export function getPlugChoices(state: StateMachine, input: string): Dropdown<str
 			const type: keyof typeof plugtype = state.get(['DEVICE', 'device', 'inputList', 'items', input, 'plugList', 'items', plug, 'status', 'pp', 'type'])
 			return {
 				id: plug,
-				label: 'Plug ' + plug + ' - ' + plugtype[type]
+				label: `Plug ${ plug } - ` + plugtype[type]
 			}
 		}
 	) ?? []
 }
 
 export function getMasterMemoryArray(state: StateMachine): Choicemeta[] {
-	let bankpath = 'DEVICE/device/masterPresetBank/bankList'
-	if (state.platform === 'midra') {
-		bankpath = 'DEVICE/device/preset/masterBank/slotList'
-	}
+	const bankpath = 'DEVICE/device/masterPresetBank/bankList'
 	return (
 		state.get(state.concat(bankpath, 'itemKeys'))?.filter((mem: string) => {
 			return state.get(state.concat(bankpath, ['items', mem, 'status', 'pp', 'isValid']))
@@ -381,11 +278,7 @@ export function getMasterMemoryChoices(state: StateMachine): Dropdown<string>[] 
 }
 
 export function getScreenMemoryArray(state: StateMachine): Choicemeta[] {
-	let bankpath = 'DEVICE/device/presetBank/bankList'
-	if (state.platform === 'midra') {
-		bankpath = 'DEVICE/device/preset/bank/slotList'
-	}
-
+	const bankpath = 'DEVICE/device/presetBank/bankList'
 	return (
 		state.get(state.concat(bankpath, 'itemKeys'))?.filter((mem: string) => {
 			return state.get(state.concat(bankpath, ['items', mem, 'status', 'pp', 'isValid']))
@@ -498,33 +391,25 @@ export function getMultiviewerChoices(state: StateMachine): Dropdown<string>[] {
 
 export function getWidgetChoices(state: StateMachine): Dropdown<string>[] {
 	const ret: Dropdown<string>[] = []
-	if (state.platform.startsWith('livepremier')) {
-		for (const multiviewer of getMultiviewerArray(state)) {
-			for (const widget of state.getUnmapped([
-				'DEVICE',
-				'device',
-				'monitoringList',
-				'items',
-				multiviewer,
-				'layout',
-				'widgetList',
-				'itemKeys',
-			])) {
-				ret.push({
-					id: `${multiviewer}:${widget}`,
-					label: `Multiviewer ${multiviewer} Widget ${parseInt(widget)+1}`,
-				})
-			}
+
+	for (const multiviewer of getMultiviewerArray(state)) {
+		for (const widget of state.getUnmapped([
+			'DEVICE',
+			'device',
+			'monitoringList',
+			'items',
+			multiviewer,
+			'layout',
+			'widgetList',
+			'itemKeys',
+		])) {
+			ret.push({
+				id: `${multiviewer}:${widget}`,
+				label: `Multiviewer ${multiviewer} Widget ${parseInt(widget)+1}`,
+			})
 		}
-	} else if (state.platform === 'midra') {
-		return state.getUnmapped('DEVICE/device/multiviewer/status/pp/widgetValidity').map((widget: string) => {
-			return {
-				id: '1:' + widget,
-				label: `Widget ${parseInt(widget)}`,
-			}
-		})
-		
 	}
+	
 	return ret
 }
 
@@ -533,33 +418,23 @@ export function getWidgetSourceChoices(state: StateMachine): Dropdown<string>[] 
 	const ret: Dropdown<string>[] = [{ id: 'NONE', label: 'None' }]
 
 	// next add Screens
-	// different nomenclature on livepremier and midra
-	let program = 'PROGRAM_S'
-	let preview = 'PREVIEW_S'
-	if (state.platform === 'midra') { 
-		program = 'SCREEN_PRGM_'
-		preview = 'SCREEN_PRW_'
-	}
 	for (const screen of getScreensArray(state)) {
 		ret.push({
-			id: program + screen.index,
+			id: 'PROGRAM_S' + screen.index,
 			label: `Screen ${screen.index} PGM${screen.label === '' ? '' : ' - ' + screen.label}`,
 		})
 		ret.push({
-			id: preview + screen.index,
+			id: 'PREVIEW_S' + screen.index,
 			label: `Screen ${screen.index} PVW${screen.label === '' ? '' : ' - ' + screen.label}`,
 		})
 	}
 
 	// next add Auxscreens
-	// not available on midra
-	if (state.platform.startsWith('livepremier')) {
-		for (const screen of getAuxArray(state)) {
-			ret.push({
-				id: screen.id,
-				label: `Aux ${screen.index} PGM${screen.label === '' ? '' : ' - ' + screen.label}`,
-			})
-		}
+	for (const screen of getAuxArray(state)) {
+		ret.push({
+			id: screen.id,
+			label: `Aux ${screen.index} PGM${screen.label === '' ? '' : ' - ' + screen.label}`,
+		})
 	}
 
 	// next add live inputs
@@ -569,15 +444,12 @@ export function getWidgetSourceChoices(state: StateMachine): Dropdown<string>[] 
 	ret.push(...getTimerChoices(state))
 
 	// next add still images
-	// not available on midra
-	if (state.platform.startsWith('livepremier')) {
-		ret.push(...getStillsArray(state).map((itm: Choicemeta) => {
-			return {
-				id: `STILL_${itm.id}`,
-				label: `Image ${itm.id}${itm.label === '' ? '' : ' - ' + itm.label}`,
-			}
-		}))
-	}
+	ret.push(...getStillsArray(state).map((itm: Choicemeta) => {
+		return {
+			id: `STILL_${itm.id}`,
+			label: `Image ${itm.id}${itm.label === '' ? '' : ' - ' + itm.label}`,
+		}
+	}))
 
 	return ret
 }
@@ -590,30 +462,14 @@ export function getLayersAsArray(state: StateMachine, param: string | number, bk
 		for (let i = 1; i <= param; i += 1) {
 			ret.push(i.toString())
 		}
-		if (state.platform === 'midra' && (bkg === undefined || bkg === true)) ret.push('TOP')
 		return ret
 	} else if (typeof param === 'string') {
-		if (state.platform.startsWith('livepremier')) {
-			if (bkg === undefined || bkg === true) ret.push('NATIVE')
-			layercount = state.get(`DEVICE/device/screenList/items/${param}/status/pp/layerCount`) ?? 1
-			for (let i = 1; i <= layercount; i += 1) {
-				ret.push(i.toString())
-			}
-			return ret
+		if (bkg === undefined || bkg === true) ret.push('NATIVE')
+		layercount = state.get(`DEVICE/device/screenList/items/${param}/status/pp/layerCount`) ?? 1
+		for (let i = 1; i <= layercount; i += 1) {
+			ret.push(i.toString())
 		}
-		if (state.platform === 'midra') {
-			if (param.startsWith('A')) {
-				ret.push('BKG')
-			}
-			if (param.startsWith('S')) {
-				layercount = state.getUnmapped(`DEVICE/device/preconfig/status/stateList/items/CURRENT/screenList/items/${param.replace(/\D/g, '')}/pp/layerCount`) ?? 1
-				if (bkg === undefined || bkg === true) ret.push('NATIVE')
-				for (let i = 1; i <= layercount; i += 1) {
-					ret.push(i.toString())
-				}
-				if (bkg === undefined || bkg === true) ret.push('TOP')
-			}
-		}
+		return ret
 	}
 	return ret
 }
@@ -631,41 +487,25 @@ export function getLayerChoices(state: StateMachine, param: string | number, bkg
 		for (let i = 1; i <= param; i += 1) {
 			ret.push({ id: `${i.toString()}`, label: `Layer ${i.toString()}` })
 		}
-		if (state.platform === 'midra' && (bkg === undefined || bkg === true)) ret.push({ id: 'TOP', label: 'Foreground' })
 		return ret
-	} else if (typeof param === 'string') {
-		if (state.platform.startsWith('livepremier')) {
-			if (bkg === undefined || bkg === true) ret.push({ id: 'NATIVE', label: 'Background' })
-			layercount = state.get(`DEVICE/device/screenList/items/${param}/status/pp/layerCount`) ?? 1
-			for (let i = 1; i <= layercount; i += 1) {
-				ret.push({ id: `${i.toString()}`, label: `Layer ${i.toString()}` })
-			}
-			return ret
+	} else if (typeof param === 'string') {	
+		if (bkg === undefined || bkg === true) ret.push({ id: 'NATIVE', label: 'Background' })
+		layercount = state.get(`DEVICE/device/screenList/items/${param}/status/pp/layerCount`) ?? 1
+		for (let i = 1; i <= layercount; i += 1) {
+			ret.push({ id: `${i.toString()}`, label: `Layer ${i.toString()}` })
 		}
-		if (state.platform === 'midra') {
-			if (param.startsWith('A')) {
-				ret.push({ id: 'BKG', label: 'Background Layer' })
-			}
-			if (param.startsWith('S')) {
-				layercount = state.getUnmapped(`DEVICE/device/preconfig/status/stateList/items/CURRENT/screenList/items/${param.replace(/\D/g, '')}/pp/layerCount`) ?? 1
-				if (bkg === undefined || bkg === true) ret.push({ id: 'NATIVE', label: 'Background Layer' })
-				for (let i = 1; i <= layercount; i += 1) {
-					ret.push({ id: `${i.toString()}`, label: `Layer ${i.toString()}` })
-				}
-				if (bkg === undefined || bkg === true) ret.push({ id: 'TOP', label: 'Foreground Layer' })
-			}
-		}
+		return ret
 	}
 	return ret
 }
 
 export function getOutputArray(state: StateMachine): Choicemeta[] {
 	return state.get('DEVICE/device/outputList/itemKeys')?.filter((itm: string) => {
-		return state.get('DEVICE/device/outputList/items/'+itm+'/status/pp/isAvailable') === true
+		return state.get(`DEVICE/device/outputList/items/${itm}/status/pp/isAvailable`) === true
 	}).map((itm: string) => {
 		return {
 			id: itm,
-			label: state.get('DEVICE/device/outputList/items/'+itm+'/control/pp/label')
+			label: state.get(`DEVICE/device/outputList/items/${itm}/control/pp/label`)
 		}
 	}) ?? []
 
@@ -688,59 +528,38 @@ export function getOutputChoices(state: StateMachine): Dropdown<string>[] {
  */
 export function getAudioOutputsArray(state: StateMachine, _device?: number): Choicemeta[] {
 	const ret: Choicemeta[] = []
-	if (state.platform.startsWith('livepremier')) {
-		const outputs = state.get('DEVICE/device/audio/control/txList/itemKeys') ?? []
-		for (const out of outputs) {
-			const outputnum = out.split('_')[1]
-			if (out.startsWith('OUTPUT') && state.get('DEVICE/device/outputList/items/' + outputnum + '/status/pp/isAvailable')) {
-				ret.push({
-					id: out,
-					label: state.get('DEVICE/device/outputList/items/' + outputnum + '/control/pp/label'),
-					index: outputnum,
-					longname: 'Output'
-				})
-			}
-			if (out.startsWith('DANTE') && state.get('DEVICE/device/system/dante/channelList/items/' + out + '_CHANNEL_8/status/pp/isAvailable')) {
-				ret.push({
-					id: out,
-					label: '',
-					index: outputnum,
-					longname: 'Dante'
-				})
-			}
-			if (out.startsWith('MVW') && state.get('DEVICE/device/monitoringList/items/' + outputnum + '/status/pp/isAvailable')) {
-				ret.push({
-					id: out,
-					label: state.get('DEVICE/device/monitoringList/items/' + outputnum + '/control/pp/label'),
-					index: outputnum,
-					longname: 'Multiviewer'
-				})
-			}
+	const outputs = state.get('DEVICE/device/audio/control/txList/itemKeys') ?? []
+	for (const out of outputs) {
+		const outputnum = out.split('_')[1]
+		if (out.startsWith('OUTPUT') && state.get(`DEVICE/device/outputList/items/${ outputnum }/status/pp/isAvailable`)) {
+			ret.push({
+				id: out,
+				label: state.get(`DEVICE/device/outputList/items/${ outputnum }/control/pp/label`),
+				index: outputnum,
+				longname: 'Output'
+			})
 		}
-	} else if (state.platform === 'midra') {
-		const outputs = state.get('DEVICE/device/audio/outputList/itemKeys') ?? []
-		for (const out of outputs) {
-			if (state.get('DEVICE/device/audio/outputList/items/' + out + '/status/pp/isAvailable')){
-				ret.push({
-					id: out,
-					label: ''
-				})
-			}
+		if (out.startsWith('DANTE') && state.get(`DEVICE/device/system/dante/channelList/items/${ out }_CHANNEL_8/status/pp/isAvailable`)) {
+			ret.push({
+				id: out,
+				label: '',
+				index: outputnum,
+				longname: 'Dante'
+			})
+		}
+		if (out.startsWith('MVW') && state.get(`DEVICE/device/monitoringList/items/${ outputnum }/status/pp/isAvailable`)) {
+			ret.push({
+				id: out,
+				label: state.get(`DEVICE/device/monitoringList/items/${ outputnum }/control/pp/label`),
+				index: outputnum,
+				longname: 'Multiviewer'
+			})
 		}
 	}
 	return ret
 }
 
-export function getAudioOutputChoices(state: StateMachine): Dropdown<string>[] { 
-	if (state.platform === 'midra') {
-		return getAudioOutputChoicesMidra(state)
-	} else {
-		return getAudioOutputChoicesLivePremier(state)
-	}
-
-}
-
-export function getAudioOutputChoicesLivePremier(state: StateMachine): Dropdown<string>[] {
+export function getAudioOutputChoices(state: StateMachine): Dropdown<string>[] {
 	const ret: Dropdown<string>[] = []
 	for (const out of getAudioOutputsArray(state)) {
 		const channels = state.get(`DEVICE/device/audio/control/txList/items/${out.id}/channelList/itemKeys`) ?? []
@@ -749,54 +568,18 @@ export function getAudioOutputChoicesLivePremier(state: StateMachine): Dropdown<
 			let label = '',
 				outputLabel = ''
 			if (outputtype === 'OUTPUT') {
-				outputLabel = state.get('DEVICE/device/outputList/items/' + outnum + '/control/pp/label')
+				outputLabel = state.get(`DEVICE/device/outputList/items/${ outnum }/control/pp/label`)
 				label = `Output ${outnum} Channel ${channel}${outputLabel === '' ? '' : ' - ' + outputLabel}`
 			} else if (outputtype === 'DANTE') {
 				outputLabel = state.get(
-					'DEVICE/device/system/dante/channelList/items/' + out + '_CHANNEL_' + channel + '/transmitter/status/pp/label'
+					`DEVICE/device/system/dante/channelList/items/${ out.id }_CHANNEL_${ channel }/transmitter/status/pp/label`
 				)
 				label = `Dante Channel ${(parseInt(outnum) - 1) * 8 + parseInt(channel)}${
 					outputLabel === '' ? '' : ' - ' + outputLabel
 				}`
 			} else if (outputtype === 'MVW') {
-				outputLabel = state.get('DEVICE/device/monitoringList/items/' + outnum + '/control/pp/label')
+				outputLabel = state.get(`DEVICE/device/monitoringList/items/${ outnum }/control/pp/label`)
 				label = `Multiviewer ${outnum} Channel ${channel}${outputLabel === '' ? '' : ' - ' + outputLabel}`
-			}
-
-			ret.push({
-				id: out.id + ':' + channel,
-				label,
-			})
-		}
-	}
-	return ret
-}
-
-export function getAudioOutputChoicesMidra(state: StateMachine): Dropdown<string>[] {
-	const ret: Dropdown<string>[] = []
-	for (const out of getAudioOutputsArray(state)) {
-		const outarr = /\d*$/.exec(out.id)
-		let outnum = '0'
-		if (outarr !== null) outnum = outarr[0]
-		for (let channel = 1; channel <= 8; channel += 1) {
-			let label = '',
-				outputLabel = ''
-			if (out.id.startsWith('VIDEO_OUT')) {
-				outputLabel = state.get('DEVICE/device/outputList/items/' + outnum + '/control/pp/label')
-				label = `Video Output ${outnum} Channel ${channel}${outputLabel === '' ? '' : ' - ' + outputLabel}`
-			} else if (out.id.startsWith('DANTE_CH')) {
-				outputLabel = state.get(
-					'DEVICE/device/audio/dante/channelList/items/' + (parseInt(outnum) - 8 + channel) + '/transmitter/status/pp/label'
-				)
-				label = `Dante Channel ${parseInt(outnum) - 8 + channel}${
-					outputLabel === '' ? '' : ' - ' + outputLabel
-				}`
-			} else if (out.id.startsWith('ANALOG')) {
-				label = `Analog Audio Output ${outnum} Channel ${channel}`
-			} else if (out.id.startsWith('VIDEO_MULTIVIEWER')) {
-				label = `Multiviewer Output Channel ${channel}`
-			} else if (out.id.startsWith('VIDEO_MONITORING')) {
-				label = `Monitoring Output Channel ${channel}`
 			}
 
 			ret.push({
@@ -813,40 +596,31 @@ export function getAudioCustomBlockChoices(): Dropdown<string>[] {
 	for (let block = 1; block <= 10; block += 1) {
 		for (let channel = 1; channel <= 8; channel += 1) {
 			ret.push({
-				id: 'CUSTOM_' + block.toString() + ':' + channel.toString(),
-				label: 'Custom ' +  block.toString() + ' Channel ' + channel.toString(),
+				id: `CUSTOM_${ block.toString() }:` + channel.toString(),
+				label: `Custom ${  block.toString() } Channel ` + channel.toString(),
 			})
 		}
 	}
 	return ret
 }
 
-export function getAudioInputChoices(state: StateMachine): Dropdown<string>[] { 
-	if (state.platform === 'midra') {
-		return getAudioInputChoicesMidra(state)
-	} else {
-		return getAudioInputChoicesLivePremier(state)
-	}
-
-}
-
-export function getAudioInputChoicesLivePremier(state: StateMachine): Dropdown<string>[] {
+export function getAudioInputChoices(state: StateMachine): Dropdown<string>[] {
 	const ret = [{ id: 'NONE', label: 'No Source' }]
 	const inputs = state.get('DEVICE/device/audio/control/rxList/itemKeys') ?? []
 	for (const input of inputs) {
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		const [inputtype, inputnum, _channel, channelnum] = input.split('_')
-		if (inputtype === 'INPUT' && state.get('DEVICE/device/inputList/items/IN_' + inputnum + '/status/pp/isAvailable')) {
-			const inputLabel = state.get('DEVICE/device/inputList/items/IN_' + inputnum + '/control/pp/label')
+		if (inputtype === 'INPUT' && state.get(`DEVICE/device/inputList/items/IN_${ inputnum }/status/pp/isAvailable`)) {
+			const inputLabel = state.get(`DEVICE/device/inputList/items/IN_${ inputnum }/control/pp/label`)
 			ret.push({
 				id: input,
 				label: `Input ${inputnum} Channel ${channelnum}${inputLabel === '' ? '' : ' - ' + inputLabel}`,
 			})
 		} else if (
 			inputtype === 'DANTE' &&
-			state.get('DEVICE/device/system/dante/channelList/items/' + input + '/status/pp/isAvailable')
+			state.get(`DEVICE/device/system/dante/channelList/items/${ input }/status/pp/isAvailable`)
 		) {
-			const inputLabel = state.get('DEVICE/device/system/dante/channelList/items/' + input + '/source/status/pp/label')
+			const inputLabel = state.get(`DEVICE/device/system/dante/channelList/items/${ input }/source/status/pp/label`)
 			ret.push({
 				id: input,
 				label: `Dante Channel ${(parseInt(inputnum) - 1) * 8 + parseInt(channelnum)}${
@@ -856,68 +630,6 @@ export function getAudioInputChoicesLivePremier(state: StateMachine): Dropdown<s
 		}
 	}
 	return ret
-}
-
-export function getAudioInputChoicesMidra(state: StateMachine): Dropdown<string>[] {
-	const ret = [{ id: 'NONE', label: 'No Source' }]
-	for (const input of state.getUnmapped('DEVICE/device/audio/inputList/itemKeys') ?? []) {
-		let inputtype = '', inputnum = '', inputplug = '', channelstart = 0
-		const inputlabel = ''
-		if (input.match(/^IN\d+_ACTIVE_PLUG_EMBEDDED$/)) {
-			inputtype = 'Input '
-			inputnum = input.replace(/\D/g, '')
-			inputplug = ''
-		} else if (input.match(/^IN\d+_\w+_EMBEDDED$/)) {
-			const res = input.match(/^IN(\d+)_(\w+)_EMBEDDED$/)
-			inputtype = 'Input '
-			inputnum = res[1]
-			inputplug = res[2]
-		} else if (input.match(/^IN_DANTE_CH/)) {
-			inputtype = 'Dante'
-			channelstart = parseInt(input.replace(/^\D+/, '')) - 1
-		} else if (input.match(/^IN_ANALOG/)) {
-			inputtype = 'Line Input '
-			inputnum = input.replace(/[^0-9]/g, '')
-		} else if (input.match(/^IN_MEDIA_PLAYER/)) {
-			inputtype = 'Media Player'
-		}
-		if (state.getUnmapped('DEVICE/device/audio/inputList/items/' + input + '/status/pp/isAvailable')){
-			for (const channel of state.get('DEVICE/device/audio/inputList/items/' + input + '/channelList/itemKeys')) {
-				if (state.getUnmapped('DEVICE/device/audio/inputList/items/' + input + '/channelList/items/' + channel + '/status/pp/isAvailable')) {
-					if (inputtype === 'Dante') {
-						ret.push({
-						id: `IN_DANTE_CH${channelstart + parseInt(channel)}`,
-						label: `Dante Channel ${channelstart + parseInt(channel)} (${channelstart+1}-${channelstart+8} / ${channel})`,
-					})
-					} else
-					ret.push({
-						id: input + '_CH' + channel,
-						label: `${inputtype}${inputnum}${inputplug === '' ? '' : ' ' + inputplug} Channel ${channelstart + parseInt(channel)}${inputlabel === '' ? '' : ' - ' + inputlabel}`,
-					})
-				}
-			}
-		}
-	}
-	return ret
-}
-
-export function getAudioSourceChoicesMidra(state: StateMachine): Dropdown<string>[] {
-	return state.get('DEVICE/device/audio/sourceList/itemKeys').filter((itm: string) => {
-		return state.get('DEVICE/device/audio/sourceList/items/'+itm+'/status/pp/isAvailable')
-	}).map((itm: string) => {
-		const label = itm
-			.replace(/^NONE$/, 'None')
-			.replace(/^IN_DANTE_CH(\d+)_(\d+)$/, 'Dante In Ch $1-$2')
-			.replace(/^IN_ANALOG_/, 'Line Input ')
-			.replace(/^IN_MEDIA_PLAYER$/, 'Media Player')
-			.replace(/^CUSTOM_/, 'Custom ')
-			.replace(/^IN/, 'Input ')
-
-		return {
-			id: itm,
-			label
-		}
-	}) ?? []
 }
 
 export function getTimerArray(state: StateMachine): Choicemeta[] {
