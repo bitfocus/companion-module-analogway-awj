@@ -1,7 +1,7 @@
 {
 	"name": "analogway-awj",
 	"version": "2.4.0",
-	"main": "dist/index.js",
+	"main": "dist/src/index.js",
 	"scripts": {
 		"prepare": "husky install",
 		"dev": "yarn build:watch",

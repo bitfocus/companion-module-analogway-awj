@@ -4,6 +4,8 @@ import { getActions } from "./actions.js"
 import { getFeedbacks } from "./feedback.js"
 import { getPresets } from "./presets.js"
 import { StateMachine } from "../state.js"
+import { commonSubscriptions } from "./subscriptions.js"
+import { Subscription } from '../../types/Subscription.js'
 
 /**
  * This is the base class for providing action-, feedback- and preset-definitions, subscriptions for an AWJ device.
@@ -16,6 +18,7 @@ import { StateMachine } from "../state.js"
 class AWJdevice extends StateMachine{
     instance: AWJinstance
     connection: AWJconnection
+    subscriptions: Record<string, Subscription> = {}
 
     constructor(instance: AWJinstance, initialState?: {[name: string]: any}) {
         super(instance, initialState)
@@ -36,7 +39,7 @@ class AWJdevice extends StateMachine{
     /**
      * Returns the action definitions for this device
      * @param instance 
-     * @returns 
+     * @returns action definitions
      */
     getActionDefinitions(instance: AWJinstance) {
         return getActions(instance)
@@ -121,6 +124,10 @@ class AWJdevice extends StateMachine{
 
 	}
 
+    initSubscriptions() {
+        this.subscriptions = commonSubscriptions
+    }
+
     public get maxScreens() : number {
         return 24
     }
@@ -130,6 +137,8 @@ class AWJdevice extends StateMachine{
     public get maxInputs() : number {
         return 256
     }
+
+    
 
 }
 

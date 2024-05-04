@@ -1,5 +1,6 @@
 import { AWJinstance } from './index.js'
-import { checkForAction, Subscription } from './awjdevice/subscriptions.js'
+import { checkForAction } from './awjdevice/subscriptions.js'
+import { Subscription } from '../types/Subscription.js'
 import { mapIn, mapOut, MapItem } from './mappings.js'
 import { Choicemeta, getAuxArray, getScreensArray } from './awjdevice/choices.js'
 import { Config } from './config.js'
@@ -333,9 +334,9 @@ class StateMachine {
 		return this.state.LOCAL.mappings
 	}
 
-	public get subscriptions(): Record<string, Subscription> {
-		return this.state.LOCAL.subscriptions
-	}
+	// public get subscriptions(): Record<string, Subscription> {
+	// 	return this.state.LOCAL.subscriptions
+	// }
 
 	public isLocked(screen: string, preset: string): boolean {
 		preset = preset.replace(/pgm/i, 'PROGRAM').replace(/pvw/i, 'PREVIEW')

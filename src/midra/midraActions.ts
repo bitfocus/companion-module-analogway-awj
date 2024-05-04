@@ -30,7 +30,7 @@ import {
 	getTimerChoices,
 	getWidgetChoices,
 	getWidgetSourceChoices,
-} from './choices.js'
+} from './../awjdevice/choices.js'
 import {
 	CompanionActionEvent,
 	CompanionInputFieldDropdown,
@@ -42,7 +42,7 @@ import { Config } from '../config.js'
 import { compileExpression } from '@nx-js/compiler-util'
 import { AWJconnection } from '../connection.js'
 import { InstanceStatus, splitRgb } from '@companion-module/base'
-import { AWJdevice } from './awjdevice.js'
+import { AWJdevice } from '../awjdevice/awjdevice.js'
 
 /**
  * T = Object like {option1id: type, option2id: type}
@@ -96,101 +96,8 @@ export function getActions(instance: AWJinstance): any {
 	 *  MARK: Recall Screen Memory
 	 */
 	type DeviceScreenAuxMemory = { screens: string[], preset: string, memory: string, selectScreens: boolean}
-	const deviceScreenMemory_livepremier: AWJaction<DeviceScreenAuxMemory> = {
-		name: 'Recall Screen Memory',
-		options: [
-			{
-				id: 'screens',
-				type: 'multidropdown',
-				label: 'Screen',
-				choices: [{ id: 'sel', label: 'Selected' }, ...getScreenAuxChoices(state)],
-				default: ['sel'],
-			},
-			{
-				id: 'preset',
-				type: 'dropdown',
-				label: 'Preset',
-				choices: [{ id: 'sel', label: 'Selected' }, ...choicesPreset],
-				default: 'sel',
-			},
-			{
-				id: 'memory',
-				type: 'dropdown',
-				label: 'Screen Memory',
-				choices: getScreenMemoryChoices(state),
-				default: getScreenMemoryChoices(state)[0]?.id,
-			},
-			{
-				id: 'selectScreens',
-				type: 'checkbox',
-				label: 'Select screens after load',
-				default: true,
-			},
-		],
-		callback: (action) => {
-			const screens = state.getChosenScreenAuxes(action.options.screens)
-			const preset = device.getPresetSelection(action.options.preset, true)
-			for (const screen of screens) {
-				if (state.isLocked(screen, preset)) continue
-				connection.sendWSmessage(
-					[
-						'device',
-						'presetBank',
-						'control',
-						'load',
-						'slotList',
-						'items',
-						action.options.memory,
-						'screenList',
-						'items',
-						screen,
-						'presetList',
-						'items',
-						preset,
-						'pp',
-						'xRequest',
-					],
-					false
-				)
-				connection.sendWSmessage(
-					[
-						'device',
-						'presetBank',
-						'control',
-						'load',
-						'slotList',
-						'items',
-						action.options.memory,
-						'screenList',
-						'items',
-						screen,
-						'presetList',
-						'items',
-						preset,
-						'pp',
-						'xRequest',
-					],
-					true
-				)
-
-				device.sendXupdate()
-
-				if (action.options.selectScreens) {
-					if (state.syncSelection) {
-						connection.sendRawWSmessage(
-							`{"channel":"REMOTE","data":{"name":"replace","path":"/live/screens/screenAuxSelection","args":[${JSON.stringify(
-								screens
-							)}]}}`
-						)
-					} else {
-						state.set('LOCAL/screenAuxSelection/keys', screens)
-						instance.checkFeedbacks('liveScreenSelection')
-					}
-				}
-			}
-		},
-	}
-	const deviceScreenMemory_midra: AWJaction<DeviceScreenAuxMemory> = {
+	
+	actions['deviceScreenMemory'] = {
 		name: 'Recall Screen Memory',
 		options: [
 			{
@@ -226,47 +133,16 @@ export function getActions(instance: AWJinstance): any {
 			const preset = device.getPresetSelection(action.options.preset, true)
 			for (const screen of screens) {
 				if (state.isLocked(screen, preset)) continue
-				connection.sendWSmessage(
-					[
-						'device',
-						'presetBank',
-						'control',
-						'load',
-						'slotList',
-						'items',
-						action.options.memory,
-						'screenList',
-						'items',
-						screen,
-						'presetList',
-						'items',
-						preset,
-						'pp',
-						'xRequest',
-					],
-					false
-				)
-				connection.sendWSmessage(
-					[
-						'device',
-						'presetBank',
-						'control',
-						'load',
-						'slotList',
-						'items',
-						action.options.memory,
-						'screenList',
-						'items',
-						screen,
-						'presetList',
-						'items',
-						preset,
-						'pp',
-						'xRequest',
-					],
-					true
-				)
-
+				const fullpath = [
+					'device', 'presetBank',
+					'control', 'load',
+					'slotList', 'items', action.options.memory,
+					'screenList', 'items', screen,
+					'presetList', 'items', preset,
+					'pp', 'xRequest',
+				]
+				connection.sendWSmessage(fullpath, false)
+				connection.sendWSmessage(fullpath, true)
 				device.sendXupdate()
 
 				if (action.options.selectScreens) {
@@ -279,13 +155,11 @@ export function getActions(instance: AWJinstance): any {
 				}
 			}
 		},
-	}
+	} as AWJaction<DeviceScreenAuxMemory>
 
-	if (state.platform.startsWith('livepremier')) actions['deviceScreenMemory'] = deviceScreenMemory_livepremier
-	else if (state.platform === 'midra') actions['deviceScreenMemory'] = deviceScreenMemory_midra
-	
+
 	// MARK: recall Aux memory
-	const deviceAuxMemory_midra: AWJaction<DeviceScreenAuxMemory> = {
+	actions['deviceAuxMemory'] = {
 		name: 'Recall Aux Memory',
 		options: [
 			{
@@ -321,49 +195,16 @@ export function getActions(instance: AWJinstance): any {
 			const preset = device.getPresetSelection(action.options.preset as string, true)
 			for (const screen of screens) {
 				if (state.isLocked(screen, preset)) continue
-				connection.sendWSmessage(
-					[
-						'device',
-						'preset',
-						'auxBank',
-						'control',
-						'load',
-						'slotList',
-						'items',
-						action.options.memory,
-						'auxiliaryScreenList',
-						'items',
-						screen.replace(/\D/g, ''),
-						'presetList',
-						'items',
-						preset,
-						'pp',
-						'xRequest',
-					],
-					false
-				)
-				connection.sendWSmessage(
-					[
-						'device',
-						'preset',
-						'auxBank',
-						'control',
-						'load',
-						'slotList',
-						'items',
-						action.options.memory,
-						'auxiliaryScreenList',
-						'items',
-						screen.replace(/\D/g, ''),
-						'presetList',
-						'items',
-						preset,
-						'pp',
-						'xRequest',
-					],
-					true
-				)
-
+				const fullpath = [
+					'device', 'preset', 'auxBank',
+					'control', 'load',
+					'slotList', 'items', action.options.memory,
+					'auxiliaryScreenList', 'items', screen.replace(/\D/g, ''),
+					'presetList', 'items', preset,
+					'pp', 'xRequest',
+				]
+				connection.sendWSmessage(fullpath, false)
+				connection.sendWSmessage(fullpath, true)
 				device.sendXupdate()
 
 				if (action.options.selectScreens) {
@@ -376,8 +217,7 @@ export function getActions(instance: AWJinstance): any {
 				}
 			}
 		},
-	}
-  if (state.platform === 'midra') actions['deviceAuxMemory'] = deviceAuxMemory_midra
+	} as AWJaction<DeviceScreenAuxMemory>
 
 	/**
 	 * MARK: Recall Master Memory
@@ -390,7 +230,10 @@ export function getActions(instance: AWJinstance): any {
 				id: 'preset',
 				type: 'dropdown',
 				label: 'Preset',
-				choices: [{ id: 'sel', label: 'Selected' }, ...choicesPreset],
+				choices: [
+					{ id: 'sel', label: 'Selected' },
+					 ...choicesPreset
+				],
 				default: 'sel',
 			},
 			{
@@ -409,48 +252,20 @@ export function getActions(instance: AWJinstance): any {
 		],
 		callback: (action) => {
 			const preset = device.getPresetSelection(action.options.preset, true)
-			let screens: string[] = []
-
-			let bankpath = ['device', 'masterPresetBank']
-			let list = 'bankList'
-			if (state.platform == 'midra') {
-				bankpath = ['device', 'preset', 'masterBank']
-				list = 'slotList'
-			}
-			const memorypath = ['items', action.options.memory]
-			const loadpath = ['control', 'load', 'slotList']
-
-			const filterpath = state.getUnmapped(['DEVICE', ...bankpath, list, ...memorypath, 'status', 'pp', 'isShadow']) ? ['status', 'shadow', 'pp'] : ['status', 'pp']			
+			const memorypath = ['device', 'preset', 'masterBank', 'slotList', 'items', action.options.memory]
+			const filterpath = state.getUnmapped(['DEVICE', ...memorypath, 'status', 'pp', 'isShadow']) ? ['status', 'shadow', 'pp'] : ['status', 'pp']			
 			
-			if (state.platform.startsWith('livepremier')) {
-				screens = state.getUnmapped([
-					'DEVICE',
-					...bankpath,
-					list,
-					...memorypath,
-					...filterpath,
-					'screenFilter',
-				])
-			} else if (state.platform == 'midra') {
-				screens = [
+			const screens = [
 					...state.getUnmapped([
-						'DEVICE',
-						...bankpath,
-						list,
-						...memorypath,
-						...filterpath,
-						'screenFilter',
+						'DEVICE', ...memorypath,
+						...filterpath, 'screenFilter',
 					]).map((scr: string) => 'S' + scr),
 					...state.getUnmapped([
-						'DEVICE',
-						...bankpath,
-						list,
-						...memorypath,
-						...filterpath,
-						'auxFilter',
+						'DEVICE', ...memorypath,
+						...filterpath, 'auxFilter',
 					]).map((scr: string) => 'A' + scr)
 				]
-			}
+			
 			if (
 				screens.find((screen: string) => {
 					return state.isLocked(screen, preset)
@@ -458,20 +273,18 @@ export function getActions(instance: AWJinstance): any {
 			) {
 				return // TODO: resembles original WebRCS behavior, but could be also individual screen handling
 			}
-			// if (state.isLocked(layer.screenAuxKey, preset)) continue
-			connection.sendWSmessage(
-				[
-					...bankpath,
-					...loadpath,
-					...memorypath,
-					'presetList',
-					'items',
-					preset,
-					'pp',
-					'xRequest',
-				],
-				false
-			)
+
+			const fullpath = [
+				...memorypath,
+				'presetList',
+				'items',
+				preset,
+				'pp',
+				'xRequest',
+			]
+			connection.sendWSmessage(fullpath, false)
+			connection.sendWSmessage(fullpath, true)
+			device.sendXupdate()
 
 			if (action.options.selectScreens) {
 				if (state.syncSelection) {
@@ -481,23 +294,6 @@ export function getActions(instance: AWJinstance): any {
 					instance.checkFeedbacks('liveScreenSelection')
 				}
 			}
-
-			connection.sendWSmessage(
-				[
-					...bankpath,
-					...loadpath,
-					...memorypath,
-					'presetList',
-					'items',
-					preset,
-					'pp',
-					'xRequest',
-				],
-				true
-			)
-
-			device.sendXupdate()
-
 		},
 	} as AWJaction<DeviceMasterMemory>
 
@@ -516,69 +312,51 @@ export function getActions(instance: AWJinstance): any {
 				choices: getMultiviewerMemoryChoices(state),
 				default: getMultiviewerMemoryChoices(state)[0]?.id,
 			},
-		],
-		callback: (action) => {
-			for (const mv of action.options.multiviewer) {
-				connection.sendWSmessage(
-					[
-						'device',
-						'monitoringBank',
-						'control',
-						'load',
-						'slotList',
-						'items',
-						action.options.memory,
-						'outputList',
-						'items',
-						mv,
-						'pp',
-						'xRequest',
-					],
-					false
-				)
-				connection.sendWSmessage(
-					[
-						'device',
-						'monitoringBank',
-						'control',
-						'load',
-						'slotList',
-						'items',
-						action.options.memory,
-						'outputList',
-						'items',
-						mv,
-						'pp',
-						'xRequest',
-					],
-					true
-				)
-			}
-		},
-	} as AWJaction<DeviceMultiviewerMemory>
-	if (getMultiviewerArray(state).length > 1) {
-		actions['deviceMultiviewerMemory'].options.push(
 			{
 				id: 'multiviewer',
 				type: 'multidropdown',
 				label: 'Multiviewer',
 				choices: getMultiviewerChoices(state),
 				default: [getMultiviewerArray(state)?.[0]],
+				isVisible: (_options, data = getMultiviewerArray(state).length > 1) => { return data} // don't show this option if there is only one multiviewer
 			},
-		)
-	} else {
-		actions['deviceMultiviewerMemory'].options.push(
-			{
-				id: 'multiviewer',
-				type: 'multidropdown',
-				label: 'Multiviewer',
-				choices: [{id: '1', label: 'Multiviewer 1'}],
-				default: ['1'],
-				isVisible: () => false
-			},
-		)
-	}
+		],
+		callback: (action) => {
+			for (const mv of action.options.multiviewer) {
+				const fullpath = [
+					'device', 'monitoringBank',
+					'control', 'load',
+					'slotList', 'items', action.options.memory,
+					'outputList', 'items', mv,
+					'pp', 'xRequest',
+				]
+				connection.sendWSmessage(fullpath, false)
+				connection.sendWSmessage(fullpath, true)
+			}
+		},
+	} as AWJaction<DeviceMultiviewerMemory>
 
+	/**
+	 * MARK: Take one or multiple screens
+	 */
+	type DeviceTakeScreen = {screens: string[]}
+	actions['deviceTakeScreen'] = {
+		name: 'Take Screen',
+		options: [
+			{
+				id: 'screens',
+				type: 'multidropdown',
+				label: 'Screens / Auxscreens',
+				choices: [{ id: 'all', label: 'All' }, { id: 'sel', label: 'Selected Screens' }, ...getScreenAuxChoices(state)],
+				default: ['sel'],
+			},
+		],
+		callback: (action) => {
+			for (const screen of state.getChosenScreenAuxes(action.options.screens)) {
+				connection.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'xTake'], true)
+			}
+		},
+	} as AWJaction<DeviceTakeScreen>
 
 	/**
 	 * MARK: Cut one or multiple screens
@@ -664,56 +442,7 @@ export function getActions(instance: AWJinstance): any {
 	 * MARK: Change the transition time of a preset per screen
 	 */
 	type DeviceTakeTime = {screens: string[], preset: string, time: number}
-	const deviceTakeTime_livepremier: AWJaction<DeviceTakeTime> = {
-		name: 'Set Transition Time',
-		options: [
-			{
-				id: 'screens',
-				type: 'multidropdown',
-				label: 'Screens / Auxscreens',
-				choices: [{ id: 'all', label: 'All' }, { id: 'sel', label: 'Selected Screens' }, ...getScreenAuxChoices(state)],
-				default: ['all'],
-			},
-			{
-				id: 'preset',
-				type: 'dropdown',
-				label: 'Preset',
-				choices: [{ id: 'all', label: 'Both' }, ...choicesPreset],
-				default: 'all',
-			},
-			{
-				id: 'time',
-				type: 'number',
-				label: 'Time (seconds)',
-				min: 0,
-				max: 300,
-				step: 0.1,
-				default: 1,
-				range: true,
-			},
-		],
-		callback: (action) => {
-			const time = action.options.time as number * 10
-			state.getChosenScreenAuxes(action.options.screens).forEach((screen) => {
-				const presetPgm = state.getPreset(screen, 'PGM')
-				if (
-					action.options.preset === 'all' ||
-					(action.options.preset === 'pgm' && presetPgm === 'A') ||
-					(action.options.preset === 'pvw' && presetPgm === 'B')
-				) {
-					connection.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeDownTime'], time)
-				}
-				if (
-					action.options.preset === 'all' ||
-					(action.options.preset === 'pvw' && presetPgm === 'A') ||
-					(action.options.preset === 'pgm' && presetPgm === 'B')
-				) {
-					connection.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'], time)
-				}
-			})
-		},
-	}
-	const deviceTakeTime_midra: AWJaction<DeviceTakeTime> = {
+	 actions['deviceTakeTime'] = {
 		name: 'Set Transition Time',
 		options: [
 			{
@@ -748,281 +477,54 @@ export function getActions(instance: AWJinstance): any {
 				connection.sendWSmessage(['device', 'transition', 'screenList', 'items', screen, 'control', 'pp', 'takeTime'], time)
 			)
 		},
-	}
+	} as AWJaction<DeviceTakeTime>
 
-	if (state.platform.startsWith('livepremier')) actions['deviceTakeTime'] = deviceTakeTime_livepremier
-	else if (state.platform === 'midra') actions['deviceTakeTime'] = deviceTakeTime_midra
 
-	/**
-	 * MARK: Select the source in a layer livepremier
-	 */
-	type DeviceSelectSource = {method: string, screen: string[], preset: string}
-	if (state.platform.startsWith('livepremier')) {
-		const deviceSelectSource_livepremier: AWJaction<DeviceSelectSource> = {
-			name: 'Select Layer Source',
-			options: [
-				{
-					id: 'method',
-					type: 'dropdown',
-					label: 'Method',
-					choices: [
-						{ id: 'spec', label: 'Target specified layers' },
-						{ id: 'sel', label: 'Target selected layers' },
-					],
-					default: 'spec',
-				},
-				{
-					id: 'screen',
-					type: 'multidropdown',
-					label: 'Screen / Aux',
-					choices: getScreenAuxChoices(state),
-					default: [getScreenAuxChoices(state)[0]?.id],
-					isVisible: (options:  DeviceSelectSource) => {
-						return options.method === 'spec'
-					},
-				},
-				{
-					id: 'preset',
-					type: 'dropdown',
-					label: 'Preset',
-					choices: choicesPreset,
-					default: 'pvw',
-					isVisible: (options:  AWJoptionValuesExtended<DeviceSelectSource>) => {
-						return options.method === 'spec'
-					},
-				},
-			],
-			callback: (action) => {
-				if (action.options.method === 'spec') {
-					for (const screen of action.options.screen) {
-						if (state.isLocked(screen, action.options.preset)) continue
-						for (const layer of action.options[`layer${screen}`]) {
-							let sourcetype = 'sourceLayer'
-							if (screen.startsWith('A')) {
-								sourcetype = 'sourceBack'
-							}
-							if (layer === 'NATIVE') {
-								sourcetype = 'sourceNative'
-							}
-							connection.sendWSmessage([
-								'device', 'screenList', 'items', screen,
-								'presetList', 'items', state.getPreset(screen, action.options.preset),
-								'layerList', 'items', layer,
-								'source', 'pp', 'inputNum'
-							], action.options[sourcetype])
-						}
-					}
-				}
-				else if (action.options.method === 'sel') {
-					const preset = device.getPresetSelection('sel')
-					state.getSelectedLayers()
-						.filter((selection) => state.isLocked(selection.screenAuxKey, preset) === false)
-						.forEach((layer) => {
-							let source = 'keep'
-							if (
-								layer.screenAuxKey.startsWith('S') &&
-								layer.layerKey === 'NATIVE' &&
-								action.options['sourceNative'] !== 'keep'
-							) source = action.options['sourceNative']
-							else if (
-								layer.screenAuxKey.startsWith('S') &&
-								layer.layerKey.match(/^\d+$/) &&
-								action.options['sourceLayer'] !== 'keep'
-							) source = action.options['sourceLayer']
-							else if (
-								layer.screenAuxKey.startsWith('A') &&
-								layer.layerKey.match(/^\d+$/) &&
-								action.options['sourceBack'] !== 'keep'
-							) source = action.options['sourceBack']
-							if (source !== 'keep'){
-								connection.sendWSmessage([
-									'device', 'screenList', 'items', layer.screenAuxKey,
-									'presetList', 'items', state.getPreset(layer.screenAuxKey, preset),
-									'layerList', 'items', layer.layerKey,
-									'source', 'pp', 'inputNum'
-								], source)
-							}
-					})
-				}
-				device.sendXupdate()
-			},
-		}
-		screens.forEach((screen) => {
-			const isScreen = screen.id.startsWith('S')
-			// eslint-disable-next-line @typescript-eslint/ban-types
-			let visFn = (_action: DeviceSelectSource): boolean => {
-				return true
-			}
-			// make the code more injection proof
-			if (screen.id.match(/^S|A\d{1,3}$/)) {
-				// eslint-disable-next-line @typescript-eslint/no-implied-eval
-				visFn = new Function(
-					'thisOptions',
-					`return thisOptions.method === 'spec' && thisOptions.screen.includes('${screen.id}')`
-				) as (arg0: DeviceSelectSource) => boolean
-			}
-			deviceSelectSource_livepremier.options.push({
-				id: `layer${screen.id}`,
-				type: 'multidropdown',
-				label: 'Layer ' + screen.id,
-				choices: getLayerChoices(state, screen.id, isScreen),
-				default: ['1'],
-				isVisible: visFn,
-			})
-		})
-		deviceSelectSource_livepremier.options.push(
-			{
-				id: 'sourceLayer',
-				type: 'dropdown',
-				label: 'Screen Layer Source',
-				choices: [{ id: 'keep', label: "Don't change source"}, ...getSourceChoices(state)],
-				default: 'keep',
-				isVisible: (options:  AWJoptionValuesExtended<DeviceSelectSource>) => {
-					if (options.method === 'sel') return true
-					if (options.method === 'spec') {
-						for (const screen of options.screen.filter((screen) => screen.startsWith('S'))) {
-							if (options[`layer${screen}`].find((elem: string) => elem.match(/^\d+$/))) return true
-						}
-					}
-					return false
-				},
-			},
-			{
-				id: 'sourceNative',
-				type: 'dropdown',
-				label: 'Screen Background Source',
-				choices: [{ id: 'keep', label: "Don't change source"}, ...choicesBackgroundSourcesPlusNone],
-				default: 'keep',
-				isVisible: (options:  AWJoptionValuesExtended<DeviceSelectSource>) => {
-					if (options.method === 'sel') return true
-					if (options.method === 'spec') {
-						for (const screen of options.screen.filter((screen) => screen.startsWith('S'))) {
-							if (options[`layer${screen}`].find((elem: string) => elem === 'NATIVE')) return true
-						}
-					}
-					return false
-				},
-			},
-			{
-				id: 'sourceBack',
-				type: 'dropdown',
-				label: 'Aux Layer Source',
-				choices: [{ id: 'keep', label: "Don't change source"}, ...getAuxSourceChoices(state)],
-				default: 'keep',
-				isVisible: (options:  AWJoptionValuesExtended<DeviceSelectSource>) => {
-					if (options.method === 'sel') return true
-					if (options.method === 'spec') {
-						for (const screen of options.screen.filter((screen) => screen.startsWith('A'))) {
-							if (options[`layer${screen}`].find((elem: string) => elem.match(/^\d+$/))) return true
-						}
-					}
-					return false
-				},
-			},
-		)
-		actions['deviceSelectSource'] = deviceSelectSource_livepremier
-	}
 	// MARK: Select the source in a layer midra
-	else if (state.platform === 'midra') {
-		const deviceSelectSource_midra: AWJaction<DeviceSelectSource> = {
-			name: 'Select Layer Source',
-			options: [
-				{
-					id: 'method',
-					type: 'dropdown',
-					label: 'Method',
-					choices: [
-						{ id: 'spec', label: 'Target specified layers' },
-						{ id: 'sel', label: 'Target selected layers' },
-					],
-					default: 'spec',
-				},
-				{
-					id: 'screen',
-					type: 'multidropdown',
-					label: 'Screen / Aux',
-					choices: getScreenAuxChoices(state),
-					default: [getScreenAuxChoices(state)[0]?.id],
-					isVisible: (options) => {
-						return options.method === 'spec'
-					},
-				},
-				{
-					id: 'preset',
-					type: 'dropdown',
-					label: 'Preset',
-					choices: choicesPreset,
-					default: 'pvw',
-					isVisible: (options) => {
-						return options.method === 'spec'
-					}
-				},
-			],
-			callback: (action) => {
-				if (action.options.method === 'spec') {
-					for (const screen of action.options.screen) {
-						if (state.isLocked(screen, action.options.preset)) continue
-						const presetpath = ['device', 'screenList', 'items', screen, 'presetList', 'items', state.getPreset(screen, action.options.preset)]
-						if (screen.startsWith('A') && action.options['sourceBack'] !== 'keep')
-							// on Midra on aux there is only background, so we don't show a layer dropdown and just set the background
-							connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'content'], action.options['sourceBack'])
-						else
-							// else decide which dropdown to use for which layer
-							for (const layer of action.options[`layer${screen}`]) {
-								if (layer === 'NATIVE' && action.options['sourceNative'] !== 'keep') {
-									connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'set'], action.options['sourceNative'].replace(/\D/g, ''))
-								} else if (layer === 'TOP' && action.options['sourceFront'] !== 'keep') {
-									connection.sendWSmessage([...presetpath, 'top', 'source', 'pp', 'frame'], action.options['sourceFront'].replace(/\D/g, ''))
-								} else if ( action.options['sourceLayer'] !== 'keep') {
-									connection.sendWSmessage([...presetpath, 'liveLayerList', 'items', layer, 'source', 'pp', 'input'], action.options['sourceLayer'])
-								}
-							}
-					}
-				} else if (action.options.method === 'sel') {
-					const preset = device.getPresetSelection('sel')
-					state.getSelectedLayers()
-						.filter((selection) => state.isLocked(selection.screenAuxKey, preset) === false)
-						.forEach((layer) => {
-							const presetpath = ['device', 'screenList', 'items', layer.screenAuxKey, 'presetList', 'items', state.getPreset(layer.screenAuxKey, 'sel')]
-							if (layer.layerKey === 'BKG' && layer.screenAuxKey.startsWith('S') && action.options['sourceNative'] !== 'keep') {
-									connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'set'], action.options['sourceNative'].replace(/\D/g, ''))
-								} else if (layer.layerKey === 'BKG' && layer.screenAuxKey.startsWith('A') && action.options['sourceBack'] !== 'keep') {
-									connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'content'], action.options['sourceBack'])
-								} else if (layer.layerKey === 'TOP' && action.options['sourceFront'] !== 'keep') {
-									connection.sendWSmessage([...presetpath, 'top', 'source', 'pp', 'frame'], action.options['sourceFront'].replace(/\D/g, ''))
-								} else if ( action.options['sourceLayer'] !== 'keep') {
-									connection.sendWSmessage([...presetpath, 'liveLayerList', 'items', layer.layerKey, 'source', 'pp', 'input'], action.options['sourceLayer'])
-								}
-						})
-				}
-				device.sendXupdate()
+	type DeviceSelectSource = {method: string, screen: string[], preset: string}
+	actions['deviceSelectSource'] = {
+		name: 'Select Layer Source',
+		options: [
+			{
+				id: 'method',
+				type: 'dropdown',
+				label: 'Method',
+				choices: [
+					{ id: 'spec', label: 'Target specified layers' },
+					{ id: 'sel', label: 'Target selected layers' },
+				],
+				default: 'spec',
 			},
-		}
-		const screens = getScreensArray(state) // don't build a dropdown for aux on midra
-		screens.forEach((screen) => {
-			// eslint-disable-next-line @typescript-eslint/ban-types
-			let visFn = (_arg0: any): boolean => {
-				return true
-			}
-			// make the code more injection proof
-			if (screen.id.match(/^S|A\d{1,3}$/)) {
-				// eslint-disable-next-line @typescript-eslint/no-implied-eval
-				visFn = new Function(
-					'thisOptions',
-					`return thisOptions.method === 'spec' && thisOptions.screen.includes('${screen.id}')`
-				) as (arg0: any) => boolean
-			}
-			
-			deviceSelectSource_midra.options.push({
-				id: `layer${screen.id}`,
+			{
+				id: 'screen',
 				type: 'multidropdown',
-				label: 'Layer ' + screen.id,
-				choices: getLayerChoices(state, screen.id),
-				default: ['1'],
-				isVisible: visFn,
-			})
-		})
-		deviceSelectSource_midra.options.push(
+				label: 'Screen / Aux',
+				choices: getScreenAuxChoices(state),
+				default: [getScreenAuxChoices(state)[0]?.id],
+				isVisible: (options) => {
+					return options.method === 'spec'
+				},
+			},
+			{
+				id: 'preset',
+				type: 'dropdown',
+				label: 'Preset',
+				choices: choicesPreset,
+				default: 'pvw',
+				isVisible: (options) => {
+					return options.method === 'spec'
+				}
+			},
+			...getScreensArray(state).map((screen) => {
+				return {
+					id: `layer${screen.id}`,
+					type: 'multidropdown',
+					label: 'Layer ' + screen.id,
+					choices: getLayerChoices(state, screen.id),
+					default: ['1'],
+					isVisible: (options, screenId = screen.id) => {return options.method === 'spec' && options.screen.includes(screenId)},
+				}
+			}),
 			{
 				id: 'sourceNative',
 				type: 'dropdown',
@@ -1089,9 +591,95 @@ export function getActions(instance: AWJinstance): any {
 					return false
 				},
 			},
-		)
-		actions['deviceSelectSource'] = deviceSelectSource_midra
-	}
+		],
+		callback: (action) => {
+			if (action.options.method === 'spec') {
+				for (const screen of action.options.screen) {
+					if (state.isLocked(screen, action.options.preset)) continue
+					const presetpath = ['device', 'screenList', 'items', screen, 'presetList', 'items', state.getPreset(screen, action.options.preset)]
+					if (screen.startsWith('A') && action.options['sourceBack'] !== 'keep')
+						// on Midra on aux there is only background, so we don't show a layer dropdown and just set the background
+						connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'content'], action.options['sourceBack'])
+					else
+						// else decide which dropdown to use for which layer
+						for (const layer of action.options[`layer${screen}`]) {
+							if (layer === 'NATIVE' && action.options['sourceNative'] !== 'keep') {
+								connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'set'], action.options['sourceNative'].replace(/\D/g, ''))
+							} else if (layer === 'TOP' && action.options['sourceFront'] !== 'keep') {
+								connection.sendWSmessage([...presetpath, 'top', 'source', 'pp', 'frame'], action.options['sourceFront'].replace(/\D/g, ''))
+							} else if ( action.options['sourceLayer'] !== 'keep') {
+								connection.sendWSmessage([...presetpath, 'liveLayerList', 'items', layer, 'source', 'pp', 'input'], action.options['sourceLayer'])
+							}
+						}
+				}
+			} else if (action.options.method === 'sel') {
+				const preset = device.getPresetSelection('sel')
+				state.getSelectedLayers()
+					.filter((selection) => state.isLocked(selection.screenAuxKey, preset) === false)
+					.forEach((layer) => {
+						const presetpath = ['device', 'screenList', 'items', layer.screenAuxKey, 'presetList', 'items', state.getPreset(layer.screenAuxKey, 'sel')]
+						if (layer.layerKey === 'BKG' && layer.screenAuxKey.startsWith('S') && action.options['sourceNative'] !== 'keep') {
+								connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'set'], action.options['sourceNative'].replace(/\D/g, ''))
+							} else if (layer.layerKey === 'BKG' && layer.screenAuxKey.startsWith('A') && action.options['sourceBack'] !== 'keep') {
+								connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'content'], action.options['sourceBack'])
+							} else if (layer.layerKey === 'TOP' && action.options['sourceFront'] !== 'keep') {
+								connection.sendWSmessage([...presetpath, 'top', 'source', 'pp', 'frame'], action.options['sourceFront'].replace(/\D/g, ''))
+							} else if ( action.options['sourceLayer'] !== 'keep') {
+								connection.sendWSmessage([...presetpath, 'liveLayerList', 'items', layer.layerKey, 'source', 'pp', 'input'], action.options['sourceLayer'])
+							}
+					})
+			}
+			device.sendXupdate()
+		},
+	} as AWJaction<DeviceSelectSource>
+	
+
+	// MARK: Set input plug
+	type DeviceInputPlug = Record<string,string>
+	actions['deviceInputPlug'] = {
+		name: 'Set Input Plug',
+		options: [
+			{
+				id: 'input',
+				type: 'dropdown',
+				label: 'Input',
+				choices: getLiveInputArray(state)
+					.filter((input) => getPlugChoices(state, input.id).length > 1)
+					.map((input) => {
+						return {
+							id: input.id,
+							label: 'Input '+ input.index + (input.label.length ? ' - ' + input.label : '')
+						}
+					}
+				),
+				default: getLiveInputArray(state)
+					.filter((input) => getPlugChoices(state, input.id).length > 1)
+					.map(input => input.id)[0] ?? ''
+			},
+			...getLiveInputArray(state)
+				.filter((input) => getPlugChoices(state, input.id).length > 1)
+				.map((input) => {
+					const plugs = getPlugChoices(state, input.id)
+					return {
+						id: 'plugs' + input.id,
+						type: 'dropdown',
+						label: 'Plug',
+						choices: plugs,
+						default: plugs[0].id,
+						isVisible: (options, inputId = input.id) => {return options.input.includes(inputId)}
+					}
+				}
+			),
+
+		],
+		callback: (action) => {
+			connection.sendWSmessage([
+				'device', 'inputList', 'items',
+				action.options.input ?? '',
+				'control', 'pp', 'plug'
+			], action.options[`plugs${ action.options.input }`] ?? '1')
+		}
+	} as AWJaction<DeviceInputPlug>
 
 
 	/**
@@ -1124,17 +712,10 @@ export function getActions(instance: AWJinstance): any {
 			connection.sendWSmessage(
 				[
 					'device',
-					'inputList',
-					'items',
-					action.options.input,
-					'plugList',
-					'items',
-					state.get('DEVICE/device/inputList/items/' + action.options.input + '/status/pp/plug'),
-					'settings',
-					'keying',
-					'control',
-					'pp',
-					'mode',
+					'inputList', 'items', action.options.input,
+					'plugList', 'items', state.get('DEVICE/device/inputList/items/' + action.options.input + '/status/pp/plug'),
+					'settings', 'keying', 'control',
+					'pp', 'mode',
 				],
 				action.options.mode
 			)
@@ -1183,121 +764,110 @@ export function getActions(instance: AWJinstance): any {
 	/**
 	 * MARK: Change layer freeze (Midra)
 	 */
-	if (state.platform === 'midra') {
-		type DeviceLayerFreeze = {screen: string[], mode: number}
-		actions['deviceLayerFreeze'] = {
-			name: 'Set Layer Freeze',
-			options: [
-				{
-					id: 'screen',
-					type: 'multidropdown',
-					label: 'Screen',
-					choices: getScreenChoices(state),
-					default: [getScreenChoices(state)[0]?.id],
-				},
-				...getScreensArray(state).map((screen) => {
-					// eslint-disable-next-line @typescript-eslint/ban-types
-					let visFn = (_arg0: any): boolean => {
-						return true
-					}
-					// make the code more injection proof
-					if (screen.id.match(/^S\d{1,3}$/)) {
-						// eslint-disable-next-line @typescript-eslint/no-implied-eval
-						visFn = new Function(
-							'thisOptions',
-							`return thisOptions.screen.includes('${screen.id}')`
-						) as (arg0: any) => boolean
-					}
-					return {
-						id: `layerS${screen.index}`,
-						type: 'multidropdown',
-						label: 'Layer ' + screen.id,
-						choices: [{id:'NATIVE', label: 'Background Layer'}, ...getLayerChoices(state, screen.id, false)],
-						default: ['1'],
-						isVisible: visFn,
-					}
-				}),
-				{
-					id: 'mode',
-					type: 'dropdown',
-					label: 'Mode',
-					choices: [
-						{ id: 1, label: 'Freeze' },
-						{ id: 0, label: 'Unfreeze' },
-						{ id: 2, label: 'Toggle' },
-					],
-					default: 2,
-				},
-			],
-			callback: (action) => {
-				for (const screen of action.options.screen) {
-					for (const layer of action.options[`layer${screen}`]) {
-						let val = false
-						let path: string[]
-						if (layer === 'NATIVE') {
-							path = ['device', 'screenList', 'items', screen, 'background', 'control', 'pp', 'freeze']
-						} else {
-							path = ['device', 'screenList', 'items', screen, 'liveLayerList', 'items', layer, 'control', 'pp', 'freeze']
-						}
-						if (action.options.mode === 1) {
-							val = true
-						} else if (action.options.mode === 2) {
-							val = !state.get(['DEVICE', ...path])
-						}
-						connection.sendWSmessage(path, val)
-					}
-				}				
+	type DeviceLayerFreeze = {screen: string[], mode: number}
+	actions['deviceLayerFreeze'] = {
+		name: 'Set Layer Freeze',
+		options: [
+			{
+				id: 'screen',
+				type: 'multidropdown',
+				label: 'Screen',
+				choices: getScreenChoices(state),
+				default: [getScreenChoices(state)[0]?.id],
 			},
-		} as AWJaction<DeviceLayerFreeze>
-	}
+			...getScreensArray(state).map((screen) => {
+				return {
+					id: `layerS${screen.index}`,
+					type: 'multidropdown',
+					label: 'Layer ' + screen.id,
+					choices: [
+						{id:'NATIVE', label: 'Background Layer'},
+						...getLayerChoices(state, screen.id, false)
+					],
+					default: ['1'],
+					isVisible: (options, screenId = screen.id) => {return options.screen.includes(screenId)},
+				}
+			}),
+			{
+				id: 'mode',
+				type: 'dropdown',
+				label: 'Mode',
+				choices: [
+					{ id: 1, label: 'Freeze' },
+					{ id: 0, label: 'Unfreeze' },
+					{ id: 2, label: 'Toggle' },
+				],
+				default: 2,
+			},
+		],
+		callback: (action) => {
+			for (const screen of action.options.screen) {
+				for (const layer of action.options[`layer${screen}`]) {
+					let val = false
+					let path: string[]
+					if (layer === 'NATIVE') {
+						path = ['device', 'screenList', 'items', screen, 'background', 'control', 'pp', 'freeze']
+					} else {
+						path = ['device', 'screenList', 'items', screen, 'liveLayerList', 'items', layer, 'control', 'pp', 'freeze']
+					}
+					if (action.options.mode === 1) {
+						val = true
+					} else if (action.options.mode === 2) {
+						val = !state.get(['DEVICE', ...path])
+					}
+					connection.sendWSmessage(path, val)
+				}
+			}				
+		},
+	} as AWJaction<DeviceLayerFreeze>
+
 
 	/**
 	 * MARK: Change screen freeze (Midra)
 	 */
-	if (state.platform === 'midra') {
-		type DeviceScreenFreeze = {screen: string[], mode: number}
-		actions['deviceScreenFreeze'] = {
-			name: 'Set Screen Freeze',
-			options: [
-				{
-					id: 'screen',
-					type: 'multidropdown',
-					label: 'Screen',
-					choices: getScreenAuxChoices(state),
-					default: [getScreenAuxChoices(state)[0]?.id],
-				},
-				{
-					id: 'mode',
-					type: 'dropdown',
-					label: 'Mode',
-					choices: [
-						{ id: 1, label: 'Freeze' },
-						{ id: 0, label: 'Unfreeze' },
-						{ id: 2, label: 'Toggle' },
-					],
-					default: 2,
-				},
-			],
-			callback: (action) => {
-				for (const screen of action.options.screen) {
-					let val = false
-					let path: string[]
-					const screenNum = screen.substring(1)
-					if (screen.startsWith('A')) {
-						path = ['device', 'auxiliaryScreenList', 'items', screenNum, 'control', 'pp', 'freeze']
-					} else if (screen.startsWith('S')){
-						path = ['device', 'screenList', 'items', screenNum, 'control', 'pp', 'freeze']
-					} else return
-					if (action.options.mode === 1) {
-						val = true
-					} else if (action.options.mode === 2) {
-						val = !state.getUnmapped(['DEVICE', ...path])
-					}
-					connection.sendWSmessage(path, val)	
-				}				
+	type DeviceScreenFreeze = {screen: string[], mode: number}
+	actions['deviceScreenFreeze'] = {
+		name: 'Set Screen Freeze',
+		options: [
+			{
+				id: 'screen',
+				type: 'multidropdown',
+				label: 'Screen',
+				choices: getScreenAuxChoices(state),
+				default: [getScreenAuxChoices(state)[0]?.id],
 			},
-		} as AWJaction<DeviceScreenFreeze>
-	}
+			{
+				id: 'mode',
+				type: 'dropdown',
+				label: 'Mode',
+				choices: [
+					{ id: 1, label: 'Freeze' },
+					{ id: 0, label: 'Unfreeze' },
+					{ id: 2, label: 'Toggle' },
+				],
+				default: 2,
+			},
+		],
+		callback: (action) => {
+			for (const screen of action.options.screen) {
+				let val = false
+				let path: string[]
+				const screenNum = screen.slice(1)
+				if (screen.startsWith('A')) {
+					path = ['device', 'auxiliaryScreenList', 'items', screenNum, 'control', 'pp', 'freeze']
+				} else if (screen.startsWith('S')){
+					path = ['device', 'screenList', 'items', screenNum, 'control', 'pp', 'freeze']
+				} else return
+				if (action.options.mode === 1) {
+					val = true
+				} else if (action.options.mode === 2) {
+					val = !state.getUnmapped(['DEVICE', ...path])
+				}
+				connection.sendWSmessage(path, val)	
+			}				
+		},
+	} as AWJaction<DeviceScreenFreeze>
+
 
 	/**
 	 * MARK: Layer position and size
@@ -1343,11 +913,11 @@ export function getActions(instance: AWJinstance): any {
 	}
 
 	type DevicePositionSize = {screen: string, preset: string, layersel: string, parameters: string[], x: string, xAnchor: string, y: string, yAnchor: string, w: string, h: string, ar: string} & Record<string, string> 
-	if (state.platform.startsWith('livepremier')) {
-		//const regexNumber = `[+-]?\\d+(?:\\.\\d+)?`
-		//const regexFraction = `${regexNumber}(%|[\\/:]${regexNumber})?`
-		//const regexInput = `/([+-]\\s+)?${regexFraction}[psl]?(\\s+[+-]\\s+${regexFraction}[psl]?)*/g`
-		const tooltip =
+
+	//const regexNumber = `[+-]?\\d+(?:\\.\\d+)?`
+	//const regexFraction = `${regexNumber}(%|[\\/:]${regexNumber})?`
+	//const regexInput = `/([+-]\\s+)?${regexFraction}[psl]?(\\s+[+-]\\s+${regexFraction}[psl]?)*/g`
+	const tooltip =
 `start with "inc" to increase by amount,
 start with "dec" to decrease by amount,
 otherwise set value.
@@ -1357,375 +927,374 @@ lw: layer width, lh: layer height, lx: layer left edge, ly: layer top edge, la: 
 bw: box width, bh: box height, bx: box left edge, by: box top edge, ba: box aspect ratio,
 iw: layer source width, ih: layer source height, ia: layer source aspect ratio,
 sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name, screen: screen name`
-		actions['devicePositionSize'] = {
-			name: 'Set Position and Size',
-			options: [
-				{
-					id: 'screen',
-					type: 'dropdown',
-					label: 'Screen / Aux',
-					choices: [{ id: 'sel', label: 'Selected Screen(s)' }, ...getScreenAuxChoices(state)],
-					default: 'sel',
-				},
-				{
-					id: 'preset',
-					type: 'dropdown',
-					label: 'Preset',
-					choices: [{ id: 'sel', label: 'Selected Preset' }, ...choicesPreset],
-					default: 'sel',
-				},
-				{
-					id: `layersel`,
+	actions['devicePositionSize'] = {
+		name: 'Set Position and Size',
+		options: [
+			{
+				id: 'screen',
+				type: 'dropdown',
+				label: 'Screen / Aux',
+				choices: [{ id: 'sel', label: 'Selected Screen(s)' }, ...getScreenAuxChoices(state)],
+				default: 'sel',
+			},
+			{
+				id: 'preset',
+				type: 'dropdown',
+				label: 'Preset',
+				choices: [{ id: 'sel', label: 'Selected Preset' }, ...choicesPreset],
+				default: 'sel',
+			},
+			{
+				id: `layersel`,
+				type: 'dropdown',
+				label: 'Layer',
+				tooltip: 'When using "selected layer" and screen or preset are not using "Selected", you can narrow the selection',
+				choices: [{ id: 'sel', label: 'Selected Layer(s)' }, ...Array.from({length: 128}, (_i, e:number) => {return {id: e+1, label: `Layer ${e+1}`}})],
+				default: 'sel',
+				isVisible: (options) => {return options.screen === 'sel'},
+			},
+			...screens.map((screen) => {
+				return{
+					id: `layer${screen.id}`,
 					type: 'dropdown',
 					label: 'Layer',
 					tooltip: 'When using "selected layer" and screen or preset are not using "Selected", you can narrow the selection',
-					choices: [{ id: 'sel', label: 'Selected Layer(s)' }, ...Array.from({length: 128}, (_i, e:number) => {return {id: e+1, label: `Layer ${e+1}`}})],
+					choices: [{ id: 'sel', label: 'Selected Layer(s)' }, ...getLayerChoices(state, screen.id, false)],
 					default: 'sel',
-					isVisible: (options) => {return options.screen === 'sel'},
-				},
-				...screens.map((screen) => {
-					return{
-						id: `layer${screen.id}`,
-						type: 'dropdown',
-						label: 'Layer',
-						tooltip: 'When using "selected layer" and screen or preset are not using "Selected", you can narrow the selection',
-						choices: [{ id: 'sel', label: 'Selected Layer(s)' }, ...getLayerChoices(state, screen.id, false)],
-						default: 'sel',
-						// isVisible: visFn,
-						isVisibleData: screen.id,
-						isVisible: (options: any, screenID: string) => {
-							return options.screen === screenID
-						}
-					}
-				}),
-				{
-					id: 'parameters',
-					type: 'multidropdown',
-					label: 'Act on',
-					choices: [
-						{ id: 'x', label: 'X Position' },
-						{ id: 'y', label: 'Y Position' },
-						{ id: 'w', label: 'Width' },
-						{ id: 'h', label: 'Height' },
-					],
-					default: ['x', 'y', 'w', 'h'],
-				},
-				{
-					id: 'x',
-					type: 'textinput',
-					label: 'X position in screen (pixels)',
-					tooltip,
-					default: '',
-					useVariables: true,
-					isVisible: (options) => {return options.parameters.includes('x')},
-				},
-				{
-					id: 'y',
-					type: 'textinput',
-					label: 'Y position in screen (pixels)',
-					tooltip,
-					default: '',
-					useVariables: true,
-					isVisible: (options) => {return options.parameters.includes('y')},
-				},
-				{
-					id: 'w',
-					type: 'textinput',
-					label: 'Width (pixels)',
-					tooltip,
-					default: '',
-					useVariables: true,
-					isVisible: (options) => {return options.parameters.includes('w')},
-				},
-				{
-					id: 'h',
-					type: 'textinput',
-					label: 'Height (pixels)',
-					tooltip,
-					default: '',
-					useVariables: true,
-					isVisible: (options) => {return options.parameters.includes('h')},
-				},
-				{
-					id: 'xAnchor',
-					type: 'textinput',
-					label: 'Anchor X position',
-					tooltip,
-					default: 'lx + 0.5 * lw',
-					useVariables: true,
-					isVisible: (options) => {return options.parameters.includes('x') || options.parameters.includes('w')},
-				},
-				{
-					id: 'yAnchor',
-					type: 'textinput',
-					label: 'Anchor Y position',
-					tooltip,
-					default: 'ly + 0.5 * lh',
-					useVariables: true,
-					isVisible: (options) => {return options.parameters.includes('y') || options.parameters.includes('h')},
-				},
-				{
-					id: 'ar',
-					type: 'textinput',
-					label: 'Aspect Ratio',
-					tooltip: `use "keep" to keep the aspect ratio, use notations like 16/9, 4/3, 1.678 to set to a specific ratio, use nothing or any other word to change aspect ratio`,
-					default: '',
-					useVariables: true,
-					isVisible: (options) => {return options.parameters.includes('h') && !options.parameters.includes('w') || !options.parameters.includes('h') && options.parameters.includes('w')},
-				},
-			],
-			learn: (action) => {
-				const options = action.options
-				const newoptions:DevicePositionSize = {...options}
-
-				let layers: {screenAuxKey: string, layerKey: string}[]
-				if (options.screen === 'sel') {
-					if (options.layersel === 'sel') {
-						layers = state.getSelectedLayers()
-					} else {
-						layers = [{screenAuxKey: options.screen, layerKey: options.layersel}]
-					}
-				} else {
-					if (options[`layer${options.screen}`] === 'sel') {
-						layers = state.getSelectedLayers().filter(layer => layer.screenAuxKey == options.screen)
-					} else {
-						layers = [{screenAuxKey: options.screen, layerKey: options[`layer${options.screen}`]}]
+					// isVisible: visFn,
+					isVisibleData: screen.id,
+					isVisible: (options: any, screenID: string) => {
+						return options.screen === screenID
 					}
 				}
-
-				if (layers.length === 0) return options
-
-				const [screen, layer] = [layers[0].screenAuxKey, layers[0].layerKey]
-				
-				newoptions.screen = screen
-				newoptions.layersel = layer
-				newoptions.preset = device.getPresetSelection()
-				newoptions.xAnchor = 'lx + 0.5 * lw'
-				newoptions.yAnchor = 'ly + 0.5 * lh'
-				newoptions.parameters = ['x', 'y', 'w', 'h']
-				
-				const pathToLayer = ['device','screenList','items',screen,'presetList','items',state.getPreset(screen, newoptions.preset),'layerList','items',layer,'position','pp']
-				const w = state.get(['DEVICE', ...pathToLayer, 'sizeH'])
-				const h = state.get(['DEVICE', ...pathToLayer, 'sizeV'])
-				newoptions.w = w.toString()
-				newoptions.h = h.toString()
-				newoptions.x = state.get(['DEVICE', ...pathToLayer, 'posH']).toString()
-				newoptions.y = state.get(['DEVICE', ...pathToLayer, 'posV']).toString()
-				
-				newoptions.ar = h !== 0 ? calculateAr(w,h)?.string ?? '' : ''
-
-				return newoptions
+			}),
+			{
+				id: 'parameters',
+				type: 'multidropdown',
+				label: 'Act on',
+				choices: [
+					{ id: 'x', label: 'X Position' },
+					{ id: 'y', label: 'Y Position' },
+					{ id: 'w', label: 'Width' },
+					{ id: 'h', label: 'Height' },
+				],
+				default: ['x', 'y', 'w', 'h'],
 			},
-			callback: async (action) => {
-				let layers: {screenAuxKey: string, layerKey: string}[]
-				if (action.options.screen === 'sel') {
-					if (action.options.layersel === 'sel') {
-						layers = state.getSelectedLayers()
-					} else {
-						layers = [{screenAuxKey: action.options.screen, layerKey: action.options.layersel}]
-					}
-				} else {
-					if (action.options[`layer${action.options.screen}`] === 'sel') {
-						layers = state.getSelectedLayers().filter(layer => layer.screenAuxKey == action.options.screen)
-					} else {
-						layers = [{screenAuxKey: action.options.screen, layerKey: action.options[`layer${action.options.screen}`]}]
-					}
-				}
-
-				const preset = action.options.preset === 'sel' ? device.getPresetSelection('sel') : action.options.preset
-				console.log('layers before match', layers)
-				layers = layers.filter(layer => (!state.isLocked(layer.screenAuxKey, preset) && layer.layerKey.match(/^\d+$/))) // wipe out layers of locked screens and native layer
-				if (layers.length === 0) return
-
-				const parseExpressionString = (expression: string, context: {[name: string]: number | string | boolean}, initialValue = 0) => {
-					let relate: (n: number) => number
-					if (expression.toLowerCase().startsWith('inc')) {
-						relate = (n) => initialValue + n
-						expression = expression.substring(3)
-					} else if (expression.toLowerCase().startsWith('dec')) {
-						relate = (n) => initialValue - n
-						expression = expression.substring(3)
-					} else {
-						relate = (n) => n
-					}
-					let result:any = undefined
-					try {
-						const expressionFn = compileExpression(expression)
-						result = expressionFn(context)
-					} catch (_error) {
-						// fail silent
-					}
-					if (typeof result === 'number') {
-						return relate(result)
-					}
-					return 0
-				}
-
-				const boundingBoxes = {}
-
-				for (const layerIndex in layers as {screenAuxKey: string, layerKey: string, x: number, y: number, w: number, h: number, [name: string]: number | string}[]) {
-					const layer: any = layers[layerIndex]
-					const presetKey = state.getPreset(layer.screenAuxKey, preset)
-					const pathToLayer = ['device','screenList','items',layer.screenAuxKey,'presetList','items',presetKey,'layerList','items',layer.layerKey]
-					layer.w = state.get(['DEVICE', ...pathToLayer,'position','pp', 'sizeH']) ?? 1920
-					layer.wOriginal = layer.w
-					layer.h = state.get(['DEVICE', ...pathToLayer,'position','pp', 'sizeV']) ?? 1080
-					layer.hOriginal = layer.h
-					layer.x = (state.get(['DEVICE', ...pathToLayer,'position','pp', 'posH']) ?? 0) - layer.w / 2
-					layer.xOriginal = layer.x
-					layer.y = (state.get(['DEVICE', ...pathToLayer,'position','pp', 'posV']) ?? 0) - layer.h / 2
-					layer.yOriginal = layer.y
-
-					if (boundingBoxes[layer.screenAuxKey] === undefined ) boundingBoxes[layer.screenAuxKey] = {}
-					const box = boundingBoxes[layer.screenAuxKey]
-					if (box.x === undefined  || layer.x < box.x) box.x = layer.x
-					if (box.y === undefined  || layer.y < box.y) box.y = layer.y
-					if (box.w === undefined  || layer.x + layer.w > box.x + box.w) 
-						box.w = layer.x + layer.w - box.x
-					if (box.h === undefined  || layer.y + layer.h > box.y + box.h) 
-						box.h = layer.y + layer.h - box.y
-				}
-
-				for (const layerIndex in layers as {screenAuxKey: string, layerKey: string, x: number, y: number, w: number, h: number, [name: string]: number | string}[]) {
-					const layer: any = layers[layerIndex]
-					const presetKey = state.getPreset(layer.screenAuxKey, preset)
-					const screenWidth = state.get(`DEVICE/device/screenList/items/${layer.screenAuxKey}/status/size/pp/sizeH`)
-					const screenHeight = state.get(`DEVICE/device/screenList/items/${layer.screenAuxKey}/status/size/pp/sizeV`)
-					
-					const pathToLayer = ['device','screenList','items',layer.screenAuxKey,'presetList','items',presetKey,'layerList','items',layer.layerKey]
-
-					layer.input = state.get(['DEVICE', ...pathToLayer,'source','pp','inputNum']) ?? 'NONE'
-					//console.log('layer before match', layer)
-					if (layer.input?.match(/^IN/)) {
-						layer.inPlug = state.get(`DEVICE/device/inputList/items/${layer.input}/control/pp/plug`) || '1'
-						layer.inWidth = state.get(`DEVICE/device/inputList/items/${layer.input}/plugList/items/${layer.inPlug}/status/signal/pp/imageWidth`) || 0
-						layer.inHeight = state.get(`DEVICE/device/inputList/items/${layer.input}/plugList/items/${layer.inPlug}/status/signal/pp/imageHeight`) || 0
-					} else {
-						layer.inWidth = 0
-						layer.inHeight = 0
-					}
-					
-					const boxWidth = boundingBoxes[layer.screenAuxKey]?.w ?? layer.w
-					const boxHeight = boundingBoxes[layer.screenAuxKey]?.h ?? layer.h
-
-					const context = {
-						sw: screenWidth,
-						sh: screenHeight,
-						sa: calculateAr(screenWidth, screenHeight)?.value ?? 0,
-						lw: layer.w,
-						lh: layer.h,
-						lx: layer.x,
-						ly: layer.y,
-						la: calculateAr(layer.w, layer.h)?.value ?? 0,
-						bx: boundingBoxes[layer.screenAuxKey]?.x ?? layer.x,
-						by: boundingBoxes[layer.screenAuxKey]?.y ?? layer.y,
-						bw: boxWidth,
-						bh: boxHeight,
-						ba: calculateAr(boxWidth, boxHeight)?.value ?? 0,
-						iw: layer.inWidth,
-						ih: layer.inHeight,
-						ia: calculateAr(layer.inWidth, layer.inHeight)?.value ?? 0,
-						screen: layer.screenAuxKey,
-						layer: layer.layerKey,
-						index: layerIndex
-					}
-
-					const xAnchorPromise = instance.parseVariablesInString(action.options.xAnchor)
-					const xPromise = instance.parseVariablesInString(action.options.x)
-					const yAnchorPromise = instance.parseVariablesInString(action.options.yAnchor)
-					const yPromise = instance.parseVariablesInString(action.options.y)
-					const wPromise = instance.parseVariablesInString(action.options.w)
-					const hPromise = instance.parseVariablesInString(action.options.h)
-					const arPromise = instance.parseVariablesInString(action.options.ar)
-
-					const [xAnchorParsed, xParsed, yAnchorParsed, yParsed, wParsed, hParsed, arP] = await Promise.all([xAnchorPromise, xPromise, yAnchorPromise, yPromise, wPromise, hPromise, arPromise])
-
-					const xAnchor = parseExpressionString(xAnchorParsed, context, 0)
-					const xPos = parseExpressionString(xParsed, context, layer.x)
-					const yAnchor = parseExpressionString(yAnchorParsed, context, 0)
-					const yPos = parseExpressionString(yParsed, context, layer.y)
-					const widthInput = parseExpressionString(wParsed, context, layer.w)
-					const heightInput = parseExpressionString(hParsed, context, layer.h)
-
-					let ar: number | undefined
-					if (action.options.ar.match(/keep/i)) {
-						ar = calculateAr(layer.w, layer.h)?.value ?? 0
-					} else {
-						ar = parseExpressionString(arP, context, calculateAr(layer.w, layer.h)?.value)
-					}
-
-					let xChange = false
-					let yChange = false
-
-					// do resizing
-					if (action.options.parameters.includes('w') && action.options.parameters.includes('h')) {
-						// set new width and height
-						console.log('set new width and height')
-						layer.w = widthInput
-						layer.h = heightInput
-					} else if (action.options.parameters.includes('w')) {
-						// set new width by value, height by ar or leave untouched
-						layer.w = widthInput
-						if (ar !== undefined && ar !== 0) layer.h = layer.w / ar
-					} else if (action.options.parameters.includes('h')) {
-						// set new height by value, width by ar or leave untouched
-						layer.h = heightInput
-						if (ar !== undefined) layer.w = layer.h * ar
-					}
-
-					// adjust position according anchor
-					if (layer.w !== layer.wOriginal && xAnchor !== (layer.xOriginal + 0.5 * layer.wOriginal)) {
-						layer.x = layer.xOriginal - ((xAnchor - layer.xOriginal) * (layer.w / layer.wOriginal)) + (xAnchor - layer.xOriginal)
-						xChange = true
-					}
-					if (layer.h !== layer.hOriginal && yAnchor !== (layer.yOriginal + 0.5 * layer.hOriginal)) {
-						layer.y = layer.yOriginal - ((yAnchor - layer.yOriginal) * (layer.h / layer.hOriginal)) + (yAnchor - layer.yOriginal)
-						yChange = true
-					}
-
-					// do positioning
-					if (action.options.parameters.includes('x')) {
-						layer.x += xPos - xAnchor
-					} 
-					if (action.options.parameters.includes('y')) {
-						layer.y += yPos - yAnchor
-					}
-
-
-					console.log('layer', {...layer, xAnchor, yAnchor, context})
-
-					// send values
-					if (layer.x !== layer.xOriginal || xChange) {
-						connection.sendWSmessage(
-							[...pathToLayer,'position','pp', 'posH'],
-							Math.round(layer.x + layer.w / 2)
-						)
-					}
-					if (layer.y !== layer.yOriginal || yChange) {
-						connection.sendWSmessage(
-							[...pathToLayer,'position','pp', 'posV'],
-							Math.round(layer.y + layer.h / 2)
-						)
-					}
-					if (layer.w !== layer.wOriginal) {
-						connection.sendWSmessage(
-							[...pathToLayer,'position','pp', 'sizeH'],
-							Math.round(layer.w)
-						)
-					}
-					if (layer.h !== layer.hOriginal) {
-						connection.sendWSmessage(
-							[...pathToLayer,'position','pp', 'sizeV'],
-							Math.round(layer.h)
-						)
-					}
-				}
-
-				device.sendXupdate()
+			{
+				id: 'x',
+				type: 'textinput',
+				label: 'X position in screen (pixels)',
+				tooltip,
+				default: '',
+				useVariables: true,
+				isVisible: (options) => {return options.parameters.includes('x')},
 			},
-		} as AWJaction<DevicePositionSize>
-		
-	}
+			{
+				id: 'y',
+				type: 'textinput',
+				label: 'Y position in screen (pixels)',
+				tooltip,
+				default: '',
+				useVariables: true,
+				isVisible: (options) => {return options.parameters.includes('y')},
+			},
+			{
+				id: 'w',
+				type: 'textinput',
+				label: 'Width (pixels)',
+				tooltip,
+				default: '',
+				useVariables: true,
+				isVisible: (options) => {return options.parameters.includes('w')},
+			},
+			{
+				id: 'h',
+				type: 'textinput',
+				label: 'Height (pixels)',
+				tooltip,
+				default: '',
+				useVariables: true,
+				isVisible: (options) => {return options.parameters.includes('h')},
+			},
+			{
+				id: 'xAnchor',
+				type: 'textinput',
+				label: 'Anchor X position',
+				tooltip,
+				default: 'lx + 0.5 * lw',
+				useVariables: true,
+				isVisible: (options) => {return options.parameters.includes('x') || options.parameters.includes('w')},
+			},
+			{
+				id: 'yAnchor',
+				type: 'textinput',
+				label: 'Anchor Y position',
+				tooltip,
+				default: 'ly + 0.5 * lh',
+				useVariables: true,
+				isVisible: (options) => {return options.parameters.includes('y') || options.parameters.includes('h')},
+			},
+			{
+				id: 'ar',
+				type: 'textinput',
+				label: 'Aspect Ratio',
+				tooltip: `use "keep" to keep the aspect ratio, use notations like 16/9, 4/3, 1.678 to set to a specific ratio, use nothing or any other word to change aspect ratio`,
+				default: '',
+				useVariables: true,
+				isVisible: (options) => {return options.parameters.includes('h') && !options.parameters.includes('w') || !options.parameters.includes('h') && options.parameters.includes('w')},
+			},
+		],
+		learn: (action) => {
+			const options = action.options
+			const newoptions:DevicePositionSize = {...options}
+
+			let layers: {screenAuxKey: string, layerKey: string}[]
+			if (options.screen === 'sel') {
+				if (options.layersel === 'sel') {
+					layers = state.getSelectedLayers()
+				} else {
+					layers = [{screenAuxKey: options.screen, layerKey: options.layersel}]
+				}
+			} else {
+				if (options[`layer${options.screen}`] === 'sel') {
+					layers = state.getSelectedLayers().filter(layer => layer.screenAuxKey == options.screen)
+				} else {
+					layers = [{screenAuxKey: options.screen, layerKey: options[`layer${options.screen}`]}]
+				}
+			}
+
+			if (layers.length === 0) return options
+
+			const [screen, layer] = [layers[0].screenAuxKey, layers[0].layerKey]
+			
+			newoptions.screen = screen
+			newoptions.layersel = layer
+			newoptions.preset = device.getPresetSelection()
+			newoptions.xAnchor = 'lx + 0.5 * lw'
+			newoptions.yAnchor = 'ly + 0.5 * lh'
+			newoptions.parameters = ['x', 'y', 'w', 'h']
+			
+			const pathToLayer = ['device','screenList','items',screen,'presetList','items',state.getPreset(screen, newoptions.preset),'layerList','items',layer,'position','pp']
+			const w = state.get(['DEVICE', ...pathToLayer, 'sizeH'])
+			const h = state.get(['DEVICE', ...pathToLayer, 'sizeV'])
+			newoptions.w = w.toString()
+			newoptions.h = h.toString()
+			newoptions.x = state.get(['DEVICE', ...pathToLayer, 'posH']).toString()
+			newoptions.y = state.get(['DEVICE', ...pathToLayer, 'posV']).toString()
+			
+			newoptions.ar = h !== 0 ? calculateAr(w,h)?.string ?? '' : ''
+
+			return newoptions
+		},
+		callback: async (action) => {
+			let layers: {screenAuxKey: string, layerKey: string}[]
+			if (action.options.screen === 'sel') {
+				if (action.options.layersel === 'sel') {
+					layers = state.getSelectedLayers()
+				} else {
+					layers = [{screenAuxKey: action.options.screen, layerKey: action.options.layersel}]
+				}
+			} else {
+				if (action.options[`layer${action.options.screen}`] === 'sel') {
+					layers = state.getSelectedLayers().filter(layer => layer.screenAuxKey == action.options.screen)
+				} else {
+					layers = [{screenAuxKey: action.options.screen, layerKey: action.options[`layer${action.options.screen}`]}]
+				}
+			}
+
+			const preset = action.options.preset === 'sel' ? device.getPresetSelection('sel') : action.options.preset
+			console.log('layers before match', layers)
+			layers = layers.filter(layer => (!state.isLocked(layer.screenAuxKey, preset) && layer.layerKey.match(/^\d+$/))) // wipe out layers of locked screens and native layer
+			if (layers.length === 0) return
+
+			const parseExpressionString = (expression: string, context: {[name: string]: number | string | boolean}, initialValue = 0) => {
+				let relate: (n: number) => number
+				if (expression.toLowerCase().startsWith('inc')) {
+					relate = (n) => initialValue + n
+					expression = expression.substring(3)
+				} else if (expression.toLowerCase().startsWith('dec')) {
+					relate = (n) => initialValue - n
+					expression = expression.substring(3)
+				} else {
+					relate = (n) => n
+				}
+				let result:any = undefined
+				try {
+					const expressionFn = compileExpression(expression)
+					result = expressionFn(context)
+				} catch (_error) {
+					// fail silent
+				}
+				if (typeof result === 'number') {
+					return relate(result)
+				}
+				return 0
+			}
+
+			const boundingBoxes = {}
+
+			for (const layerIndex in layers as {screenAuxKey: string, layerKey: string, x: number, y: number, w: number, h: number, [name: string]: number | string}[]) {
+				const layer: any = layers[layerIndex]
+				const presetKey = state.getPreset(layer.screenAuxKey, preset)
+				const pathToLayer = ['device','screenList','items',layer.screenAuxKey,'presetList','items',presetKey,'layerList','items',layer.layerKey]
+				layer.w = state.get(['DEVICE', ...pathToLayer,'position','pp', 'sizeH']) ?? 1920
+				layer.wOriginal = layer.w
+				layer.h = state.get(['DEVICE', ...pathToLayer,'position','pp', 'sizeV']) ?? 1080
+				layer.hOriginal = layer.h
+				layer.x = (state.get(['DEVICE', ...pathToLayer,'position','pp', 'posH']) ?? 0) - layer.w / 2
+				layer.xOriginal = layer.x
+				layer.y = (state.get(['DEVICE', ...pathToLayer,'position','pp', 'posV']) ?? 0) - layer.h / 2
+				layer.yOriginal = layer.y
+
+				if (boundingBoxes[layer.screenAuxKey] === undefined ) boundingBoxes[layer.screenAuxKey] = {}
+				const box = boundingBoxes[layer.screenAuxKey]
+				if (box.x === undefined  || layer.x < box.x) box.x = layer.x
+				if (box.y === undefined  || layer.y < box.y) box.y = layer.y
+				if (box.w === undefined  || layer.x + layer.w > box.x + box.w) 
+					box.w = layer.x + layer.w - box.x
+				if (box.h === undefined  || layer.y + layer.h > box.y + box.h) 
+					box.h = layer.y + layer.h - box.y
+			}
+
+			for (const layerIndex in layers as {screenAuxKey: string, layerKey: string, x: number, y: number, w: number, h: number, [name: string]: number | string}[]) {
+				const layer: any = layers[layerIndex]
+				const presetKey = state.getPreset(layer.screenAuxKey, preset)
+				const screenWidth = state.get(`DEVICE/device/screenList/items/${layer.screenAuxKey}/status/size/pp/sizeH`)
+				const screenHeight = state.get(`DEVICE/device/screenList/items/${layer.screenAuxKey}/status/size/pp/sizeV`)
+				
+				const pathToLayer = ['device','screenList','items',layer.screenAuxKey,'presetList','items',presetKey,'layerList','items',layer.layerKey] // TODO: convert for midra
+
+				layer.input = state.get(['DEVICE', ...pathToLayer,'source','pp','inputNum']) ?? 'NONE'
+				//console.log('layer before match', layer)
+				if (layer.input?.match(/^IN/)) {
+					layer.inPlug = state.get(`DEVICE/device/inputList/items/${layer.input}/control/pp/plug`) || '1'
+					layer.inWidth = state.get(`DEVICE/device/inputList/items/${layer.input}/plugList/items/${layer.inPlug}/status/signal/pp/imageWidth`) || 0
+					layer.inHeight = state.get(`DEVICE/device/inputList/items/${layer.input}/plugList/items/${layer.inPlug}/status/signal/pp/imageHeight`) || 0
+				} else {
+					layer.inWidth = 0
+					layer.inHeight = 0
+				}
+				
+				const boxWidth = boundingBoxes[layer.screenAuxKey]?.w ?? layer.w
+				const boxHeight = boundingBoxes[layer.screenAuxKey]?.h ?? layer.h
+
+				const context = {
+					sw: screenWidth,
+					sh: screenHeight,
+					sa: calculateAr(screenWidth, screenHeight)?.value ?? 0,
+					lw: layer.w,
+					lh: layer.h,
+					lx: layer.x,
+					ly: layer.y,
+					la: calculateAr(layer.w, layer.h)?.value ?? 0,
+					bx: boundingBoxes[layer.screenAuxKey]?.x ?? layer.x,
+					by: boundingBoxes[layer.screenAuxKey]?.y ?? layer.y,
+					bw: boxWidth,
+					bh: boxHeight,
+					ba: calculateAr(boxWidth, boxHeight)?.value ?? 0,
+					iw: layer.inWidth,
+					ih: layer.inHeight,
+					ia: calculateAr(layer.inWidth, layer.inHeight)?.value ?? 0,
+					screen: layer.screenAuxKey,
+					layer: layer.layerKey,
+					index: layerIndex
+				}
+
+				const xAnchorPromise = instance.parseVariablesInString(action.options.xAnchor)
+				const xPromise = instance.parseVariablesInString(action.options.x)
+				const yAnchorPromise = instance.parseVariablesInString(action.options.yAnchor)
+				const yPromise = instance.parseVariablesInString(action.options.y)
+				const wPromise = instance.parseVariablesInString(action.options.w)
+				const hPromise = instance.parseVariablesInString(action.options.h)
+				const arPromise = instance.parseVariablesInString(action.options.ar)
+
+				const [xAnchorParsed, xParsed, yAnchorParsed, yParsed, wParsed, hParsed, arP] = await Promise.all([xAnchorPromise, xPromise, yAnchorPromise, yPromise, wPromise, hPromise, arPromise])
+
+				const xAnchor = parseExpressionString(xAnchorParsed, context, 0)
+				const xPos = parseExpressionString(xParsed, context, layer.x)
+				const yAnchor = parseExpressionString(yAnchorParsed, context, 0)
+				const yPos = parseExpressionString(yParsed, context, layer.y)
+				const widthInput = parseExpressionString(wParsed, context, layer.w)
+				const heightInput = parseExpressionString(hParsed, context, layer.h)
+
+				let ar: number | undefined
+				if (action.options.ar.match(/keep/i)) {
+					ar = calculateAr(layer.w, layer.h)?.value ?? 0
+				} else {
+					ar = parseExpressionString(arP, context, calculateAr(layer.w, layer.h)?.value)
+				}
+
+				let xChange = false
+				let yChange = false
+
+				// do resizing
+				if (action.options.parameters.includes('w') && action.options.parameters.includes('h')) {
+					// set new width and height
+					console.log('set new width and height')
+					layer.w = widthInput
+					layer.h = heightInput
+				} else if (action.options.parameters.includes('w')) {
+					// set new width by value, height by ar or leave untouched
+					layer.w = widthInput
+					if (ar !== undefined && ar !== 0) layer.h = layer.w / ar
+				} else if (action.options.parameters.includes('h')) {
+					// set new height by value, width by ar or leave untouched
+					layer.h = heightInput
+					if (ar !== undefined) layer.w = layer.h * ar
+				}
+
+				// adjust position according anchor
+				if (layer.w !== layer.wOriginal && xAnchor !== (layer.xOriginal + 0.5 * layer.wOriginal)) {
+					layer.x = layer.xOriginal - ((xAnchor - layer.xOriginal) * (layer.w / layer.wOriginal)) + (xAnchor - layer.xOriginal)
+					xChange = true
+				}
+				if (layer.h !== layer.hOriginal && yAnchor !== (layer.yOriginal + 0.5 * layer.hOriginal)) {
+					layer.y = layer.yOriginal - ((yAnchor - layer.yOriginal) * (layer.h / layer.hOriginal)) + (yAnchor - layer.yOriginal)
+					yChange = true
+				}
+
+				// do positioning
+				if (action.options.parameters.includes('x')) {
+					layer.x += xPos - xAnchor
+				} 
+				if (action.options.parameters.includes('y')) {
+					layer.y += yPos - yAnchor
+				}
+
+
+				console.log('layer', {...layer, xAnchor, yAnchor, context})
+
+				// send values
+				if (layer.x !== layer.xOriginal || xChange) {
+					connection.sendWSmessage(
+						[...pathToLayer,'position','pp', 'posH'],
+						Math.round(layer.x + layer.w / 2)
+					)
+				}
+				if (layer.y !== layer.yOriginal || yChange) {
+					connection.sendWSmessage(
+						[...pathToLayer,'position','pp', 'posV'],
+						Math.round(layer.y + layer.h / 2)
+					)
+				}
+				if (layer.w !== layer.wOriginal) {
+					connection.sendWSmessage(
+						[...pathToLayer,'position','pp', 'sizeH'],
+						Math.round(layer.w)
+					)
+				}
+				if (layer.h !== layer.hOriginal) {
+					connection.sendWSmessage(
+						[...pathToLayer,'position','pp', 'sizeV'],
+						Math.round(layer.h)
+					)
+				}
+			}
+
+			device.sendXupdate()
+		},
+	} as AWJaction<DevicePositionSize>
+	
 
 	/**
 	 * MARK: Copy preview from program
@@ -1776,23 +1345,20 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 		],
 		callback: (act) => {
 			const allscreens = getScreensAuxArray(state, true).map((itm) => itm.id)
+			if (allscreens.length === 0) return
+			let action = act.options.action
+
 			// device/transition/screenList/items/1/control/pp/enablePresetToggle
 			// device/screenGroupList/items/S1/control/pp/copyMode
-			let property = 'copyMode'
-			let invert = true
-			if (state.platform === 'midra') {
-				property = 'enablePresetToggle'
-				invert = false
-			}
-			let action = act.options.action
+
 			if (action === 'toggle') {
-				if (state.get('DEVICE/device/screenGroupList/items/S1/control/pp/'+ property) === !invert) action = 'off'
+				if (state.get('DEVICE/device/screenGroupList/items/'+ allscreens[0] +'/control/pp/enablePresetToggle') === true) action = 'off'
 				else action = 'on'
 			}
 			if (action === 'on') allscreens.forEach((screen: string) =>
-				connection.sendWSmessage('device/screenGroupList/items/' + screen + '/control/pp/' + property, invert ? false : true))
+				connection.sendWSmessage('device/screenGroupList/items/' + screen + '/control/pp/enablePresetToggle', true))
 			if (action === 'off') allscreens.forEach((screen: string) =>
-				connection.sendWSmessage('device/screenGroupList/items/' + screen + '/control/pp/' + property, invert ? true : false))
+				connection.sendWSmessage('device/screenGroupList/items/' + screen + '/control/pp/enablePresetToggle', false))
 		}
 	} as AWJaction<DevicePresetToggle>
 
@@ -1840,8 +1406,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			const widget = action.options.widget?.split(':')[1] ?? '0'
 			let widgetSelection: Record<'multiviewerKey' | 'widgetKey', string>[] = []
 			if (state.syncSelection) {
-				if (state.platform.startsWith('livepremier')) widgetSelection = [...state.getUnmapped('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
-				if (state.platform === 'midra') widgetSelection = [...state.getUnmapped('REMOTE/live/multiviewer/widgetSelection/widgetKeys').map((key: string) => {return {multiviewerKey: '1', widgetKey: key}})]
+				widgetSelection = [...state.getUnmapped('REMOTE/live/multiviewer/widgetSelection/widgetKeys').map((key: string) => {return {multiviewerKey: '1', widgetKey: key}})]
 			} else {
 				widgetSelection = [...state.get('LOCAL/widgetSelection/widgetIds')]
 			}
@@ -1858,8 +1423,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			}
 
 			if (state.syncSelection) {
-				if (state.platform.startsWith('livepremier')) connection.sendWSdata('REMOTE', 'replace', 'live/multiviewers/widgetSelection', [widgetSelection])
-				if (state.platform === 'midra') connection.sendWSdata('REMOTE', 'replace', 'live/multiviewer/widgetSelection', [widgetSelection.map((itm: {widgetKey: string}) => itm.widgetKey)])
+				connection.sendWSdata('REMOTE', 'replace', 'live/multiviewer/widgetSelection', [widgetSelection.map((itm: {widgetKey: string}) => itm.widgetKey)])
 			} else {
 				state.set('LOCAL/widgetSelection/widgetIds', widgetSelection)
 				instance.checkFeedbacks('remoteWidgetSelection')
@@ -1909,16 +1473,11 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				connection.sendWSmessage(
 					[
 						'device',
-						'monitoringList',
-						'items',
-						widget.multiviewerKey,
+						'monitoringList', 'items', widget.multiviewerKey,
 						'layout',
-						'widgetList',
-						'items',
-						widget.widgetKey,
+						'widgetList', 'items', widget.widgetKey,
 						'control',
-						'pp',
-						'source',
+						'pp', 'source',
 					],
 					action.options.source
 				)
@@ -2274,6 +1833,21 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					return options.method.startsWith('sel')
 				},
 			},
+			...screens.map((screen) => {
+				const layerChoices = getLayerChoices(state, screen.id, true)
+				let defaultChoice: DropdownChoiceId
+				if (layerChoices.find((choice: DropdownChoice) => choice.id === '1')) defaultChoice = '1'
+				else defaultChoice = layerChoices[0].id
+
+				return {
+					id: `layer${screen.id}`,
+					type: 'multidropdown',
+					label: 'Layer ' + screen.id,
+					choices: layerChoices,
+					default: [defaultChoice],
+					isVisible: (options, screenId = screen.id) => { return options.method.startsWith('spec') && options.screen.includes(`${screenId}`)},
+				}
+			})
 		],
 		callback: (action) => {
 			let ret: Record<'screenAuxKey' | 'layerKey', string>[] = []
@@ -2324,33 +1898,6 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			}
 		},
 	} as AWJaction<SelectLayer>
-	for (const screen of screens) {
-		// eslint-disable-next-line @typescript-eslint/ban-types
-		let visFn = (_arg0: any): boolean => {
-			return true
-		}
-		// make the code more injection proof
-		if (screen.id.match(/^(S|A)\d{1,3}$/)) {
-			// eslint-disable-next-line @typescript-eslint/no-implied-eval
-			visFn = new Function(
-				'thisOptions',
-				`return thisOptions.method.startsWith('spec') && thisOptions.screen.includes('${screen.id}')`
-			) as (options: any) => boolean
-		}
-		const layerChoices = getLayerChoices(state, screen.id, true)
-		let defaultChoice: DropdownChoiceId
-		if (layerChoices.find((choice: DropdownChoice) => choice.id === '1')) defaultChoice = '1'
-		else defaultChoice = layerChoices[0].id
-
-		actions['selectLayer']?.options.push({
-			id: `layer${screen.id}`,
-			type: 'multidropdown',
-			label: 'Layer ' + screen.id,
-			choices: layerChoices,
-			default: [defaultChoice],
-			isVisible: visFn,
-		})
-	}
 
 	/**
 	 * MARK: Switch selection syncronization with device on/off
@@ -2429,7 +1976,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 
 	// MARK: Stream Control
 	type DeviceStreamControl = {stream: string}
-	if (state.platform === 'midra') actions['deviceStreamControl'] = {
+	actions['deviceStreamControl'] = {
 		name: 'Stream Control',
 		options: [
 			{
@@ -2465,7 +2012,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 
 	// MARK: Stream Audio Mute
 	type DeviceStreamAudioMute = {stream: string}
-	if (state.platform === 'midra') actions['deviceStreamAudioMute'] = {
+	actions['deviceStreamAudioMute'] = {
 		name: 'Stream Audio Mute',
 		options: [
 			{
@@ -2495,10 +2042,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 	 * MARK: Route audio block
 	 */
 	type DeviceAudioRouteBlock = {out: string, in: string, blocksize: number}
-	let audioOutputChoices: DropdownChoice[] = []
+	const audioOutputChoices = getAudioCustomBlockChoices()
 	const audioInputChoices = getAudioInputChoices(state)
-	if (state.platform.startsWith('livepremier')) audioOutputChoices = getAudioOutputChoices(state)
-	if (state.platform === 'midra') audioOutputChoices = getAudioCustomBlockChoices()
 
 	actions['deviceAudioRouteBlock'] = {
 		name: 'Route Audio (Block)',
@@ -2530,40 +2075,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				range: true,
 			},
 		],
-	} as AWJaction<DeviceAudioRouteBlock>
-	if (state.platform.startsWith('livepremier')) actions['deviceAudioRouteBlock'].callback = (action: ActionEvent<DeviceAudioRouteBlock>) => {
-			const outstart = audioOutputChoices.findIndex((item) => {
-				return item.id === action.options.out
-			})
-			const instart = audioInputChoices.findIndex((item) => {
-				return item.id === action.options.in
-			})
-			if (outstart > -1 && instart > -1) {
-				const max = Math.min(
-					audioOutputChoices.length - outstart,
-					audioInputChoices.length - instart,
-					action.options.blocksize
-				) // since 'None' is input at index 0 no extra test is needed, it is possible to fill all outputs with none
-				for (let s = 0; s < max; s += 1) {
-					const path = [
-						'device',
-						'audio',
-						'control',
-						'txList',
-						'items',
-						audioOutputChoices[outstart + s].id.toString().split(':')[0],
-						'channelList',
-						'items',
-						audioOutputChoices[outstart + s].id.toString().split(':')[1],
-						'control',
-						'pp',
-						'source',
-					]
-					connection.sendWSmessage(path, audioInputChoices[instart === 0 ? 0 : instart + s].id)
-				}
-			}
-	}
-	if (state.platform === 'midra') actions['deviceAudioRouteBlock'].callback = (action: ActionEvent<DeviceAudioRouteBlock>) => {
+		callback: (action) => {
 			const outstart = audioOutputChoices.findIndex((item) => {
 				return item.id === action.options.out
 			})
@@ -2590,15 +2102,9 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				}
 				Object.keys(routings).forEach((block) => {
 					const path = [
-						'device',
-						'audio',
-						'custom',
-						'sourceList',
-						'items',
-						block,
-						'control',
-						'pp',
-						'channelMapping',
+						'device', 'audio', 'custom',
+						'sourceList', 'items', block,
+						'control', 'pp', 'channelMapping',
 					]
 					connection.sendWSmessage(path, routings[block])
 				})
@@ -2606,6 +2112,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				console.error("%s can't be found in available outputs or %s can't be found in available inputs", action.options.out, action.options.in)
 			}
 		}
+	} as AWJaction<DeviceAudioRouteBlock>
+	
 
 	/**
 	 * MARK: Route audio channels
@@ -2632,88 +2140,40 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				minSelection: 0,
 			},
 		],
-	} as AWJaction<DeviceAudioRouteChannels>
-	if (state.platform.startsWith('livepremier')) actions['deviceAudioRouteChannels'].callback = (action: ActionEvent<DeviceAudioRouteChannels>) => {
-		if (action.options.in.length > 0) {
+		callback: (action) => {
+			let inputlist = ['NONE']
+			if (action.options.in?.length > 0) {
+				inputlist = action.options.in
+			}
 			const outstart = audioOutputChoices.findIndex((item) => {
 				return item.id === action.options.out
 			})
 			if (outstart > -1) {
-				const max = Math.min(audioOutputChoices.length - outstart, action.options.in.length)
+				const max = Math.min(audioOutputChoices.length - outstart, inputlist.length)
+				const routings: Record<string, string[]> = {}
 				for (let s = 0; s < max; s += 1) {
-					const path = [
-						'device',
-						'audio',
-						'control',
-						'txList',
-						'items',
-						audioOutputChoices[outstart + s].id.toString().split(':')[0],
-						'channelList',
-						'items',
-						audioOutputChoices[outstart + s].id.toString().split(':')[1],
-						'control',
-						'pp',
-						'source',
-					]
-					connection.sendWSmessage(path, action.options.in[s])
-				}
-			}
-		} else {
-			const path = [
-				'device',
-				'audio',
-				'control',
-				'txList',
-				'items',
-				action.options.out.split(':')[0],
-				'channelList',
-				'items',
-				action.options.out.split(':')[1],
-				'control',
-				'pp',
-				'source',
-			]
-			connection.sendWSmessage(path, audioInputChoices[0]?.id)
-		}
-	}
-	if (state.platform === 'midra') actions['deviceAudioRouteChannels'].callback = (action: ActionEvent<DeviceAudioRouteChannels>) => {
-		let inputlist = ['NONE']
-		if (action.options.in?.length > 0) {
-			inputlist = action.options.in
-		}
-		const outstart = audioOutputChoices.findIndex((item) => {
-			return item.id === action.options.out
-		})
-		if (outstart > -1) {
-			const max = Math.min(audioOutputChoices.length - outstart, inputlist.length)
-			const routings: Record<string, string[]> = {}
-			for (let s = 0; s < max; s += 1) {
-				const sink = audioOutputChoices[outstart + s].id
-				const source = inputlist[s]
-				const block = sink.toString().split(':')[0]
-				const channel = sink.toString().split(':')[1]
-				if (!routings[block]) {
-					routings[block] = [...state.getUnmapped('DEVICE/device/audio/custom/sourceList/items/' + block + '/control/pp/channelMapping')] as string[]
-				}
-				routings[block][parseInt(channel) - 1] = source.toString()
+					const sink = audioOutputChoices[outstart + s].id
+					const source = inputlist[s]
+					const block = sink.toString().split(':')[0]
+					const channel = sink.toString().split(':')[1]
+					if (!routings[block]) {
+						routings[block] = [...state.getUnmapped('DEVICE/device/audio/custom/sourceList/items/' + block + '/control/pp/channelMapping')] as string[]
+					}
+					routings[block][parseInt(channel) - 1] = source.toString()
 
+				}
+				Object.keys(routings).forEach((block: string) => {
+					const path = [
+						'device', 'audio', 'custom',
+						'sourceList', 'items', block,
+						'control', 'pp', 'channelMapping',
+					]
+					connection.sendWSmessage(path, routings[block])
+				})
 			}
-			Object.keys(routings).forEach((block: string) => {
-				const path = [
-					'device',
-					'audio',
-					'custom',
-					'sourceList',
-					'items',
-					block,
-					'control',
-					'pp',
-					'channelMapping',
-				]
-				connection.sendWSmessage(path, routings[block])
-			})
 		}
-	}
+	} as AWJaction<DeviceAudioRouteChannels>
+	
 
 	/**
 	 * MARK: Setup timer
@@ -2774,6 +2234,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				returnType: 'string',
 				label: 'Text color',
 				default: `rgba(${splitRgb(config.color_bright).r},${splitRgb(config.color_bright).g},${splitRgb(config.color_bright).b},1)`,
+				isVisible: () => { return false } // color handling is not available at midra, but add option for compatibility
 			},
 			{
 				id: 'bg_color',
@@ -2782,6 +2243,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				returnType: 'string',
 				label: 'Background color',
 				default: `rgba(${splitRgb(config.color_dark).r},${splitRgb(config.color_dark).g},${splitRgb(config.color_dark).b},0.7)`,
+				isVisible: () => { return false } // color handling is not available at midra, but add option for compatibility
 			},
 		],
 		callback: (action) => {
@@ -2800,48 +2262,10 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					action.options.unitMode
 				)
 			}
-			instance.log('debug', action.options.fg_color.toString())
-			instance.log('debug', JSON.stringify(splitRgb(action.options.fg_color).a))
-			if (state.platform === 'midra') return // color handling is not available at midra
-			connection.sendWSmessage(
-				['device', 'timerList', 'items', action.options.timer, 'control', 'background', 'color', 'pp', 'red'],
-				splitRgb(action.options.bg_color).r
-			)
-			connection.sendWSmessage(
-				['device', 'timerList', 'items', action.options.timer, 'control', 'background', 'color', 'pp', 'green'],
-				splitRgb(action.options.bg_color).g
-			)
-			connection.sendWSmessage(
-				['device', 'timerList', 'items', action.options.timer, 'control', 'background', 'color', 'pp', 'blue'],
-				splitRgb(action.options.bg_color).b
-			)
-			connection.sendWSmessage(
-				['device', 'timerList', 'items', action.options.timer, 'control', 'background', 'color', 'pp', 'alpha'],
-				Math.round((splitRgb(action.options.bg_color).a || 1) * 255)
-			)
-			connection.sendWSmessage(
-				['device', 'timerList', 'items', action.options.timer, 'control', 'text', 'color', 'pp', 'red'],
-				splitRgb(action.options.fg_color).r
-			)
-			connection.sendWSmessage(
-				['device', 'timerList', 'items', action.options.timer, 'control', 'text', 'color', 'pp', 'green'],
-				splitRgb(action.options.fg_color).g
-			)
-			connection.sendWSmessage(
-				['device', 'timerList', 'items', action.options.timer, 'control', 'text', 'color', 'pp', 'blue'],
-				splitRgb(action.options.fg_color).b
-			)
-			connection.sendWSmessage(
-				['device', 'timerList', 'items', action.options.timer, 'control', 'text', 'color', 'pp', 'alpha'],
-				Math.round((splitRgb(action.options.fg_color).a || 1) * 255)
-			)
+
 		},
 	} as AWJaction<DeviceTimerSetup>
-	if (state.platform === 'midra') {
-		const hidden = () => { return false }
-		actions['deviceTimerSetup'].options[4].isVisible = hidden
-		actions['deviceTimerSetup'].options[5].isVisible = hidden
-	}
+
 
 	/**
 	 * MARK: Adjust timer
@@ -2929,7 +2353,6 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			},
 		],
 		callback: (action) => {
-			instance.log('debug', `RUNNiNg Action ${JSON.stringify(action)}`)
 			let cmd = 'xPause'
 			if (action.options.cmd === 'start') {
 				cmd = 'xStart'
@@ -2979,147 +2402,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 	 * MARK: Choose Testpatterns
 	 */
 	type DeviceTestpatterns = {group: string, screenList: string, outputList: string, patall: string, screenListPat: string, outputListPat: string, inputList?: string, inputListPat?: string}
-	const deviceTestpatternsOptions: (Omit<CompanionInputFieldDropdown, 'choices'> & {choices: Dropdown<string>[]})[] = []
-	if (state.platform.startsWith('livepremier')) deviceTestpatternsOptions.push(
-		{
-				id: 'group',
-				type: 'dropdown',
-				label: 'Group',
-				choices: [
-					{ id: 'all', label: 'All' },
-					{ id: 'screenList', label: 'Screen Canvas' },
-					{ id: 'outputList', label: 'Output Group' },
-					{ id: 'inputList', label: 'Input Group' },
-				],
-				default: 'outputList',
-			},
-			{
-				id: 'screenList',
-				type: 'dropdown',
-				label: 'Screen',
-				choices: getScreenAuxChoices(state),
-				default: getScreenAuxChoices(state)[0]?.id,
-				isVisible: (options) => {
-					return options.group === 'screenList'
-				},
-			},
-			{
-				id: 'outputList',
-				type: 'dropdown',
-				label: 'Output',
-				choices: getOutputChoices(state),
-				default: getOutputChoices(state)[0]?.id,
-				isVisible: (options) => {
-					return options.group === 'outputList'
-				},
-			},
-			{
-				id: 'inputList',
-				type: 'dropdown',
-				label: 'Input',
-				choices: getLiveInputChoices(state),
-				default: getLiveInputChoices(state)[0]?.id,
-				isVisible: (options) => {
-					return options.group === 'inputList'
-				},
-			},
-			{
-				id: 'patall',
-				type: 'dropdown',
-				label: 'Pattern',
-				choices: [{ id: '0', label: 'Off' }],
-				default: '0',
-				isVisible: (options) => {
-					return options.group === 'all'
-				},
-			},
-			{
-				id: 'screenListPat',
-				type: 'dropdown',
-				label: 'Pattern',
-				choices: [
-					{ id: 'NONE', label: 'Off' },
-					{ id: 'GEOMETRIC', label: 'Geometric' },
-					{ id: 'VERTICAL_GREY_SCALE', label: 'Vertical Greyscale' },
-					{ id: 'HORIZONTAL_GREY_SCALE', label: 'Horizontal Greyscale' },
-					{ id: 'HORIZONTAL_GREY_SCALE_2', label: 'Horizontal Greysteps' },
-					{ id: 'VERTICAL_COLOR_BAR', label: 'Vertical Colorbars' },
-					{ id: 'HORIZONTAL_COLOR_BAR', label: 'Horizontal Colorbars' },
-					{ id: 'GRID_CUSTOM', label: 'Grid Custom' },
-					{ id: 'SMPTE', label: 'SMPTE' },
-					{ id: 'VERTICAL_GRADIENT', label: 'Vertical Gradient' },
-					{ id: 'HORIZONTAL_GRADIENT', label: 'Horzontal Gradient' },
-					{ id: 'CROSSHATCH', label: 'Crosshatch' },
-					{ id: 'CHECKERBOARD', label: 'Checkerboard' },
-				],
-				default: 'NONE',
-				isVisible: (options) => {
-					return options.group === 'screenList'
-				},
-			},
-			{
-				id: 'inputListPat',
-				type: 'dropdown',
-				label: 'Pattern',
-				choices: [
-					{ id: 'NO_PATTERN', label: 'Off' },
-					{ id: 'COLOR', label: 'Solid Color' },
-					{ id: 'VERTICAL_GREY_SCALE', label: 'Vertical Greyscale' },
-					{ id: 'HORIZONTAL_GREY_SCALE', label: 'Horizontal Greyscale' },
-					{ id: 'VERTICAL_COLOR_BAR', label: 'Vertical Colorbars' },
-					{ id: 'HORIZONTAL_COLOR_BAR', label: 'Horizontal Colorbars' },
-					{ id: 'GRID_16_16', label: 'Grid 16x16' },
-					{ id: 'GRID_32_32', label: 'Grid 32x32' },
-					{ id: 'GRID_CUSTOM', label: 'Grid Custom' },
-					{ id: 'SMPTE', label: 'SMPTE' },
-					{ id: 'BURST_H', label: 'Horizontal Burst' },
-					{ id: 'BURST_V', label: 'Vertical Burst' },
-					{ id: 'VERTICAL_GRADIENT', label: 'Vertical Gradient' },
-					{ id: 'HORIZONTAL_GRADIENT', label: 'Horzontal Gradient' },
-					{ id: 'CROSSHATCH', label: 'Crosshatch' },
-					{ id: 'CHECKERBOARD', label: 'Checkerboard' },
-					{ id: 'MOVING', label: 'Moving Lines' },
-					{ id: 'ID', label: 'ID' },
-				],
-				default: 'NO_PATTERN',
-				isVisible: (options) => {
-					return options.group === 'inputList'
-				},
-			},
-			{
-				id: 'outputListPat',
-				type: 'dropdown',
-				label: 'Pattern',
-				choices: [
-					{ id: 'NO_PATTERN', label: 'Off' },
-					{ id: 'COLOR', label: 'Solid Color' },
-					{ id: 'VERTICAL_GREY_SCALE', label: 'Vertical Greyscale' },
-					{ id: 'HORIZONTAL_GREY_SCALE', label: 'Horizontal Greyscale' },
-					{ id: 'HORIZONTAL_GREY_SCALE_2', label: 'Horizontal Greysteps' },
-					{ id: 'VERTICAL_COLOR_BAR', label: 'Vertical Colorbars' },
-					{ id: 'HORIZONTAL_COLOR_BAR', label: 'Horizontal Colorbars' },
-					{ id: 'GRID_16_16', label: 'Grid 16x16' },
-					{ id: 'GRID_32_32', label: 'Grid 32x32' },
-					{ id: 'GRID_CUSTOM', label: 'Grid Custom' },
-					{ id: 'SMPTE', label: 'SMPTE' },
-					{ id: 'BURST_H', label: 'Horizontal Burst' },
-					{ id: 'BURST_V', label: 'Vertical Burst' },
-					{ id: 'VERTICAL_GRADIENT', label: 'Vertical Gradient' },
-					{ id: 'HORIZONTAL_GRADIENT', label: 'Horzontal Gradient' },
-					{ id: 'CROSSHATCH', label: 'Crosshatch' },
-					{ id: 'CHECKERBOARD', label: 'Checkerboard' },
-					{ id: 'MOVING', label: 'Moving Lines' },
-					{ id: 'ID', label: 'ID' },
-					{ id: 'SOFTEDGE', label: 'Softedge' },
-				],
-				default: 'NO_PATTERN',
-				isVisible: (options) => {
-					return options.group === 'outputList'
-				},
-			},
-	)
-
-	if (state.platform === 'midra') deviceTestpatternsOptions.push(
+	const deviceTestpatternsOptions = [
 		{
 			id: 'group',
 			type: 'dropdown',
@@ -3211,8 +2494,9 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			isVisible: (options) => {
 				return options.group === 'outputList'
 			},
-		},
-	)
+		}
+	]
+
 	actions['deviceTestpatterns'] = {
 		name: 'Set Testpattern',
 		options: deviceTestpatternsOptions,
@@ -3471,18 +2755,6 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 	 * MARK: Device Power
 	 */
 	type DevicePower = {action : string}
-	const devicePowerChoices: DropdownChoice[] = []
-	if (state.platform.startsWith('livepremier')) devicePowerChoices.push(
-		{ id: 'on', label: 'Switch on (Wake on LAN)' },
-	)
-	if (state.platform === 'midra') devicePowerChoices.push(
-		{ id: 'wake', label: 'Wake up from Standby' },
-		{ id: 'standby', label: 'Switch to Standby' },
-	)
-	devicePowerChoices.push(
-		{ id: 'off', label: 'Switch to Power off' },
-		{ id: 'reboot', label: 'Reboot' },
-	)
 	actions['devicePower'] = {
 		name: 'Device Power',
 		options: [
@@ -3490,40 +2762,30 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				id: 'action',
 				type: 'dropdown',
 				label: 'Power',
-				choices: devicePowerChoices,
-				default: devicePowerChoices[0].id,
+				choices: [
+					{ id: 'wake', label: 'Wake up from Standby' },
+					{ id: 'standby', label: 'Switch to Standby' },
+					{ id: 'off', label: 'Switch to Power off' },
+					{ id: 'reboot', label: 'Reboot' },
+				],
+				default: 'reboot',
 			},
 		],
 		callback: (action) => {
-			let path = 'device/system/shutdown/cmd/pp/xRequest'
-			if (state.platform === 'midra') path = 'device/system/shutdown/standby/control/pp/xRequest'
+			const path = 'device/system/shutdown/standby/control/pp/xRequest'
 
-			if (action.options.action === 'on') {
-				const mac = instance.config.macaddress.split(/[,:-_.\s]/).join('')
-				connection.wake(mac)
-				connection.resetReconnectInterval()
-			}
-			if (action.options.action === 'wake' && state.platform === 'midra') {
+			if (action.options.action === 'wake' || action.options.action === 'on') {
 				connection.restPOST(instance.config.deviceaddr + '/api/tpp/v1/system/wakeup', '')
 				connection.resetReconnectInterval()
 			}
-			if (action.options.action === 'standby' && state.platform === 'midra') {
+			if (action.options.action === 'standby') {
 				connection.sendWSmessage(path, 'STANDBY')
 				instance.updateStatus(InstanceStatus.Ok, 'Standby')
 			}
-			if (action.options.action === 'off' && state.platform.startsWith('livepremier')) {
-				// device.sendWSmessage(path + 'pp/wakeOnLan', true)
-				// device.sendWSmessage(path + 'pp/xRequest', false)
-				// device.sendWSmessage(path + 'pp/xRequest', true)
-				connection.sendWSmessage(path, 'SHUTDOWN')
-			}
-			if (action.options.action === 'off' && state.platform === 'midra') {
+			if (action.options.action === 'off') {
 				connection.sendWSmessage(path, 'SWITCH_OFF')
 			}
-			if (action.options.action === 'reboot' && state.platform.startsWith('livepremier')) {
-				connection.sendWSmessage(path, 'REBOOT')
-			}
-			if (action.options.action === 'reboot' && state.platform === 'midra') {
+			if (action.options.action === 'reboot') {
 				connection.sendWSmessage('device/system/shutdown/pp/xReboot', false)
 				connection.sendWSmessage('device/system/shutdown/pp/xReboot', true)
 			}

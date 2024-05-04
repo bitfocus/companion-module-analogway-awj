@@ -11,10 +11,12 @@ import { AWJconnection } from './connection.js'
 import { AWJdevice } from './awjdevice/awjdevice.js'
 import { Config, GetConfigFields } from './config.js'
 import { initVariables } from './variables.js'
-import { checkSubscriptions, initSubscriptions, Subscription } from './awjdevice/subscriptions.js'
+import { checkSubscriptions } from './awjdevice/subscriptions.js'
+import { Subscription } from '../types/Subscription.js'
 import { UpgradeScripts } from './upgrades.js'
 import { updateMappings } from './mappings.js'
 import { StateMachine } from './state.js'
+import { AWJLivePremier } from './livepremier/awjlivepremier.js'
 
 export const regexAWJpath = '^DeviceObject(?:\\/(@items|@props|\\$?[A-Za-z0-9_-]+))+$'
 
@@ -22,10 +24,11 @@ export const regexAWJpath = '^DeviceObject(?:\\/(@items|@props|\\$?[A-Za-z0-9_-]
  * This the general setup of this module:
  * 1. When module is instanciated, init is called
  * 2. in init an AWJconnection is created and AWJconnection.connect is called
- * 3. AWJconnection tries to connect and if it succeeds it calls AWJinstance.handleApiStateResponse
- * 4. in AWJinstance.handleApiStateResponse the decision is made which device type we have and AWJinstance.createDevice is called along with the initial state
- * 5. AWJinstance.createDevice instanciates a new AWJdevice and connects the callback of the connection to the device
- * 6. the device will setup all Companion stuff at creation and get incoming messages from the connection, state is stored in the AWJdevice instance
+ * 3. AWJconnection tries to connect to webserver and if it succeeds it calls AWJinstance.createDevice  
+ *    the created device will hold the internal state and has all the methods to manipulate the state, get the right data out of state and to provide actions, feedbacks and so on
+ * 4. AWJconnection opens the websocket connection to the webserver and hooks all incoming messges to be applied to the internal state
+ * 5. AWJconnection downloads the state object from the API and calls AWJinstance.handleApiStateResponse with it
+ * 6. handleApiStateResponse will call initSubscriptions, which sets up a lot of feedbacks, choices, variables, presets...
  * Done
  * 
  * This module uses several classes:
@@ -107,7 +110,22 @@ export class AWJinstance extends InstanceBase<Config> {
 	 */
 	createDevice(platform: string, initialState?: {[name: string]: any}): AWJdevice {
 		switch (platform) {
+			case 'livepremier1':
+				this.device = new AWJLivePremier(this, initialState)
+				break
+			case 'livepremier2':
+				this.device = new AWJLivePremier(this, initialState)
+				break
+			case 'livepremier3':
+				this.device = new AWJLivePremier(this, initialState)
+				break
+			case 'livepremier4':
+				this.device = new AWJdevice(this, initialState)
+				break
 			case 'livepremier':
+				this.device = new AWJLivePremier(this, initialState)
+				break
+			case 'midra':
 				this.device = new AWJdevice(this, initialState)
 				break
 		
@@ -119,11 +137,6 @@ export class AWJinstance extends InstanceBase<Config> {
 			updateMappings(this) // TODO: remove
 		} catch (error) {
 			this.log('error', 'update Mappings failed ' + error) 
-		}
-		try {
-			initSubscriptions(this) // TODO: move into device
-		} catch (error) {
-			this.log('error', 'init Subscriptions failed ' + error) 
 		}
 		this.connection.onMessage((data) => {
 			if (
@@ -212,6 +225,12 @@ export class AWJinstance extends InstanceBase<Config> {
 					this.updateStatus(InstanceStatus.ConnectionFailure)
 					this.log('error', `Connected to an AWJ device of type '${device}', firmware '${fwVersion}'. Device type or firmware can not be determined or is not compatible with this module`)
 					return undefined
+				}
+
+				try {
+					this.device.initSubscriptions()
+				} catch (error) {
+					this.log('error', 'init Subscriptions failed ' + error) 
 				}
 
 				if (this.config.sync === true && this.connection.hadError === false) {
