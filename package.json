@@ -40,7 +40,7 @@
 		"dgram": "^1.0.1",
 		"ky": "^1.2.3",
 		"urijs": "^1.19.11",
-		"ws": "^8.8.1"
+		"ws": "^8.17.1"
 	},
 	"devDependencies": {
 		"@companion-module/tools": "^1.1.0",
