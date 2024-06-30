@@ -1,16 +1,16 @@
 import {AWJinstance} from '../index.js'
 import { Subscription } from '../../types/Subscription.js'
-export const maxScreens = 24
-export const maxAuxScreens = 96
-export const maxInputs = 256
+import { InstanceStatus } from '@companion-module/base'
+import Constants from './constants.js'
 
 /**
  * Class for managing and checking of the subscriptions.
  * A subscription is data of the device associated with a json path in the device model which we are interested in and need to react on changes.
  */
-export class Subscriptions {
+export default class Subscriptions {
 	private instance: AWJinstance
 	private subscriptions: Record<string, Subscription>
+	private constants: typeof Constants
 
 	/**
 	 * This member denotes the names of the subscriptions which are to be checked.
@@ -48,7 +48,6 @@ export class Subscriptions {
 		'layerCountChange',
 		'memoryColorChange',
 		// LivePremier
-		'liveselection',
 		'presetToggle',
 		'screenPreset',
 		'screenMemoryChange',
@@ -58,36 +57,71 @@ export class Subscriptions {
 		'inputLabel',
 		'shutdown',
 		// Midra
-		'presetToggle',
-		'screenPreset',
-		'backgroundSet',
-		'screenMemoryChange',
-		'screenMemoryLabel',
-		'screenMemoryModifiedChange',
-		'auxMemoryLabel',
-		'plugChange',
-		'inputLabel',
-		'auxMemoriesChange',
-		'liveLayerFreeze',
-		'backgroundLayerFreeze',
-		'screenFreeze',
-		'streamStatus',
-		'standby',
-		'shutdown',
+		// 'presetToggle',
+		// 'screenPreset',
+		// 'backgroundSet',
+		// 'screenMemoryChange',
+		// 'screenMemoryLabel',
+		// 'screenMemoryModifiedChange',
+		// 'auxMemoryLabel',
+		// 'plugChange',
+		// 'inputLabel',
+		// 'auxMemoriesChange',
+		// 'liveLayerFreeze',
+		// 'backgroundLayerFreeze',
+		// 'screenFreeze',
+		// 'streamStatus',
+		// 'standby',
+		// 'shutdown',
 	]
 
 	constructor(instance: AWJinstance) {
 		this.instance = instance
+		this.constants = this.instance.constants
 
 		this.subscriptions = Object.fromEntries(
             this.subscriptionsToUse.map((key) => [key, this[key]])
         )
 	}
-// }
-// export const commonSubscriptions: Record<string, Subscription> = {
+
+	/**
+	 * The names of the currently active subscriptions
+	 */
+	get subscriptionList() {
+		return Object.keys(this.subscriptions)
+	}
+
+	/**
+	 * Adds one or more subscriptions to the active subscriptions
+	 * @param subscriptions Object containing one or more subscriptions 
+	 */
+	public addSubscriptions(subscriptions: Record<string, Subscription>): void {
+		Object.keys(subscriptions).forEach(subscription => {
+			this.subscriptions[subscription] = subscriptions[subscription]
+		})
+	}
+
+	/**
+	 * Removes the subscription with the given ID  from the active subscriptions
+	 * @param subscriptionId ID of the subscription to remove
+	 */
+	public removeSubscription(subscriptionId: string): void {
+		if (this.subscriptions[subscriptionId]) delete this.subscriptions[subscriptionId]
+	}
+
+	/**
+	 * Get a specific subscription definition
+	 * @param subscription 
+	 * @returns 
+	 */
+	subscription(subscription: string) {
+		return this.subscriptions[subscription]
+	}
+
+	// export const commonSubscriptions: Record<string, Subscription> = {
 	get syncselection():Subscription {
 		return {
-			pat: 'system/network/websocketServer/clients',
+			pat: this.constants.subSyncselectionPat,
 			fbk: 'syncselection',
 		}
 	}
@@ -131,10 +165,10 @@ export class Subscriptions {
 		return {
 			pat: '/live/screens/presetModeSelection/presetMode',
 			fbk: ['livePresetSelection', 'remoteLayerSelection'],
-			fun: (instance, path, _value) => {
-				if (instance.device.syncSelection) {
-					instance.setVariableValues({
-						selectedPreset: instance.device.getUnmapped(path) === 'PREVIEW' ? 'PVW' : 'PGM'
+			fun: (path, _value) => {
+				if (this.instance.state.syncSelection) {
+					this.instance.setVariableValues({
+						selectedPreset: this.instance.state.getUnmapped(path) === 'PREVIEW' ? 'PVW' : 'PGM'
 					})
 				}
 				return false
@@ -154,10 +188,10 @@ export class Subscriptions {
 			pat: 'DEVICE/device/timerList/items/TIMER_(\\d)/status/pp/state',
 			fbk: 'timerState',
 			ini: ['1', '2', '3', '4'],
-			fun: (instance, path, _value) => {
+			fun: (path, _value) => {
 				if (!path) return false
 				const timer = path.toString().match(/(?<=TIMER_)(\d)\//) || ['0']
-				instance.setVariableValues({['timer' + timer[0] + '_status']:  instance.device.getUnmapped(path)})
+				this.instance.setVariableValues({['timer' + timer[0] + '_status']:  this.instance.state.getUnmapped(path)})
 				return false
 			},
 		}
@@ -180,41 +214,41 @@ export class Subscriptions {
 	get screenTransitionTime():Subscription {
 		return {
 			pat: 'DEVICE/device/screenGroupList/items/((?:S|A)\\d{1,3})/control/pp/take(?:Up|Down)?Time',
-			ini: (instance: AWJinstance):string[] => {
+			ini: ():string[] => {
 				let presets: string[] = []
-				if (instance.device.platform.startsWith('livepremier')) presets = ['takeUpTime', 'takeDownTime']
-				if (instance.device.platform === 'midra') presets = ['takeTime']
+				if (this.instance.state.platform.startsWith('livepremier')) presets = ['takeUpTime', 'takeDownTime']
+				if (this.instance.state.platform === 'midra') presets = ['takeTime']
 				const screens: string[] = [
-					...Array.from({ length: maxScreens }, (_, i) => 'S' + (i + 1).toString()),
-					...Array.from({ length: maxAuxScreens }, (_, i) => 'A' + (i + 1).toString()),
+					...Array.from({ length: this.constants.maxScreens }, (_, i) => 'S' + (i + 1).toString()),
+					...Array.from({ length: this.constants.maxAuxScreens }, (_, i) => 'A' + (i + 1).toString()),
 					]
 				const paths =  screens.reduce((cb: string[], screen) => cb.concat(presets.map((preset) => {
 					return 'DEVICE/device/screenGroupList/items/'+ screen +'/control/pp/'+ preset
 				})), [])
 				return paths
 			},
-			fun: (instance, path, _value) => {
+			fun: (path, _value) => {
 				if (!path) return false
 				const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
 				const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
 				if (pres === 'takeUpTime') {
-					const presname = 'B' === instance.device.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
-					instance.setVariableValues({
-						['screen' + screen + 'time' + presname]: instance.deciSceondsToString(instance.device.get(path))
+					const presname = 'B' === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
+					this.instance.setVariableValues({
+						['screen' + screen + 'time' + presname]: this.instance.deciSceondsToString(this.instance.state.get(path))
 					})
 				}
 				if (pres === 'takeDownTime') {
-					const presname = 'A' === instance.device.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
-					instance.setVariableValues({
-						['screen' + screen + 'time' + presname]: instance.deciSceondsToString(instance.device.get(path))
+					const presname = 'A' === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
+					this.instance.setVariableValues({
+						['screen' + screen + 'time' + presname]: this.instance.deciSceondsToString(this.instance.state.get(path))
 					})
 				}
 				if (pres === 'takeTime') {
-					instance.setVariableValues({
-						['screen' + screen + 'timePVW']: instance.deciSceondsToString(instance.device.get(path))
+					this.instance.setVariableValues({
+						['screen' + screen + 'timePVW']: this.instance.deciSceondsToString(this.instance.state.get(path))
 					})
-					instance.setVariableValues({
-						['screen' + screen + 'timePGM']: instance.deciSceondsToString(instance.device.get(path))
+					this.instance.setVariableValues({
+						['screen' + screen + 'timePGM']: this.instance.deciSceondsToString(this.instance.state.get(path))
 					})
 				}
 				
@@ -228,14 +262,15 @@ export class Subscriptions {
 		return {
 			pat: 'DEVICE/device/presetBank/bankList/items/(\\d+)/control/pp/label',
 			ini: Array.from({ length: 999 }, (_, i) => (i + 1).toString()),
-			fun: (instance, path, _value) => {
+			fun: (path, _value) => {
 				if (!path) return false
 				const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-				const label = memory.toString() !== '0' ? instance.device.get(path) : ''
-				instance.setVariableValues({['screenMemory' + memory + 'label']:  label})
+				const label = memory.toString() !== '0' ? this.instance.state.get(path) : ''
+				this.instance.setVariableValues({['screenMemory' + memory + 'label']:  label})
+				const self = this
 				const pathTo = {
 					get id() {
-						if (instance.device.platform === 'midra') {
+						if (self.instance.state.platform === 'midra') {
 							return ['status','pp','memoryId']
 						} else {
 							return ['presetId','status','pp','id']
@@ -245,11 +280,11 @@ export class Subscriptions {
 					midra: {id: ['status','pp','memoryId']}
 				}
 				let screens: string[] = []
-				if (instance.device.platform.startsWith('livepremier')) screens = instance.device.getChosenScreenAuxes('all')
-				if (instance.device.platform === 'midra') screens = instance.device.getChosenScreens('all')
+				if (this.instance.state.platform.startsWith('livepremier')) screens = this.instance.choices.getChosenScreenAuxes('all')
+				if (this.instance.state.platform === 'midra') screens = this.instance.choices.getChosenScreens('all')
 
 				for (const screen of screens) {
-					const pgmmem = instance.device.get([
+					const pgmmem = this.instance.state.get([
 						'DEVICE',
 						'device',
 						'screenList',
@@ -257,13 +292,13 @@ export class Subscriptions {
 						screen,
 						'presetList',
 						'items',
-						instance.device.getUnmapped('LOCAL/screens/' + screen + '/pgm/preset'),
+						this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pgm/preset'),
 						...pathTo.id
 					])
 					if (memory == pgmmem) {
-						instance.setVariableValues({['screen' + screen + 'memoryLabelPGM']:  label})
+						this.instance.setVariableValues({['screen' + screen + 'memoryLabelPGM']:  label})
 					}
-					const pvwmem = instance.device.get([
+					const pvwmem = this.instance.state.get([
 						'DEVICE',
 						'device',
 						'screenList',
@@ -271,11 +306,11 @@ export class Subscriptions {
 						screen,
 						'presetList',
 						'items',
-						instance.device.getUnmapped('LOCAL/screens/' + screen + '/pvw/preset'),
+						this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pvw/preset'),
 						...pathTo.id
 					])
 					if (memory == pvwmem) {
-						instance.setVariableValues({['screen' + screen + 'memoryLabelPVW']:  label})
+						this.instance.setVariableValues({['screen' + screen + 'memoryLabelPVW']:  label})
 					}
 				}
 				return true
@@ -294,10 +329,10 @@ export class Subscriptions {
 		return {
 			pat: 'DEVICE/device/masterPresetBank/bankList/items/(\\d+)/control/pp/label',
 			ini: Array.from({ length: 499 }, (_, i) => (i + 1).toString()),
-			fun: (instance, path, _value) => {
+			fun: (path, _value) => {
 				if (!path) return false
 				const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-				instance.setVariableValues({['masterMemory' + memory + 'label']:  instance.device.get(path)})
+				this.instance.setVariableValues({['masterMemory' + memory + 'label']:  this.instance.state.get(path)})
 				return true
 			},
 		}
@@ -307,10 +342,10 @@ export class Subscriptions {
 		return {
 			pat: 'DEVICE/device/monitoringBank/bankList/items/(\\d+)/control/pp/label',
 			ini: Array.from({ length: 49 }, (_, i) => (i + 1).toString()),
-			fun: (instance, path, _value) => {
+			fun: (path, _value) => {
 				if (!path) return false
 				const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-				instance.setVariableValues({['multiviewerMemory' + memory + 'label']:  instance.device.get(path)})
+				this.instance.setVariableValues({['multiviewerMemory' + memory + 'label']:  this.instance.state.get(path)})
 				return true
 			},
 		}
@@ -320,10 +355,10 @@ export class Subscriptions {
 		return {
 			pat: 'DEVICE/device/layerBank/bankList/items/(\\d+)/control/pp/label',
 			ini: Array.from({ length: 49 }, (_, i) => (i + 1).toString()),
-			fun: (instance, path, _value) => {
+			fun: (path, _value) => {
 				if (!path) return false
 				const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-				instance.setVariableValues({['layerMemory' + memory + 'label']:  instance.device.get(path)})
+				this.instance.setVariableValues({['layerMemory' + memory + 'label']:  this.instance.state.get(path)})
 				return true
 			},
 		}
@@ -333,10 +368,10 @@ export class Subscriptions {
 		return {
 			pat: 'DEVICE/device/stillList/items/(\\d+)/control/pp/label',
 			ini: Array.from({ length: 47 }, (_, i) => (i + 1).toString()),
-			fun: (instance, path, _value) => {
+			fun: (path, _value) => {
 				if (!path) return false
 				const input = Array.isArray(path) ? path[4] : path.split('/')[4]
-				instance.setVariableValues({['STILL_' + input + 'label']:  instance.device.get(path)})
+				this.instance.setVariableValues({['STILL_' + input + 'label']:  this.instance.state.get(path)})
 				return true
 			},
 		}
@@ -345,7 +380,7 @@ export class Subscriptions {
 	get stillValid():Subscription {
 		return {
 			pat: 'DEVICE/device/stillList/items/(\\d+)/status/pp/isValid',
-			fun: (_instance: AWJinstance, _path?: string | string[], _value?: string | string[] | number | boolean): boolean => {
+			fun: (_path?: string | string[], _value?: string | string[] | number | boolean): boolean => {
 				return true
 			},
 		}
@@ -354,12 +389,12 @@ export class Subscriptions {
 	get screenLabel():Subscription {
 		return {
 			pat: 'DEVICE/device/screenList/items/S(\\d{1,2})/control/pp/label',
-			ini: Array.from({ length: maxScreens }, (_, i) => (i + 1).toString()),
-			fun: (instance, path, _value) => {
+			ini: Array.from({ length: this.constants.maxScreens }, (_, i) => (i + 1).toString()),
+			fun: (path, _value) => {
 				if (!path) return false
 				const input = Array.isArray(path) ? path[4] : path.split('/')[4]
-				instance.setVariableValues({[input.replace('S', 'SCREEN_') + 'label']:  instance.device.get(path)})
-				instance.setVariableValues({['screen' + input + 'label']:  instance.device.get(path)})
+				this.instance.setVariableValues({[input.replace('S', 'SCREEN_') + 'label']:  this.instance.state.get(path)})
+				this.instance.setVariableValues({['screen' + input + 'label']:  this.instance.state.get(path)})
 				return true
 			},
 		}
@@ -368,12 +403,12 @@ export class Subscriptions {
 	get auxscreenLabel():Subscription {
 		return {
 			pat: 'DEVICE/device/screenList/items/A(\\d{1,2})/control/pp/label',
-			ini: Array.from({ length: maxAuxScreens }, (_, i) => (i + 1).toString()),
-			fun: (instance, path, _value) => {
+			ini: Array.from({ length: this.constants.maxAuxScreens }, (_, i) => (i + 1).toString()),
+			fun: (path, _value) => {
 				if (!path) return false
 				const input = Array.isArray(path) ? path[4] : path.split('/')[4]
-				instance.setVariableValues({[input.replace('A', 'AUXSCREEN_') + 'label']:  instance.device.get(path)})
-				instance.setVariableValues({['screen' + input + 'label']:  instance.device.get(path)})
+				this.instance.setVariableValues({[input.replace('A', 'AUXSCREEN_') + 'label']:  this.instance.state.get(path)})
+				this.instance.setVariableValues({['screen' + input + 'label']:  this.instance.state.get(path)})
 				return true
 			},
 		}
@@ -382,7 +417,7 @@ export class Subscriptions {
 	get screenEnabled():Subscription {
 		return {
 			pat: 'device/screenList/items/((?:S|A)\\d{1,3})/status/pp/mode',
-			fun: (_instance: AWJinstance, _path?: string | string[], _value?: string | string[] | number | boolean): boolean => {
+			fun: (_path?: string | string[], _value?: string | string[] | number | boolean): boolean => {
 				return true
 			},
 		}
@@ -391,7 +426,7 @@ export class Subscriptions {
 	get liveInputsChange():Subscription {
 		return {
 			pat: 'DEVICE/device/inputList/items/IN_(\\d{1,2})/status/pp/isEnabled',
-			fun: (_instance: AWJinstance, _path?: string | string[], _value?: string | string[] | number | boolean): boolean => {
+			fun: (_path?: string | string[], _value?: string | string[] | number | boolean): boolean => {
 				return true
 			},
 		}
@@ -400,7 +435,7 @@ export class Subscriptions {
 	get masterMemoriesChange():Subscription {
 		return {
 			pat: 'DEVICE/device/masterPresetBank/bankList/items/(\\d{1,3})/status/pp/isValid',
-			fun: (_instance: AWJinstance, _path?: string | string[], _value?: string | string[] | number | boolean): boolean => {
+			fun: (_path?: string | string[], _value?: string | string[] | number | boolean): boolean => {
 				return true
 			},
 		}
@@ -409,7 +444,7 @@ export class Subscriptions {
 	get screenMemoriesChange():Subscription {
 		return {
 			pat: 'DEVICE/device/presetBank/bankList/items/(\\d{1,4})/status/pp/isValid',
-			fun: (_instance: AWJinstance, _path?: string | string[], _value?: string | string[] | number | boolean): boolean => {
+			fun: (_path?: string | string[], _value?: string | string[] | number | boolean): boolean => {
 				return true
 			},
 		}
@@ -418,7 +453,7 @@ export class Subscriptions {
 	get layerMemoriesChange():Subscription {
 		return {
 			pat: 'DEVICE/device/layerBank/bankList/items/(\\d{1,3})/status/pp/isValid',
-			fun: (_instance: AWJinstance, _path?: string | string[], _value?: string | string[] | number | boolean): boolean => {
+			fun: (_path?: string | string[], _value?: string | string[] | number | boolean): boolean => {
 				return true
 			},
 		}
@@ -427,7 +462,7 @@ export class Subscriptions {
 	get multiviewerMemoriesChange():Subscription {
 		return {
 			pat: 'DEVICE/device/monitoringBank/bankList/items/(\\d{1,3})/status/pp/isValid',
-			fun: (_instance: AWJinstance, _path?: string | string[], _value?: string | string[] | number | boolean): boolean => {
+			fun: (_path?: string | string[], _value?: string | string[] | number | boolean): boolean => {
 				return true
 			},
 		}
@@ -436,7 +471,7 @@ export class Subscriptions {
 	get layerCountChange():Subscription {
 		return {
 			pat: 'DEVICE/device/screenList/items/((?:S|A)\\d{1,2})/status/pp/layerCount',
-			fun: (_instance: AWJinstance, _path?: string | string[], _value?: string | string[] | number | boolean): boolean => {
+			fun: (_path?: string | string[], _value?: string | string[] | number | boolean): boolean => {
 				return true
 			},
 		}
@@ -445,7 +480,7 @@ export class Subscriptions {
 	get memoryColorChange():Subscription {
 		return {
 			pat: 'banks/(\\w+)/items/(\\d+)/color',
-			fun: (_instance: AWJinstance, _path?: string | string[], _value?: string | string[] | number | boolean): boolean => {
+			fun: (_path?: string | string[], _value?: string | string[] | number | boolean): boolean => {
 				return true
 			},
 		}
@@ -453,12 +488,13 @@ export class Subscriptions {
 
 	//}
 	//export const livepremierSubscriptions: Record<string, Subscription> = {
-	get liveselection():Subscription {
-		return {
-			pat: 'live/screens/screenAuxSelection',
-			fbk: 'liveScreenSelection',
-		}
-	}
+
+	// get liveselection():Subscription {
+	// 	return {
+	// 		pat: 'live/screens/screenAuxSelection',
+	// 		fbk: 'liveScreenSelection',
+	// 	}
+	// }
 
 	get presetToggle():Subscription {
 		return {
@@ -472,12 +508,12 @@ export class Subscriptions {
 			pat: 'DEVICE/device/screenGroupList/items/(\\w+?)/status/pp/transition',
 			fbk: 'deviceTake',
 			ini: [
-				...Array.from({ length: maxScreens }, (_, i) => 'S' + (i + 1).toString()),
-				...Array.from({ length: maxAuxScreens }, (_, i) => 'A' + (i + 1).toString()),
+				...Array.from({ length: this.constants.maxScreens }, (_, i) => 'S' + (i + 1).toString()),
+				...Array.from({ length: this.constants.maxAuxScreens }, (_, i) => 'A' + (i + 1).toString()),
 			],
-			fun: (instance, path, _value) => {
+			fun: (path, _value) => {
 				const setMemoryVariables = (screen: string, preset: string, variableSuffix: string): void => {
-					const mem = instance.device.get([
+					const mem = this.instance.state.get([
 						'DEVICE',
 						'device',
 						'screenList',
@@ -491,7 +527,7 @@ export class Subscriptions {
 						'pp',
 						'id',
 					]);
-					const unmodified = instance.device.get([
+					const unmodified = this.instance.state.get([
 						'DEVICE',
 						'device',
 						'screenList',
@@ -505,11 +541,11 @@ export class Subscriptions {
 						'pp',
 						'isNotModified',
 					]);
-					instance.setVariableValues({ ['screen' + screen + 'memory' + variableSuffix]: mem ? 'M' + mem : '' });
-					instance.setVariableValues({ ['screen' + screen + 'memoryModified' + variableSuffix]: mem && !unmodified ? '*' : '' });
-					instance.setVariableValues({
+					this.instance.setVariableValues({ ['screen' + screen + 'memory' + variableSuffix]: mem ? 'M' + mem : '' });
+					this.instance.setVariableValues({ ['screen' + screen + 'memoryModified' + variableSuffix]: mem && !unmodified ? '*' : '' });
+					this.instance.setVariableValues({
 						['screen' + screen + 'memoryLabel' + variableSuffix]: mem
-							? instance.device.getUnmapped(['DEVICE', 'device', 'presetBank', 'bankList', 'items', mem, 'control', 'pp', 'label'])
+							? this.instance.state.getUnmapped(['DEVICE', 'device', 'presetBank', 'bankList', 'items', mem, 'control', 'pp', 'label'])
 							: ''
 					});
 				};
@@ -521,22 +557,22 @@ export class Subscriptions {
 				} else {
 					return false;
 				}
-				const val = instance.device.get(patharr);
+				const val = this.instance.state.get(patharr);
 				const screen = patharr[4];
 				let program = '', preview = '';
 				if (val === 'AT_UP') {
 					program = 'B';
 					preview = 'A';
-					instance.device.set(`LOCAL/screens/${screen}/pgm/preset`, program);
-					instance.device.set(`LOCAL/screens/${screen}/pvw/preset`, preview);
-					instance.setVariableValues({
-						['screen' + screen + 'timePGM']: instance.deciSceondsToString(
-							instance.device.get(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
+					this.instance.state.set(`LOCAL/screens/${screen}/pgm/preset`, program);
+					this.instance.state.set(`LOCAL/screens/${screen}/pvw/preset`, preview);
+					this.instance.setVariableValues({
+						['screen' + screen + 'timePGM']: this.instance.deciSceondsToString(
+							this.instance.state.get(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
 						)
 					});
-					instance.setVariableValues({
-						['screen' + screen + 'timePVW']: instance.deciSceondsToString(
-							instance.device.get([
+					this.instance.setVariableValues({
+						['screen' + screen + 'timePVW']: this.instance.deciSceondsToString(
+							this.instance.state.get([
 								'DEVICE',
 								'device',
 								'screenGroupList',
@@ -554,11 +590,11 @@ export class Subscriptions {
 				if (val === 'AT_DOWN') {
 					program = 'A';
 					preview = 'B';
-					instance.device.set(`LOCAL/screens/${screen}/pgm/preset`, program);
-					instance.device.set(`LOCAL/screens/${screen}/pvw/preset`, preview);
-					instance.setVariableValues({
-						['screen' + screen + 'timePGM']: instance.deciSceondsToString(
-							instance.device.get([
+					this.instance.state.set(`LOCAL/screens/${screen}/pgm/preset`, program);
+					this.instance.state.set(`LOCAL/screens/${screen}/pvw/preset`, preview);
+					this.instance.setVariableValues({
+						['screen' + screen + 'timePGM']: this.instance.deciSceondsToString(
+							this.instance.state.get([
 								'DEVICE',
 								'device',
 								'screenGroupList',
@@ -570,15 +606,15 @@ export class Subscriptions {
 							])
 						)
 					});
-					instance.setVariableValues({
-						['screen' + screen + 'timePVW']: instance.deciSceondsToString(
-							instance.device.get(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
+					this.instance.setVariableValues({
+						['screen' + screen + 'timePVW']: this.instance.deciSceondsToString(
+							this.instance.state.get(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
 						)
 					});
 					setMemoryVariables(screen, program, 'PGM');
 					setMemoryVariables(screen, preview, 'PVW');
 				}
-				instance.checkFeedbacks('deviceSourceTally', 'deviceScreenMemory', 'deviceTake');
+				this.instance.checkFeedbacks('deviceSourceTally', 'deviceScreenMemory', 'deviceTake');
 				return false;
 			},
 		}
@@ -588,22 +624,22 @@ export class Subscriptions {
 		return {
 			pat: 'DEVICE/device/screenList/items/(S|A)\\d{1,3}/presetList/items/(A|B)/presetId/status/pp/id',
 			fbk: 'deviceScreenMemory',
-			fun: (instance, path, _value) => {
+			fun: (path, _value) => {
 				if (!path) return false;
 				const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
 				const pres = Array.isArray(path) ? path[7] : path.split('/')[7];
-				const presname = pres === instance.device.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
-				const memorystr = instance.device.get(path).toString() !== '0' ? instance.device.get(path) : '';
-				instance.setVariableValues({ ['screen' + screen + 'memory' + presname]: memorystr });
-				instance.setVariableValues({
-					['screen' + screen + 'memoryLabel' + presname]: instance.device.get(path).toString() !== '0'
-						? instance.device.getUnmapped([
+				const presname = pres === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
+				const memorystr = this.instance.state.get(path).toString() !== '0' ? this.instance.state.get(path) : '';
+				this.instance.setVariableValues({ ['screen' + screen + 'memory' + presname]: memorystr });
+				this.instance.setVariableValues({
+					['screen' + screen + 'memoryLabel' + presname]: this.instance.state.get(path).toString() !== '0'
+						? this.instance.state.getUnmapped([
 							'DEVICE',
 							'device',
 							'presetBank',
 							'bankList',
 							'items',
-							instance.device.get(path).toString(),
+							this.instance.state.get(path).toString(),
 							'control',
 							'pp',
 							'label',
@@ -619,15 +655,15 @@ export class Subscriptions {
 		return {
 			pat: 'DEVICE/device/screenList/items/((?:S|A)\\d{1,3})/presetList/items/(A|B)/presetId/status/pp/isNotModified',
 			fbk: 'deviceScreenMemory',
-			fun: (instance, path, _value) => {
+			fun: (path, _value) => {
 				if (!path) return false;
 				const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
 				const pres = Array.isArray(path) ? path[7] : path.split('/')[7];
-				const presname = pres === instance.device.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
-				instance.setVariableValues({
-					['screen' + screen + 'memoryModified' + presname]: instance.device.get(
+				const presname = pres === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
+				this.instance.setVariableValues({
+					['screen' + screen + 'memoryModified' + presname]: this.instance.state.get(
 						'DEVICE/device/screenList/items/' + screen + '/presetList/items/' + pres + '/presetId/status/pp/id'
-					) && !instance.device.get(path)
+					) && !this.instance.state.get(path)
 						? '*'
 						: ''
 				});
@@ -636,97 +672,97 @@ export class Subscriptions {
 		}
 	}
 
-	get screenTransitionTime():Subscription {
-		return {
-			pat: 'DEVICE/device/screenGroupList/items/((?:S|A)\\d{1,3})/control/pp/take(?:Up|Down)?Time',
-			ini: (_instance: AWJinstance):string[] => {
-				const presets = ['takeUpTime', 'takeDownTime']
-				const screens: string[] = [
-					...Array.from({ length: maxScreens }, (_, i) => 'S' + (i + 1).toString()),
-					...Array.from({ length: maxAuxScreens }, (_, i) => 'A' + (i + 1).toString()),
-					]
-				const paths =  screens.reduce((cb: string[], screen) => cb.concat(presets.map((preset) => {
-					return 'DEVICE/device/screenGroupList/items/'+ screen +'/control/pp/'+ preset
-				})), [])
-				return paths
-			},
-			fun: (instance, path, _value) => {
-				if (!path) return false
-				const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
-				const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
-				if (pres === 'takeUpTime') {
-					const presname = 'B' === instance.device.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
-					instance.setVariableValues({
-						['screen' + screen + 'time' + presname]: instance.deciSceondsToString(instance.device.get(path))
-					})
-				} else
-				if (pres === 'takeDownTime') {
-					const presname = 'A' === instance.device.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
-					instance.setVariableValues({
-						['screen' + screen + 'time' + presname]: instance.deciSceondsToString(instance.device.get(path))
-					})
-				}
+	// get screenTransitionTime():Subscription {
+	// 	return {
+	// 		pat: 'DEVICE/device/screenGroupList/items/((?:S|A)\\d{1,3})/control/pp/take(?:Up|Down)?Time',
+	// 		ini: ():string[] => {
+	// 			const presets = ['takeUpTime', 'takeDownTime']
+	// 			const screens: string[] = [
+	// 				...Array.from({ length: this.constants.maxScreens }, (_, i) => 'S' + (i + 1).toString()),
+	// 				...Array.from({ length: this.constants.maxAuxScreens }, (_, i) => 'A' + (i + 1).toString()),
+	// 				]
+	// 			const paths =  screens.reduce((cb: string[], screen) => cb.concat(presets.map((preset) => {
+	// 				return 'DEVICE/device/screenGroupList/items/'+ screen +'/control/pp/'+ preset
+	// 			})), [])
+	// 			return paths
+	// 		},
+	// 		fun: (path, _value) => {
+	// 			if (!path) return false
+	// 			const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
+	// 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
+	// 			if (pres === 'takeUpTime') {
+	// 				const presname = 'B' === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
+	// 				this.instance.setVariableValues({
+	// 					['screen' + screen + 'time' + presname]: this.instance.deciSceondsToString(this.instance.state.get(path))
+	// 				})
+	// 			} else
+	// 			if (pres === 'takeDownTime') {
+	// 				const presname = 'A' === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
+	// 				this.instance.setVariableValues({
+	// 					['screen' + screen + 'time' + presname]: this.instance.deciSceondsToString(this.instance.state.get(path))
+	// 				})
+	// 			}
 				
-				return false
-			},
-		}
-	}
+	// 			return false
+	// 		},
+	// 	}
+	// }
 
-	get screenMemoryLabel():Subscription {
-		return {
-			pat: 'DEVICE/device/presetBank/bankList/items/(\\d+)/control/pp/label',
-			ini: Array.from({ length: 999 }, (_, i) => (i + 1).toString()),
-			fun: (instance, path, _value) => {
-				if (!path) return false
-				const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-				const label = memory.toString() !== '0' ? instance.device.get(path) : ''
-				const screens = instance.device.getChosenScreenAuxes('all')
+	// get screenMemoryLabel():Subscription {
+	// 	return {
+	// 		pat: 'DEVICE/device/presetBank/bankList/items/(\\d+)/control/pp/label',
+	// 		ini: Array.from({ length: 999 }, (_, i) => (i + 1).toString()),
+	// 		fun: (path, _value) => {
+	// 			if (!path) return false
+	// 			const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
+	// 			const label = memory.toString() !== '0' ? this.instance.state.get(path) : ''
+	// 			const screens = this.instance.choices.getChosenScreenAuxes('all')
 				
-				instance.setVariableValues({['screenMemory' + memory + 'label']:  label})
+	// 			this.instance.setVariableValues({['screenMemory' + memory + 'label']:  label})
 
-				for (const screen of screens) {
-					const pgmmem = instance.device.get([
-						'DEVICE',
-						'device',
-						'screenList',
-						'items',
-						screen,
-						'presetList',
-						'items',
-						instance.device.getUnmapped('LOCAL/screens/' + screen + '/pgm/preset'),
-						'presetId','status','pp','id'
-					])
-					if (memory == pgmmem) {
-						instance.setVariableValues({['screen' + screen + 'memoryLabelPGM']:  label})
-					}
-					const pvwmem = instance.device.get([
-						'DEVICE',
-						'device',
-						'screenList',
-						'items',
-						screen,
-						'presetList',
-						'items',
-						instance.device.getUnmapped('LOCAL/screens/' + screen + '/pvw/preset'),
-						'presetId','status','pp','id'
-					])
-					if (memory == pvwmem) {
-						instance.setVariableValues({['screen' + screen + 'memoryLabelPVW']:  label})
-					}
-				}
-				return true
-			},
-		}
-	}
+	// 			for (const screen of screens) {
+	// 				const pgmmem = this.instance.state.get([
+	// 					'DEVICE',
+	// 					'device',
+	// 					'screenList',
+	// 					'items',
+	// 					screen,
+	// 					'presetList',
+	// 					'items',
+	// 					this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pgm/preset'),
+	// 					'presetId','status','pp','id'
+	// 				])
+	// 				if (memory == pgmmem) {
+	// 					this.instance.setVariableValues({['screen' + screen + 'memoryLabelPGM']:  label})
+	// 				}
+	// 				const pvwmem = this.instance.state.get([
+	// 					'DEVICE',
+	// 					'device',
+	// 					'screenList',
+	// 					'items',
+	// 					screen,
+	// 					'presetList',
+	// 					'items',
+	// 					this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pvw/preset'),
+	// 					'presetId','status','pp','id'
+	// 				])
+	// 				if (memory == pvwmem) {
+	// 					this.instance.setVariableValues({['screen' + screen + 'memoryLabelPVW']:  label})
+	// 				}
+	// 			}
+	// 			return true
+	// 		},
+	// 	}
+	// }
 
 	get inputLabel():Subscription {
 		return {
 			pat: 'DEVICE/device/inputList/items/IN_(\\d+)/control/pp/label',
-			ini: Array.from({ length: maxInputs }, (_, i) => (i + 1).toString()),
-			fun: (instance, path, _value) => {
+			ini: Array.from({ length: this.constants.maxInputs }, (_, i) => (i + 1).toString()),
+			fun: (path, _value) => {
 				if (!path) return false;
 				const input = Array.isArray(path) ? path[4] : path.split('/')[4];
-				instance.setVariableValues({ [input.replace(/^\w+_/, 'INPUT_') + 'label']: instance.device.get(path) });
+				this.instance.setVariableValues({ [input.replace(/^\w+_/, 'INPUT_') + 'label']: this.instance.state.get(path) });
 				return true;
 			},
 		}
@@ -735,10 +771,10 @@ export class Subscriptions {
 	get shutdown():Subscription {
 		return {
 			pat: 'DEVICE/device/system/shutdown/cmd/pp/xRequest',
-			fun: (instance: AWJinstance, _path?: string | string[], value?: string | string[] | number | boolean): boolean => {
+			fun: (_path?: string | string[], value?: string | string[] | number | boolean): boolean => {
 				if (value === 'SHUTDOWN') {
-					instance.log('info', 'Device has been shut down.');
-					instance.updateStatus(InstanceStatus.Ok, 'Shut down');
+					this.instance.log('info', 'Device has been shut down.');
+					this.instance.updateStatus(InstanceStatus.Ok, 'Shut down');
 				}
 				return false;
 			},
@@ -747,102 +783,103 @@ export class Subscriptions {
 
 	//};
 	//export const midraSubscriptions: Record<string, Subscription> = {
-	get presetToggle():Subscription {
-		return {
-			pat: 'DEVICE/device/screenGroupList/items/S1/control/pp/enablePresetToggle',
-			fbk: 'presetToggle'
-		}
-	}
 
-	get screenPreset():Subscription {
-		return {
-			pat: 'DEVICE/device/transition/screenList/items/(\\w+?)/status/pp/transition',
-			fbk: 'deviceTake',
-			ini: [
-				...Array.from({ length: 8 }, (_, i) => 'S' + (i + 1).toString()),
-				...Array.from({ length: 8 }, (_, i) => 'A' + (i + 1).toString()),
-			],
-			fun: (instance, path, _value) => {
-				const setMemoryVariables = (screen: string, preset: string, variableSuffix: string): void => {
-					const mem = instance.device.get([
-						'DEVICE',
-						'device',
-						'screenList',
-						'items',
-						screen,
-						'presetList',
-						'items',
-						preset,
-						'status',
-						'pp',
-						'memoryId',
-					]);
-					const modified = instance.device.get([
-						'DEVICE',
-						'device',
-						'screenList',
-						'items',
-						screen,
-						'presetList',
-						'items',
-						preset,
-						'status',
-						'pp',
-						'isModified',
-					]);
-					instance.setVariableValues({ ['screen' + screen + 'memory' + variableSuffix]: mem ? 'M' + mem : '' });
-					instance.setVariableValues({ ['screen' + screen + 'memoryModified' + variableSuffix]: mem && modified ? '*' : '' });
-					instance.setVariableValues({
-						['screen' + screen + 'memoryLabel' + variableSuffix]: mem
-							? instance.device.get([
-								'DEVICE',
-								'device',
-								'preset',
-								'bank',
-								'slotList',
-								'items',
-								mem.toString(),
-								'control',
-								'pp',
-								'label',
-							])
-							: ''
-					});
-				};
-				let patharr: string[];
-				if (typeof path === 'string') {
-					patharr = path.split('/');
-				} else if (Array.isArray(path)) {
-					patharr = path;
-				} else {
-					return false;
-				}
-				const val = instance.device.get(patharr);
-				const screen = patharr[5];
-				let program = '', preview = '';
-				if (val === 'AT_UP') {
-					program = 'B';
-					preview = 'A';
-					instance.device.setUnmapped(`LOCAL/screens/${screen}/pgm/preset`, program);
-					instance.device.setUnmapped(`LOCAL/screens/${screen}/pvw/preset`, preview);
+	// get presetToggle():Subscription {
+	// 	return {
+	// 		pat: 'DEVICE/device/screenGroupList/items/S1/control/pp/enablePresetToggle',
+	// 		fbk: 'presetToggle'
+	// 	}
+	// }
 
-					setMemoryVariables(screen, program, 'PGM');
-					setMemoryVariables(screen, preview, 'PVW');
-				}
-				if (val === 'AT_DOWN') {
-					program = 'A';
-					preview = 'B';
-					instance.device.setUnmapped(`LOCAL/screens/${screen}/pgm/preset`, program);
-					instance.device.setUnmapped(`LOCAL/screens/${screen}/pvw/preset`, preview);
+	// get screenPreset():Subscription {
+	// 	return {
+	// 		pat: 'DEVICE/device/transition/screenList/items/(\\w+?)/status/pp/transition',
+	// 		fbk: 'deviceTake',
+	// 		ini: [
+	// 			...Array.from({ length: 8 }, (_, i) => 'S' + (i + 1).toString()),
+	// 			...Array.from({ length: 8 }, (_, i) => 'A' + (i + 1).toString()),
+	// 		],
+	// 		fun: (path, _value) => {
+	// 			const setMemoryVariables = (screen: string, preset: string, variableSuffix: string): void => {
+	// 				const mem = this.instance.state.get([
+	// 					'DEVICE',
+	// 					'device',
+	// 					'screenList',
+	// 					'items',
+	// 					screen,
+	// 					'presetList',
+	// 					'items',
+	// 					preset,
+	// 					'status',
+	// 					'pp',
+	// 					'memoryId',
+	// 				]);
+	// 				const modified = this.instance.state.get([
+	// 					'DEVICE',
+	// 					'device',
+	// 					'screenList',
+	// 					'items',
+	// 					screen,
+	// 					'presetList',
+	// 					'items',
+	// 					preset,
+	// 					'status',
+	// 					'pp',
+	// 					'isModified',
+	// 				]);
+	// 				this.instance.setVariableValues({ ['screen' + screen + 'memory' + variableSuffix]: mem ? 'M' + mem : '' });
+	// 				this.instance.setVariableValues({ ['screen' + screen + 'memoryModified' + variableSuffix]: mem && modified ? '*' : '' });
+	// 				this.instance.setVariableValues({
+	// 					['screen' + screen + 'memoryLabel' + variableSuffix]: mem
+	// 						? this.instance.state.get([
+	// 							'DEVICE',
+	// 							'device',
+	// 							'preset',
+	// 							'bank',
+	// 							'slotList',
+	// 							'items',
+	// 							mem.toString(),
+	// 							'control',
+	// 							'pp',
+	// 							'label',
+	// 						])
+	// 						: ''
+	// 				});
+	// 			};
+	// 			let patharr: string[];
+	// 			if (typeof path === 'string') {
+	// 				patharr = path.split('/');
+	// 			} else if (Array.isArray(path)) {
+	// 				patharr = path;
+	// 			} else {
+	// 				return false;
+	// 			}
+	// 			const val = this.instance.state.get(patharr);
+	// 			const screen = patharr[5];
+	// 			let program = '', preview = '';
+	// 			if (val === 'AT_UP') {
+	// 				program = 'B';
+	// 				preview = 'A';
+	// 				this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pgm/preset`, program);
+	// 				this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pvw/preset`, preview);
 
-					setMemoryVariables(screen, program, 'PGM');
-					setMemoryVariables(screen, preview, 'PVW');
-				}
-				instance.checkFeedbacks('deviceSourceTally', 'deviceScreenMemory', 'deviceAuxMemory', 'deviceTake');
-				return false;
-			},
-		}
-	}
+	// 				setMemoryVariables(screen, program, 'PGM');
+	// 				setMemoryVariables(screen, preview, 'PVW');
+	// 			}
+	// 			if (val === 'AT_DOWN') {
+	// 				program = 'A';
+	// 				preview = 'B';
+	// 				this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pgm/preset`, program);
+	// 				this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pvw/preset`, preview);
+
+	// 				setMemoryVariables(screen, program, 'PGM');
+	// 				setMemoryVariables(screen, preview, 'PVW');
+	// 			}
+	// 			this.instance.checkFeedbacks('deviceSourceTally', 'deviceScreenMemory', 'deviceAuxMemory', 'deviceTake');
+	// 			return false;
+	// 		},
+	// 	}
+	// }
 
 	get backgroundSet():Subscription {
 		return {
@@ -851,117 +888,117 @@ export class Subscriptions {
 		}
 	}
 
-	get screenMemoryChange():Subscription {
-		return {
-			pat: 'DEVICE/device/screenList/items/((?:S|A)\\d{1,3})/presetList/items/(A|B)/status/pp/memoryId',
-			fbk: ['deviceScreenMemory', 'deviceAuxMemory'],
-			fun: (instance, path, _value) => {
-				if (!path) return false;
-				const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
-				const pres = Array.isArray(path) ? path[7] : path.split('/')[7];
-				const presname = pres === instance.device.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
-				const memorystr = instance.device.get(path).toString() !== '0' ? instance.device.get(path) : '';
-				instance.setVariableValues({ ['screen' + screen + 'memory' + presname]: memorystr });
-				instance.setVariableValues({
-					['screen' + screen + 'memoryLabel' + presname]: instance.device.get(path).toString() !== '0'
-						? instance.device.getUnmapped([
-							'DEVICE',
-							'device',
-							'preset',
-							'bank',
-							'slotList',
-							'items',
-							instance.device.get(path).toString(),
-							'control',
-							'pp',
-							'label',
-						])
-						: ''
-				});
-				return false;
-			},
-		}
-	}
+	// get screenMemoryChange():Subscription {
+	// 	return {
+	// 		pat: 'DEVICE/device/screenList/items/((?:S|A)\\d{1,3})/presetList/items/(A|B)/status/pp/memoryId',
+	// 		fbk: ['deviceScreenMemory', 'deviceAuxMemory'],
+	// 		fun: (path, _value) => {
+	// 			if (!path) return false;
+	// 			const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
+	// 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7];
+	// 			const presname = pres === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
+	// 			const memorystr = this.instance.state.get(path).toString() !== '0' ? this.instance.state.get(path) : '';
+	// 			this.instance.setVariableValues({ ['screen' + screen + 'memory' + presname]: memorystr });
+	// 			this.instance.setVariableValues({
+	// 				['screen' + screen + 'memoryLabel' + presname]: this.instance.state.get(path).toString() !== '0'
+	// 					? this.instance.state.getUnmapped([
+	// 						'DEVICE',
+	// 						'device',
+	// 						'preset',
+	// 						'bank',
+	// 						'slotList',
+	// 						'items',
+	// 						this.instance.state.get(path).toString(),
+	// 						'control',
+	// 						'pp',
+	// 						'label',
+	// 					])
+	// 					: ''
+	// 			});
+	// 			return false;
+	// 		},
+	// 	}
+	// }
 
-	get screenMemoryLabel():Subscription {
-		return {
-			pat: 'DEVICE/device/presetBank/bankList/items/(\\d+)/control/pp/label',
-			ini: Array.from({ length: 999 }, (_, i) => (i + 1).toString()),
-			fun: (instance, path, _value) => {
-				if (!path) return false
-				const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-				const label = memory.toString() !== '0' ? instance.device.get(path) : ''
-				const screens = instance.device.getChosenScreens('all')
+	// get screenMemoryLabel():Subscription {
+	// 	return {
+	// 		pat: 'DEVICE/device/presetBank/bankList/items/(\\d+)/control/pp/label',
+	// 		ini: Array.from({ length: 999 }, (_, i) => (i + 1).toString()),
+	// 		fun: (path, _value) => {
+	// 			if (!path) return false
+	// 			const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
+	// 			const label = memory.toString() !== '0' ? this.instance.state.get(path) : ''
+	// 			const screens = this.instance.choices.getChosenScreens('all')
 				
-				instance.setVariableValues({['screenMemory' + memory + 'label']:  label})
+	// 			this.instance.setVariableValues({['screenMemory' + memory + 'label']:  label})
 
-				for (const screen of screens) {
-					const pgmmem = instance.device.get([
-						'DEVICE',
-						'device',
-						'screenList',
-						'items',
-						screen,
-						'presetList',
-						'items',
-						instance.device.getUnmapped('LOCAL/screens/' + screen + '/pgm/preset'),
-						'status','pp','memoryId'
-					])
-					if (memory == pgmmem) {
-						instance.setVariableValues({['screen' + screen + 'memoryLabelPGM']:  label})
-					}
-					const pvwmem = instance.device.get([
-						'DEVICE',
-						'device',
-						'screenList',
-						'items',
-						screen,
-						'presetList',
-						'items',
-						instance.device.getUnmapped('LOCAL/screens/' + screen + '/pvw/preset'),
-						'status','pp','memoryId'
-					])
-					if (memory == pvwmem) {
-						instance.setVariableValues({['screen' + screen + 'memoryLabelPVW']:  label})
-					}
-				}
-				return true
-			},
-		}
-	}
+	// 			for (const screen of screens) {
+	// 				const pgmmem = this.instance.state.get([
+	// 					'DEVICE',
+	// 					'device',
+	// 					'screenList',
+	// 					'items',
+	// 					screen,
+	// 					'presetList',
+	// 					'items',
+	// 					this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pgm/preset'),
+	// 					'status','pp','memoryId'
+	// 				])
+	// 				if (memory == pgmmem) {
+	// 					this.instance.setVariableValues({['screen' + screen + 'memoryLabelPGM']:  label})
+	// 				}
+	// 				const pvwmem = this.instance.state.get([
+	// 					'DEVICE',
+	// 					'device',
+	// 					'screenList',
+	// 					'items',
+	// 					screen,
+	// 					'presetList',
+	// 					'items',
+	// 					this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pvw/preset'),
+	// 					'status','pp','memoryId'
+	// 				])
+	// 				if (memory == pvwmem) {
+	// 					this.instance.setVariableValues({['screen' + screen + 'memoryLabelPVW']:  label})
+	// 				}
+	// 			}
+	// 			return true
+	// 		},
+	// 	}
+	// }
 
-	get screenMemoryModifiedChange():Subscription {
-		return {
-			pat: 'DEVICE/device/screenList/items/((?:S|A)\\d{1,3})/presetList/items/(A|B)/status/pp/isModified',
-			fbk: ['deviceScreenMemory', 'deviceAuxMemory'],
-			fun: (instance, path, _value) => {
-				if (!path) return false;
-				const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
-				const pres = Array.isArray(path) ? path[7] : path.split('/')[7];
-				const presname = pres === instance.device.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
-				instance.setVariableValues({
-					['screen' + screen + 'memoryModified' + presname]: instance.device.get(
-						'DEVICE/device/screenList/items/' + screen + '/presetList/items/' + pres + '/status/pp/memoryId'
-					) && instance.device.get(path)
-						? '*'
-						: ''
-				});
-				return false;
-			},
-		}
-	}
+	// get screenMemoryModifiedChange():Subscription {
+	// 	return {
+	// 		pat: 'DEVICE/device/screenList/items/((?:S|A)\\d{1,3})/presetList/items/(A|B)/status/pp/isModified',
+	// 		fbk: ['deviceScreenMemory', 'deviceAuxMemory'],
+	// 		fun: (path, _value) => {
+	// 			if (!path) return false;
+	// 			const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
+	// 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7];
+	// 			const presname = pres === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
+	// 			this.instance.setVariableValues({
+	// 				['screen' + screen + 'memoryModified' + presname]: this.instance.state.get(
+	// 					'DEVICE/device/screenList/items/' + screen + '/presetList/items/' + pres + '/status/pp/memoryId'
+	// 				) && this.instance.state.get(path)
+	// 					? '*'
+	// 					: ''
+	// 			});
+	// 			return false;
+	// 		},
+	// 	}
+	// }
 
 	get auxMemoryLabel():Subscription {
 		return {
 			pat: 'DEVICE/device/preset/auxBank/slotList/items/(\\d+)/control/pp/label',
 			ini: Array.from({ length: 200 }, (_, i) => (i + 1).toString()),
-			fun: (instance, path, _value) => {
+			fun: (path, _value) => {
 				if (!path) return false;
 				const memory = Array.isArray(path) ? path[6] : path.split('/')[6];
-				const label = memory.toString() !== '0' ? instance.device.get(path) : '';
-				instance.setVariableValues({ ['auxMemory' + memory + 'label']: label });
-				for (const screen of instance.device.getChosenAuxes('all')) {
-					const pgmmem = instance.device.get([
+				const label = memory.toString() !== '0' ? this.instance.state.get(path) : '';
+				this.instance.setVariableValues({ ['auxMemory' + memory + 'label']: label });
+				for (const screen of this.instance.choices.getChosenAuxes('all')) {
+					const pgmmem = this.instance.state.get([
 						'DEVICE',
 						'device',
 						'screenList',
@@ -969,15 +1006,15 @@ export class Subscriptions {
 						screen,
 						'presetList',
 						'items',
-						instance.device.getUnmapped('LOCAL/screens/' + screen + '/pgm/preset'),
+						this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pgm/preset'),
 						'status',
 						'pp',
 						'memoryId',
 					]);
 					if (memory == pgmmem) {
-						instance.setVariableValues({ ['screen' + screen + 'memoryLabelPGM']: label });
+						this.instance.setVariableValues({ ['screen' + screen + 'memoryLabelPGM']: label });
 					}
-					const pvwmem = instance.device.get([
+					const pvwmem = this.instance.state.get([
 						'DEVICE',
 						'device',
 						'screenList',
@@ -985,13 +1022,13 @@ export class Subscriptions {
 						screen,
 						'presetList',
 						'items',
-						instance.device.getUnmapped('LOCAL/screens/' + screen + '/pvw/preset'),
+						this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pvw/preset'),
 						'status',
 						'pp',
 						'memoryId',
 					]);
 					if (memory == pvwmem) {
-						instance.setVariableValues({ ['screen' + screen + 'memoryLabelPVW']: label });
+						this.instance.setVariableValues({ ['screen' + screen + 'memoryLabelPVW']: label });
 					}
 				}
 				return true;
@@ -1003,13 +1040,13 @@ export class Subscriptions {
 		return {
 			pat: 'DEVICE/device/inputList/items/(\\w+)/status/pp/plug',
 			ini: Array.from({ length: 16 }, (_, i) => 'INPUT_' + (i + 1)),
-			fun: (instance, path, _value) => {
+			fun: (path, _value) => {
 				if (!path) return false;
 				const input = Array.isArray(path) ? path[4] : path.split('/')[4];
-				instance.setVariableValues({
-					[input.replace(/^\w+_/, 'INPUT_') + 'label']: instance.device.get([
+				this.instance.setVariableValues({
+					[input.replace(/^\w+_/, 'INPUT_') + 'label']: this.instance.state.get([
 						'DEVICE', 'device', 'inputList', 'items', input,
-						'plugList', 'items', instance.device.get(path),
+						'plugList', 'items', this.instance.state.get(path),
 						'control', 'pp', 'label'
 					])
 				});
@@ -1018,26 +1055,26 @@ export class Subscriptions {
 		}
 	}
 
-	get inputLabel():Subscription {
-		return {
-			pat: 'DEVICE/device/inputList/items/(\\w+)/plugList/items/\\d+/control/pp/label',
-			fun: (instance, path, _value) => {
-				if (!path) return false;
-				const input = Array.isArray(path) ? path[4] : path.split('/')[4];
-				const plug = Array.isArray(path) ? path[7] : path.split('/')[7];
-				if (instance.device.get([
-					'DEVICE', 'device', 'inputList', 'items', input, 'status', 'pp', 'plug'
-				]) == plug) {
-					instance.setVariableValues({
-						[input.replace(/^\w+_/, 'INPUT_') + 'label']: instance.device.get(path)
-					});
-					return true;
-				} else {
-					return false;
-				}
-			}
-		}
-	}
+	// get inputLabel():Subscription {
+	// 	return {
+	// 		pat: 'DEVICE/device/inputList/items/(\\w+)/plugList/items/\\d+/control/pp/label',
+	// 		fun: (path, _value) => {
+	// 			if (!path) return false;
+	// 			const input = Array.isArray(path) ? path[4] : path.split('/')[4];
+	// 			const plug = Array.isArray(path) ? path[7] : path.split('/')[7];
+	// 			if (this.instance.state.get([
+	// 				'DEVICE', 'device', 'inputList', 'items', input, 'status', 'pp', 'plug'
+	// 			]) == plug) {
+	// 				this.instance.setVariableValues({
+	// 					[input.replace(/^\w+_/, 'INPUT_') + 'label']: this.instance.state.get(path)
+	// 				});
+	// 				return true;
+	// 			} else {
+	// 				return false;
+	// 			}
+	// 		}
+	// 	}
+	// }
 
 	get auxMemoriesChange():Subscription {
 		return {
@@ -1052,7 +1089,7 @@ export class Subscriptions {
 		return {
 			pat: 'device/screenList/items/S?\\d{1,2}/liveLayerList/items/(\\d{1,2})/control/pp/freeze',
 			fbk: 'deviceLayerFreeze',
-			ini: (_instance: AWJinstance): string[] => {
+			ini: (): string[] => {
 				const paths: string[] = [];
 				for (let screen = 1; screen <= 4; screen += 1) {
 					for (let layer = 1; layer <= 8; layer += 1) {
@@ -1061,19 +1098,19 @@ export class Subscriptions {
 				}
 				return paths;
 			},
-			fun: (instance, path, value) => {
+			fun: (path, value) => {
 				if (!path) return false;
 				const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
 				const layer = Array.isArray(path) ? path[7] : path.split('/')[7];
 				if (value === true) {
-					instance.setVariableValues({ [`frozen_${screen}_L${layer}`]: '*' });
+					this.instance.setVariableValues({ [`frozen_${screen}_L${layer}`]: '*' });
 				} else if (value === false) {
-					instance.setVariableValues({ [`frozen_${screen}_L${layer}`]: ' ' });
+					this.instance.setVariableValues({ [`frozen_${screen}_L${layer}`]: ' ' });
 				} else if (value === undefined) {
-					value = instance.device.get(path);
-					instance.setVariableValues({ [`frozen_${screen}_L${layer}`]: value === true ? '*' : ' ' });
+					value = this.instance.state.get(path);
+					this.instance.setVariableValues({ [`frozen_${screen}_L${layer}`]: value === true ? '*' : ' ' });
 				} else {
-					instance.setVariableValues({ [`frozen_${screen}_L${layer}`]: '-' });
+					this.instance.setVariableValues({ [`frozen_${screen}_L${layer}`]: '-' });
 				}
 				return false;
 			}
@@ -1085,18 +1122,18 @@ export class Subscriptions {
 			pat: 'DEVICE/device/screenList/items/(S?\\d{1,2})/background/control/pp/freeze',
 			fbk: 'deviceLayerFreeze',
 			ini: Array.from({ length: 8 }, (_, i) => 'S' + (i + 1).toString()),
-			fun: (instance, path, value) => {
+			fun: (path, value) => {
 				if (!path) return false;
 				const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
 				if (value === true) {
-					instance.setVariableValues({ [`frozen_${screen}_NATIVE`]: '*' });
+					this.instance.setVariableValues({ [`frozen_${screen}_NATIVE`]: '*' });
 				} else if (value === false) {
-					instance.setVariableValues({ [`frozen_${screen}_NATIVE`]: ' ' });
+					this.instance.setVariableValues({ [`frozen_${screen}_NATIVE`]: ' ' });
 				} else if (value === undefined) {
-					value = instance.device.get(path);
-					instance.setVariableValues({ [`frozen_${screen}_NATIVE`]: value === true ? '*' : ' ' });
+					value = this.instance.state.get(path);
+					this.instance.setVariableValues({ [`frozen_${screen}_NATIVE`]: value === true ? '*' : ' ' });
 				} else {
-					instance.setVariableValues({ [`frozen_${screen}_NATIVE`]: '-' });
+					this.instance.setVariableValues({ [`frozen_${screen}_NATIVE`]: '-' });
 				}
 				return false;
 			}
@@ -1111,18 +1148,18 @@ export class Subscriptions {
 				...Array.from({ length: 8 }, (_, i) => 'S' + (i + 1).toString()),
 				...Array.from({ length: 8 }, (_, i) => 'A' + (i + 1).toString()),
 			],
-			fun: (instance, path, value) => {
+			fun: (path, value) => {
 				if (!path) return false;
 				const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
 				if (value === true) {
-					instance.setVariableValues({ [`frozen_${screen}`]: '*' });
+					this.instance.setVariableValues({ [`frozen_${screen}`]: '*' });
 				} else if (value === false) {
-					instance.setVariableValues({ [`frozen_${screen}`]: ' ' });
+					this.instance.setVariableValues({ [`frozen_${screen}`]: ' ' });
 				} else if (value === undefined) {
-					value = instance.device.get(path);
-					instance.setVariableValues({ [`frozen_${screen}`]: value === true ? '*' : ' ' });
+					value = this.instance.state.get(path);
+					this.instance.setVariableValues({ [`frozen_${screen}`]: value === true ? '*' : ' ' });
 				} else {
-					instance.setVariableValues({ [`frozen_${screen}`]: '-' });
+					this.instance.setVariableValues({ [`frozen_${screen}`]: '-' });
 				}
 				return false;
 			}
@@ -1139,34 +1176,34 @@ export class Subscriptions {
 	get standby():Subscription {
 		return {
 			pat: 'DEVICE/device/system/shutdown/standby/control/pp/xRequest',
-			fun: (instance, _path, value) => {
+			fun: (_path, value) => {
 				if (value === 'STANDBY') {
-					instance.log('info', 'Device going to standby.');
-					instance.updateStatus(InstanceStatus.Ok, 'Standby');
+					this.instance.log('info', 'Device going to standby.');
+					this.instance.updateStatus(InstanceStatus.Ok, 'Standby');
 				}
 				return false;
 			},
 		}
 	}
 
-	get shutdown():Subscription {
-		return {
-			pat: 'DEVICE/device/system/shutdown/standby/control/pp/xRequest',
-			fun: (instance: AWJinstance, _path?: string | string[], value?: string | string[] | number | boolean): boolean => {
-				if (value === 'SWITCH_OFF') {
-					instance.log('info', 'Device has been shut down.');
-					instance.updateStatus(InstanceStatus.Ok, 'Shut down');
-				}
-				return false;
-			},
-		}
-	}
+	// get shutdown():Subscription {
+	// 	return {
+	// 		pat: 'DEVICE/device/system/shutdown/standby/control/pp/xRequest',
+	// 		fun: (_path?: string | string[], value?: string | string[] | number | boolean): boolean => {
+	// 			if (value === 'SWITCH_OFF') {
+	// 				this.instance.log('info', 'Device has been shut down.');
+	// 				this.instance.updateStatus(InstanceStatus.Ok, 'Shut down');
+	// 			}
+	// 			return false;
+	// 		},
+	// 	}
+	// }
 
 	/**
 	 * Returns a string with the feedback ID if a feedback exists and runs an action if there is a 'fun' property
 	 * @param pat The path in the state object to check if a feedback or action exists for, if undefined checks all possible subscriptions
 	 */
-	checkForAction(instance: AWJinstance, pat?: string | string[], value?: any): string | string[] | undefined {
+	checkForAction(pat?: string | string[], value?: any): string | string[] | undefined {
 		// console.log('Checking for action', pat, value);
 		const subscriptions = this.subscriptions
 		let path: string
@@ -1175,10 +1212,10 @@ export class Subscriptions {
 			for (const key of Object.keys(subscriptions)) {
 				const subscriptionobj = subscriptions[key]
 				if (subscriptionobj.fun && typeof subscriptionobj.fun === 'function') {
-					update = subscriptionobj.fun(instance)
+					update = subscriptionobj.fun()
 				}
 			}
-			if (update) void instance.updateInstance()
+			if (update) void this.instance.updateInstance()
 			return undefined
 		} else if (typeof pat === 'string') {
 			path = pat
@@ -1202,11 +1239,11 @@ export class Subscriptions {
 			if (subscriptionobj.fun && typeof subscriptionobj.fun === 'function') {
 				// console.log('found subscription fun')
 				if (value) {
-					const update = subscriptionobj.fun(instance, path, value)
-					if (update) void instance.updateInstance()
+					const update = subscriptionobj.fun(path, value)
+					if (update) void this.instance.updateInstance()
 				} else {
-					const update = subscriptionobj.fun(instance, path)
-					if (update) void instance.updateInstance()
+					const update = subscriptionobj.fun(path)
+					if (update) void this.instance.updateInstance()
 				}
 			}
 			const fbk = subscriptions?.[subscription]?.fbk
@@ -1229,11 +1266,12 @@ export class Subscriptions {
 	}
 
 	/**
-	 * Checks if the subscriptions have a 'fun' and then run it on the path. If there is an 'init' array the path will be run with all items of the array
-	 * if any of the subscriptions wants to run updateInstance it will be done at the end
+	 * Checks if the subscriptions has some iterable output of the 'ini' property and uses this as the path variable for the function of the 'fun' property.  
+	 * This has the same effect as if we would receive an update for all parameters observed by a subscription.  
+	 * If any of the subscriptions wants to run updateInstance it will be done at the end
 	 * @param subscription specific subscription or all subscriptions if omitted
 	 */
-	checkSubscriptions(instance: AWJinstance, subscription?: string): void {
+	initSubscriptions(subscription?: string): void {
 		const subscriptions = this.subscriptions
 		let update = false
 
@@ -1243,7 +1281,7 @@ export class Subscriptions {
 			let pattern = subscriptionobj.pat
 			if (subscriptionobj.fun && typeof subscriptionobj.fun === 'function') {
 				if (pattern.indexOf('(') === -1) {
-					subscriptionobj.fun(instance, pattern)
+					subscriptionobj.fun(pattern)
 				} else {
 					if (subscriptionobj.ini && Array.isArray(subscriptionobj.ini)) {
 						// if ini is array just replace the the one and only capturing group with all the values of the array and run the fun with all resulting paths
@@ -1251,14 +1289,14 @@ export class Subscriptions {
 							pattern = pattern.replace(/\([^()]+\)/g, '*')
 						}
 						for (const item of subscriptionobj.ini) {
-							const upd = subscriptionobj.fun(instance, pattern.replace('*', item))
+							const upd = subscriptionobj.fun(pattern.replace('*', item))
 							if (upd) update = true
 						}
 					} else if (subscriptionobj.ini && typeof subscriptionobj.ini === 'function') {
 						// if ini is a function run fun with all the paths generated by ini
-						subscriptionobj.ini(instance).forEach((path: string) => {
+						subscriptionobj.ini(this.instance).forEach((path: string) => {
 							if (subscriptionobj.fun && typeof subscriptionobj.fun === 'function') {
-								subscriptionobj.fun(instance, path)
+								subscriptionobj.fun(path)
 							}
 						})
 					}
@@ -1273,18 +1311,17 @@ export class Subscriptions {
 
 		} else {
 			// check all subscriptions
-			Object.keys(subscriptions).forEach((sub) => checkSub(sub))
-			update = true
+			update = this.subscriptionList.some((sub) => checkSub(sub))
 		}
 		
 		if (update) {
 			void (async () => {
 				try {
-					void instance.updateInstance()
-					instance.checkFeedbacks()
-					instance.subscribeFeedbacks()
+					void this.instance.updateInstance()
+					this.instance.checkFeedbacks()
+					this.instance.subscribeFeedbacks()
 				} catch (error) {
-					instance.log('error', 'Cannot update the instance. '+ error)
+					this.instance.log('error', 'Cannot update the this.instance. '+ error)
 				}
 			})()
 		}

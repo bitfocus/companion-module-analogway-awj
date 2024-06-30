@@ -1,34 +1,6 @@
 import {AWJinstance} from '../index.js'
 
-import {
-	Choicemeta,
-	choicesBackgroundSourcesPlusNone,
-	choicesForegroundImagesSource,
-	choicesPreset,
-	getAudioCustomBlockChoices,
-	getAudioInputChoices,
-	getAudioOutputChoices,
-	getAuxBackgroundChoices,
-	getAuxChoices,
-	getAuxMemoryChoices,
-	getAuxSourceChoices,
-	getLayerChoices,
-	getLiveInputChoices,
-	getMasterMemoryChoices,
-	getMultiviewerArray,
-	getMultiviewerChoices,
-	getMultiviewerMemoryChoices,
-	getOutputChoices,
-	getScreenAuxChoices,
-	getScreenChoices,
-	getScreenMemoryChoices,
-	getScreensArray,
-	getScreensAuxArray,
-	getSourceChoices,
-	getTimerChoices,
-	getWidgetChoices,
-	getWidgetSourceChoices,
-} from './choices.js'
+import Choices, { Choicemeta } from './choices.js'
 import {
 	CompanionActionDefinition,
 	CompanionActionDefinitions,
@@ -43,6 +15,7 @@ import { compileExpression } from '@nx-js/compiler-util'
 import { AWJconnection } from '../connection.js'
 import { InstanceStatus, splitRgb } from '@companion-module/base'
 import { AWJdevice } from './awjdevice.js'
+import { StateMachine } from '../state.js'
 
 /**
  * T = Object like {option1id: type, option2id: type}
@@ -79,10 +52,11 @@ type Dropdown<t> = {id: t, label: string}
 
 export default class Actions {
 	instance: AWJinstance
-	state: AWJdevice
+	state: StateMachine
 	connection: AWJconnection
 	device: AWJdevice
 	config: Config
+	private choices: Choices
 	screens: Choicemeta[]
 
 	readonly actionsToUse = [
@@ -134,11 +108,12 @@ export default class Actions {
 	
 	constructor (instance: AWJinstance) {
 		this.instance = instance
-		this.state = instance.device
+		this.state = instance.state
 		this.connection = instance.connection
-		this.device = instance.device
+		//this.device = instance.device
 		this.config = instance.config
-		this.screens = getScreensAuxArray(this.state)
+		this.choices = this.instance.choices
+		this.screens = this.choices.getScreensAuxArray()
 	}
 
 
@@ -156,7 +131,7 @@ export default class Actions {
 		const device: AWJdevice = instance.device
 		const config: Config = instance.config
 		const actions: {[id: string]: AWJaction<any> | undefined} = {}
-		const screens = getScreensAuxArray(state)
+		const screens = this.choices.getScreensAuxArray()
 
 		return {}
 	}
@@ -164,7 +139,7 @@ export default class Actions {
 	/**
 	 * Object with all exported action definitions
 	 */
-	get actions() {
+	get allActions() {
 		const actionDefinitions: CompanionActionDefinitions = Object.fromEntries(
             this.actionsToUse.map((key) => [key, this[key]])
         )
@@ -183,22 +158,22 @@ export default class Actions {
 					id: 'screens',
 					type: 'multidropdown',
 					label: 'Screen',
-					choices: [{ id: 'sel', label: 'Selected' }, ...getScreenAuxChoices(this.state)],
+					choices: [{ id: 'sel', label: 'Selected' }, ...this.choices.getScreenAuxChoices()],
 					default: ['sel'],
 				},
 				{
 					id: 'preset',
 					type: 'dropdown',
 					label: 'Preset',
-					choices: [{ id: 'sel', label: 'Selected' }, ...choicesPreset],
+					choices: [{ id: 'sel', label: 'Selected' }, ...this.choices.choicesPreset],
 					default: 'sel',
 				},
 				{
 					id: 'memory',
 					type: 'dropdown',
 					label: 'Screen Memory',
-					choices: getScreenMemoryChoices(this.state),
-					default: getScreenMemoryChoices(this.state)[0]?.id,
+					choices: this.choices.getScreenMemoryChoices(),
+					default: this.choices.getScreenMemoryChoices()[0]?.id,
 				},
 				{
 					id: 'selectScreens',
@@ -223,10 +198,10 @@ export default class Actions {
 		const returnAction  = this.deviceScreenMemory_common
 
 		returnAction.callback = (action) => {
-			const screens = this.state.getChosenScreenAuxes(action.options.screens)
-			const preset = this.device.getPresetSelection(action.options.preset, true)
+			const screens = this.choices.getChosenScreenAuxes(action.options.screens)
+			const preset = this.choices.getPresetSelection(action.options.preset, true)
 			for (const screen of screens) {
-				if (this.state.isLocked(screen, preset)) continue
+				if (this.choices.isLocked(screen, preset)) continue
 				this.connection.sendWSmessage(
 					[
 						'device',
@@ -268,7 +243,7 @@ export default class Actions {
 					true
 				)
 
-				this.device.sendXupdate()
+				this.instance.sendXupdate()
 
 				if (action.options.selectScreens) {
 					if (this.state.syncSelection) {
@@ -296,10 +271,10 @@ export default class Actions {
 		const deviceScreenMemory  = this.deviceScreenMemory_common
 
 		deviceScreenMemory.callback = (action) => {
-			const screens = this.state.getChosenScreens(action.options.screens)
-			const preset = this.device.getPresetSelection(action.options.preset, true)
+			const screens = this.choices.getChosenScreens(action.options.screens)
+			const preset = this.choices.getPresetSelection(action.options.preset, true)
 			for (const screen of screens) {
-				if (this.state.isLocked(screen, preset)) continue
+				if (this.choices.isLocked(screen, preset)) continue
 				this.connection.sendWSmessage(
 					[
 						'device',
@@ -341,7 +316,7 @@ export default class Actions {
 					true
 				)
 
-				this.device.sendXupdate()
+				this.instance.sendXupdate()
 
 				if (action.options.selectScreens) {
 					if (this.state.syncSelection) {
@@ -367,22 +342,22 @@ export default class Actions {
 					id: 'screens',
 					type: 'multidropdown',
 					label: 'Auxscreen',
-					choices: [{ id: 'sel', label: 'Selected' }, ...getAuxChoices(this.state)],
+					choices: [{ id: 'sel', label: 'Selected' }, ...this.choices.getAuxChoices()],
 					default: ['sel'],
 				},
 				{
 					id: 'preset',
 					type: 'dropdown',
 					label: 'Preset',
-					choices: [{ id: 'sel', label: 'Selected' }, ...choicesPreset],
+					choices: [{ id: 'sel', label: 'Selected' }, ...this.choices.choicesPreset],
 					default: 'sel',
 				},
 				{
 					id: 'memory',
 					type: 'dropdown',
 					label: 'Aux Memory',
-					choices: getAuxMemoryChoices(this.state),
-					default: getAuxMemoryChoices(this.state)[0]?.id,
+					choices: this.choices.getAuxMemoryChoices(),
+					default: this.choices.getAuxMemoryChoices()[0]?.id,
 				},
 				{
 					id: 'selectScreens',
@@ -392,10 +367,10 @@ export default class Actions {
 				},
 			],
 			callback: (action) => {
-				const screens = this.state.getChosenAuxes(action.options.screens as string[])
-				const preset = this.device.getPresetSelection(action.options.preset as string, true)
+				const screens = this.choices.getChosenAuxes(action.options.screens as string[])
+				const preset = this.choices.getPresetSelection(action.options.preset as string, true)
 				for (const screen of screens) {
-					if (this.state.isLocked(screen, preset)) continue
+					if (this.choices.isLocked(screen, preset)) continue
 					this.connection.sendWSmessage(
 						[
 							'device',
@@ -439,7 +414,7 @@ export default class Actions {
 						true
 					)
 
-					this.device.sendXupdate()
+					this.instance.sendXupdate()
 
 					if (action.options.selectScreens) {
 						if (this.state.syncSelection) {
@@ -468,15 +443,15 @@ export default class Actions {
 					id: 'preset',
 					type: 'dropdown',
 					label: 'Preset',
-					choices: [{ id: 'sel', label: 'Selected' }, ...choicesPreset],
+					choices: [{ id: 'sel', label: 'Selected' }, ...this.choices.choicesPreset],
 					default: 'sel',
 				},
 				{
 					id: 'memory',
 					type: 'dropdown',
 					label: 'Master Memory',
-					choices: getMasterMemoryChoices(this.state),
-					default: getMasterMemoryChoices(this.state)[0]?.id,
+					choices: this.choices.getMasterMemoryChoices(),
+					default: this.choices.getMasterMemoryChoices()[0]?.id,
 				},
 				{
 					id: 'selectScreens',
@@ -499,7 +474,7 @@ export default class Actions {
 		const deviceMasterMemory = this.deviceMasterMemory_common
 		
 		deviceMasterMemory.callback = (action) => {
-			const preset = this.device.getPresetSelection(action.options.preset, true)
+			const preset = this.choices.getPresetSelection(action.options.preset, true)
 			const bankpath = ['device', 'masterPresetBank']
 			const list = 'bankList'	
 			const memorypath = ['items', action.options.memory]
@@ -518,12 +493,12 @@ export default class Actions {
 
 			if (
 				screens.find((screen: string) => {
-					return this.state.isLocked(screen, preset)
+					return this.choices.isLocked(screen, preset)
 				})
 			) {
 				return // TODO: resembles original WebRCS behavior, but could be also individual screen handling
 			}
-			// if (this.state.isLocked(layer.screenAuxKey, preset)) continue
+			// if (this.choices.isLocked(layer.screenAuxKey, preset)) continue
 			this.connection.sendWSmessage(
 				[
 					...bankpath,
@@ -561,7 +536,7 @@ export default class Actions {
 				true
 			)
 
-			this.device.sendXupdate()
+			this.instance.sendXupdate()
 
 		}
 
@@ -576,7 +551,7 @@ export default class Actions {
 		const deviceMasterMemory = this.deviceMasterMemory_common
 		
 		deviceMasterMemory.callback = (action) => {
-			const preset = this.device.getPresetSelection(action.options.preset, true)
+			const preset = this.choices.getPresetSelection(action.options.preset, true)
 			const bankpath = ['device', 'preset', 'masterBank']
 			const list = 'slotList'
 			const memorypath = ['items', action.options.memory]
@@ -605,12 +580,12 @@ export default class Actions {
 
 			if (
 				screens.find((screen: string) => {
-					return this.state.isLocked(screen, preset)
+					return this.choices.isLocked(screen, preset)
 				})
 			) {
 				return // TODO: resembles original WebRCS behavior, but could be also individual screen handling
 			}
-			// if (this.state.isLocked(layer.screenAuxKey, preset)) continue
+			// if (this.choices.isLocked(layer.screenAuxKey, preset)) continue
 			this.connection.sendWSmessage(
 				[
 					...bankpath,
@@ -648,7 +623,7 @@ export default class Actions {
 				true
 			)
 
-			this.device.sendXupdate()
+			this.instance.sendXupdate()
 
 		}
 
@@ -668,8 +643,8 @@ export default class Actions {
 					id: 'memory',
 					type: 'dropdown',
 					label: 'Memory',
-					choices: getMultiviewerMemoryChoices(this.state),
-					default: getMultiviewerMemoryChoices(this.state)[0]?.id,
+					choices: this.choices.getMultiviewerMemoryChoices(),
+					default: this.choices.getMultiviewerMemoryChoices()[0]?.id,
 				},
 			],
 			callback: (action) => {
@@ -711,14 +686,14 @@ export default class Actions {
 				}
 			},
 		}
-		if (getMultiviewerArray(this.state).length > 1) {
+		if (this.choices.getMultiviewerArray().length > 1) {
 			deviceMultiviewerMemory.options.push(
 				{
 					id: 'multiviewer',
 					type: 'multidropdown',
 					label: 'Multiviewer',
-					choices: getMultiviewerChoices(this.state),
-					default: [getMultiviewerArray(this.state)?.[0]],
+					choices: this.choices.getMultiviewerChoices(),
+					default: [this.choices.getMultiviewerArray()?.[0]],
 				},
 			)
 		} else {
@@ -750,12 +725,12 @@ export default class Actions {
 					id: 'screens',
 					type: 'multidropdown',
 					label: 'Screens / Auxscreens',
-					choices: [{ id: 'all', label: 'All' }, { id: 'sel', label: 'Selected Screens' }, ...getScreenAuxChoices(this.state)],
+					choices: [{ id: 'all', label: 'All' }, { id: 'sel', label: 'Selected Screens' }, ...this.choices.getScreenAuxChoices()],
 					default: ['sel'],
 				},
 			],
 			callback: (action: any) => {
-				for (const screen of this.state.getChosenScreenAuxes(action.options.screens)) {
+				for (const screen of this.choices.getChosenScreenAuxes(action.options.screens)) {
 					this.connection.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'xCut'], true)
 				}
 			},
@@ -782,7 +757,7 @@ export default class Actions {
 					id: 'screens',
 					type: 'multidropdown',
 					label: 'Screens / Auxscreens',
-					choices: [{ id: 'all', label: 'All' }, { id: 'sel', label: 'Selected Screens' }, ...getScreenAuxChoices(this.state)],
+					choices: [{ id: 'all', label: 'All' }, { id: 'sel', label: 'Selected Screens' }, ...this.choices.getScreenAuxChoices()],
 					default: ['all'],
 				},
 				{
@@ -816,7 +791,7 @@ export default class Actions {
 						value = position / maximum
 					}
 					const tbarint = Math.round(value * tbarmax)
-					for (const screen of this.state.getChosenScreenAuxes(action.options.screens)) {
+					for (const screen of this.choices.getChosenScreenAuxes(action.options.screens)) {
 						this.connection.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'tbarPosition'], tbarint)
 					}
 				}
@@ -839,14 +814,14 @@ export default class Actions {
 					id: 'screens',
 					type: 'multidropdown',
 					label: 'Screens / Auxscreens',
-					choices: [{ id: 'all', label: 'All' }, { id: 'sel', label: 'Selected Screens' }, ...getScreenAuxChoices(this.state)],
+					choices: [{ id: 'all', label: 'All' }, { id: 'sel', label: 'Selected Screens' }, ...this.choices.getScreenAuxChoices()],
 					default: ['all'],
 				},
 				{
 					id: 'preset',
 					type: 'dropdown',
 					label: 'Preset',
-					choices: [{ id: 'all', label: 'Both' }, ...choicesPreset],
+					choices: [{ id: 'all', label: 'Both' }, ...this.choices.choicesPreset],
 					default: 'all',
 				},
 				{
@@ -874,8 +849,8 @@ export default class Actions {
 		const deviceTakeTime = this.deviceTakeTime_common
 		deviceTakeTime.callback = (action) => {
 			const time = action.options.time as number * 10
-			this.state.getChosenScreenAuxes(action.options.screens).forEach((screen) => {
-				const presetPgm = this.state.getPreset(screen, 'PGM')
+			this.choices.getChosenScreenAuxes(action.options.screens).forEach((screen) => {
+				const presetPgm = this.choices.getPreset(screen, 'PGM')
 				if (
 					action.options.preset === 'all' ||
 					(action.options.preset === 'pgm' && presetPgm === 'A') ||
@@ -904,7 +879,7 @@ export default class Actions {
 		const deviceTakeTime = this.deviceTakeTime_common
 		deviceTakeTime.callback = (action) => {
 			const time = action.options.time * 10
-			this.state.getChosenScreenAuxes(action.options.screens).forEach((screen) =>
+			this.choices.getChosenScreenAuxes(action.options.screens).forEach((screen) =>
 				this.connection.sendWSmessage(['device', 'transition', 'screenList', 'items', screen, 'control', 'pp', 'takeTime'], time)
 			)
 		}
@@ -933,8 +908,8 @@ export default class Actions {
 					id: 'screen',
 					type: 'multidropdown',
 					label: 'Screen / Aux',
-					choices: getScreenAuxChoices(this.state),
-					default: [getScreenAuxChoices(this.state)[0]?.id],
+					choices: this.choices.getScreenAuxChoices(),
+					default: [this.choices.getScreenAuxChoices()[0]?.id],
 					isVisible: (options) => {
 						return options.method === 'spec'
 					},
@@ -943,7 +918,7 @@ export default class Actions {
 					id: 'preset',
 					type: 'dropdown',
 					label: 'Preset',
-					choices: choicesPreset,
+					choices: this.choices.choicesPreset,
 					default: 'pvw',
 					isVisible: (options) => {
 						return options.method === 'spec'
@@ -966,7 +941,7 @@ export default class Actions {
 		deviceSelectSource.callback = (action) => {
 			if (action.options.method === 'spec') {
 				for (const screen of action.options.screen) {
-					if (this.state.isLocked(screen, action.options.preset)) continue
+					if (this.choices.isLocked(screen, action.options.preset)) continue
 					for (const layer of action.options[`layer${screen}`]) {
 						let sourcetype = 'sourceLayer'
 						if (screen.startsWith('A')) {
@@ -977,7 +952,7 @@ export default class Actions {
 						}
 						this.connection.sendWSmessage([
 							'device', 'screenList', 'items', screen,
-							'presetList', 'items', this.state.getPreset(screen, action.options.preset),
+							'presetList', 'items', this.choices.getPreset(screen, action.options.preset),
 							'layerList', 'items', layer,
 							'source', 'pp', 'inputNum'
 						], action.options[sourcetype])
@@ -985,9 +960,9 @@ export default class Actions {
 				}
 			}
 			else if (action.options.method === 'sel') {
-				const preset = this.device.getPresetSelection('sel')
-				this.state.getSelectedLayers()
-					.filter((selection) => this.state.isLocked(selection.screenAuxKey, preset) === false)
+				const preset = this.choices.getPresetSelection('sel')
+				this.choices.getSelectedLayers()
+					.filter((selection) => this.choices.isLocked(selection.screenAuxKey, preset) === false)
 					.forEach((layer) => {
 						let source = 'keep'
 						if (
@@ -1008,14 +983,14 @@ export default class Actions {
 						if (source !== 'keep'){
 							this.connection.sendWSmessage([
 								'device', 'screenList', 'items', layer.screenAuxKey,
-								'presetList', 'items', this.state.getPreset(layer.screenAuxKey, preset),
+								'presetList', 'items', this.choices.getPreset(layer.screenAuxKey, preset),
 								'layerList', 'items', layer.layerKey,
 								'source', 'pp', 'inputNum'
 							], source)
 						}
 				})
 			}
-			this.device.sendXupdate()
+			this.instance.sendXupdate()
 		}
 		this.screens.forEach((screen) => {
 			const isScreen = screen.id.startsWith('S')
@@ -1024,7 +999,7 @@ export default class Actions {
 				id: `layer${screen.id}`,
 				type: 'multidropdown',
 				label: 'Layer ' + screen.id,
-				choices: getLayerChoices(this.state, screen.id, isScreen),
+				choices: this.choices.getLayerChoices(screen.id, isScreen),
 				default: ['1'],
 				isVisibleData: screen.id,
 				isVisible: (options, screenId) => {
@@ -1037,7 +1012,7 @@ export default class Actions {
 				id: 'sourceLayer',
 				type: 'dropdown',
 				label: 'Screen Layer Source',
-				choices: [{ id: 'keep', label: "Don't change source"}, ...getSourceChoices(this.state)],
+				choices: [{ id: 'keep', label: "Don't change source"}, ...this.choices.getSourceChoices()],
 				default: 'keep',
 				isVisible: (options) => {
 					if (options.method === 'sel') return true
@@ -1053,7 +1028,7 @@ export default class Actions {
 				id: 'sourceNative',
 				type: 'dropdown',
 				label: 'Screen Background Source',
-				choices: [{ id: 'keep', label: "Don't change source"}, ...choicesBackgroundSourcesPlusNone],
+				choices: [{ id: 'keep', label: "Don't change source"}, ...this.choices.choicesBackgroundSourcesPlusNone],
 				default: 'keep',
 				isVisible: (options) => {
 					if (options.method === 'sel') return true
@@ -1069,7 +1044,7 @@ export default class Actions {
 				id: 'sourceBack',
 				type: 'dropdown',
 				label: 'Aux Layer Source',
-				choices: [{ id: 'keep', label: "Don't change source"}, ...getAuxSourceChoices(this.state)],
+				choices: [{ id: 'keep', label: "Don't change source"}, ...this.choices.getAuxSourceChoices()],
 				default: 'keep',
 				isVisible: (options) => {
 					if (options.method === 'sel') return true
@@ -1094,8 +1069,8 @@ export default class Actions {
 		deviceSelectSource.callback = (action) => {
 			if (action.options.method === 'spec') {
 				for (const screen of action.options.screen) {
-					if (this.state.isLocked(screen, action.options.preset)) continue
-					const presetpath = ['device', 'screenList', 'items', screen, 'presetList', 'items', this.state.getPreset(screen, action.options.preset)]
+					if (this.choices.isLocked(screen, action.options.preset)) continue
+					const presetpath = ['device', 'screenList', 'items', screen, 'presetList', 'items', this.choices.getPreset(screen, action.options.preset)]
 					if (screen.startsWith('A') && action.options['sourceBack'] !== 'keep')
 						// on Midra on aux there is only background, so we don't show a layer dropdown and just set the background
 						this.connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'content'], action.options['sourceBack'])
@@ -1112,11 +1087,11 @@ export default class Actions {
 						}
 				}
 			} else if (action.options.method === 'sel') {
-				const preset = this.device.getPresetSelection('sel')
-				this.state.getSelectedLayers()
-					.filter((selection) => this.state.isLocked(selection.screenAuxKey, preset) === false)
+				const preset = this.choices.getPresetSelection('sel')
+				this.choices.getSelectedLayers()
+					.filter((selection) => this.choices.isLocked(selection.screenAuxKey, preset) === false)
 					.forEach((layer) => {
-						const presetpath = ['device', 'screenList', 'items', layer.screenAuxKey, 'presetList', 'items', this.state.getPreset(layer.screenAuxKey, 'sel')]
+						const presetpath = ['device', 'screenList', 'items', layer.screenAuxKey, 'presetList', 'items', this.choices.getPreset(layer.screenAuxKey, 'sel')]
 						if (layer.layerKey === 'BKG' && layer.screenAuxKey.startsWith('S') && action.options['sourceNative'] !== 'keep') {
 								this.connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'set'], action.options['sourceNative'].replace(/\D/g, ''))
 							} else if (layer.layerKey === 'BKG' && layer.screenAuxKey.startsWith('A') && action.options['sourceBack'] !== 'keep') {
@@ -1128,17 +1103,17 @@ export default class Actions {
 							}
 					})
 			}
-			this.device.sendXupdate()
+			this.instance.sendXupdate()
 		}
 
 		// don't build a dropdown for aux on midra
-		getScreensArray(this.state).forEach((screen) => {
+		this.choices.getScreensArray().forEach((screen) => {
 			
 			deviceSelectSource.options.push({
 				id: `layer${screen.id}`,
 				type: 'multidropdown',
 				label: 'Layer ' + screen.id,
-				choices: getLayerChoices(this.state, screen.id),
+				choices: this.choices.getLayerChoices(screen.id),
 				default: ['1'],
 				isVisibleData: screen.id,
 				isVisible: (options, screenId) => {
@@ -1151,7 +1126,7 @@ export default class Actions {
 				id: 'sourceNative',
 				type: 'dropdown',
 				label: 'Screen Background Source',
-				choices: [{ id: 'keep', label: "Don't change source"}, ...choicesBackgroundSourcesPlusNone],
+				choices: [{ id: 'keep', label: "Don't change source"}, ...this.choices.choicesBackgroundSourcesPlusNone],
 				default: 'keep',
 				isVisible: (options) => {
 					if (options.method === 'sel') return true
@@ -1167,7 +1142,7 @@ export default class Actions {
 				id: 'sourceLayer',
 				type: 'dropdown',
 				label: 'Screen Layer Source',
-				choices: [{ id: 'keep', label: "Don't change source"}, ...getSourceChoices(this.state)],
+				choices: [{ id: 'keep', label: "Don't change source"}, ...this.choices.getSourceChoices()],
 				default: 'keep',
 				isVisible: (options) => {
 					if (options.method === 'sel') return true
@@ -1185,7 +1160,7 @@ export default class Actions {
 				id: 'sourceFront',
 				type: 'dropdown',
 				label: 'Screen Foreground Source',
-				choices: [{ id: 'keep', label: "Don't change source"}, ...choicesForegroundImagesSource],
+				choices: [{ id: 'keep', label: "Don't change source"}, ...this.choices.choicesForegroundImagesSource],
 				default: 'keep',
 				isVisible: (options) => {
 					if (options.method === 'sel') return true
@@ -1201,7 +1176,7 @@ export default class Actions {
 				id: 'sourceBack',
 				type: 'dropdown',
 				label: 'Aux Background Source',
-				choices: [{ id: 'keep', label: "Don't change source"}, ...getAuxBackgroundChoices(this.state)],
+				choices: [{ id: 'keep', label: "Don't change source"}, ...this.choices.getAuxBackgroundChoices()],
 				default: 'keep',
 				isVisible: (options) => {
 					if (options.method === 'sel') return true
@@ -1232,8 +1207,8 @@ export default class Actions {
 					id: 'input',
 					type: 'dropdown',
 					label: 'Input',
-					choices: getLiveInputChoices(this.state),
-					default: getLiveInputChoices(this.state)[0]?.id,
+					choices: this.choices.getLiveInputChoices(),
+					default: this.choices.getLiveInputChoices()[0]?.id,
 				},
 				{
 					id: 'mode',
@@ -1265,7 +1240,7 @@ export default class Actions {
 					],
 					action.options.mode
 				)
-				this.device.sendXupdate()
+				this.instance.sendXupdate()
 			},
 		}
 
@@ -1285,8 +1260,8 @@ export default class Actions {
 					id: 'input',
 					type: 'dropdown',
 					label: 'Input',
-					choices: getLiveInputChoices(this.state),
-					default: getLiveInputChoices(this.state)[0]?.id,
+					choices: this.choices.getLiveInputChoices(),
+					default: this.choices.getLiveInputChoices()[0]?.id,
 				},
 				{
 					id: 'mode',
@@ -1328,15 +1303,15 @@ export default class Actions {
 					id: 'screen',
 					type: 'multidropdown',
 					label: 'Screen',
-					choices: getScreenChoices(this.state),
-					default: [getScreenChoices(this.state)[0]?.id],
+					choices: this.choices.getScreenChoices(),
+					default: [this.choices.getScreenChoices()[0]?.id],
 				},
-				...getScreensArray(this.state).map((screen) => {
+				...this.choices.getScreensArray().map((screen) => {
 					return {
 						id: `layerS${screen.index}`,
 						type: 'multidropdown' as const,
 						label: 'Layer ' + screen.id,
-						choices: [{id:'NATIVE', label: 'Background Layer'}, ...getLayerChoices(this.state, screen.id, false)],
+						choices: [{id:'NATIVE', label: 'Background Layer'}, ...this.choices.getLayerChoices(screen.id, false)],
 						default: ['1'],
 						isVisibleData: screen.id,
 						isVisible: (options, screenId) => {
@@ -1393,8 +1368,8 @@ export default class Actions {
 					id: 'screen',
 					type: 'multidropdown',
 					label: 'Screen',
-					choices: getScreenAuxChoices(this.state),
-					default: [getScreenAuxChoices(this.state)[0]?.id],
+					choices: this.choices.getScreenAuxChoices(),
+					default: [this.choices.getScreenAuxChoices()[0]?.id],
 				},
 				{
 					id: 'mode',
@@ -1498,14 +1473,14 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					id: 'screen',
 					type: 'dropdown',
 					label: 'Screen / Aux',
-					choices: [{ id: 'sel', label: 'Selected Screen(s)' }, ...getScreenAuxChoices(this.state)],
+					choices: [{ id: 'sel', label: 'Selected Screen(s)' }, ...this.choices.getScreenAuxChoices()],
 					default: 'sel',
 				},
 				{
 					id: 'preset',
 					type: 'dropdown',
 					label: 'Preset',
-					choices: [{ id: 'sel', label: 'Selected Preset' }, ...choicesPreset],
+					choices: [{ id: 'sel', label: 'Selected Preset' }, ...this.choices.choicesPreset],
 					default: 'sel',
 				},
 				{
@@ -1523,7 +1498,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						type: 'dropdown' as const,
 						label: 'Layer',
 						tooltip: 'When using "selected layer" and screen or preset are not using "Selected", you can narrow the selection',
-						choices: [{ id: 'sel', label: 'Selected Layer(s)' }, ...getLayerChoices(this.state, screen.id, false)],
+						choices: [{ id: 'sel', label: 'Selected Layer(s)' }, ...this.choices.getLayerChoices(screen.id, false)],
 						default: 'sel',
 						isVisibleData: screen.id,
 						isVisible: (options: any, screenID: string) => {
@@ -1614,13 +1589,13 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				let layers: {screenAuxKey: string, layerKey: string}[]
 				if (options.screen === 'sel') {
 					if (options.layersel === 'sel') {
-						layers = this.state.getSelectedLayers()
+						layers = this.choices.getSelectedLayers()
 					} else {
 						layers = [{screenAuxKey: options.screen, layerKey: options.layersel}]
 					}
 				} else {
 					if (options[`layer${options.screen}`] === 'sel') {
-						layers = this.state.getSelectedLayers().filter(layer => layer.screenAuxKey == options.screen)
+						layers = this.choices.getSelectedLayers().filter(layer => layer.screenAuxKey == options.screen)
 					} else {
 						layers = [{screenAuxKey: options.screen, layerKey: options[`layer${options.screen}`]}]
 					}
@@ -1632,12 +1607,12 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				
 				newoptions.screen = screen
 				newoptions.layersel = layer
-				newoptions.preset = this.device.getPresetSelection()
+				newoptions.preset = this.choices.getPresetSelection()
 				newoptions.xAnchor = 'lx + 0.5 * lw'
 				newoptions.yAnchor = 'ly + 0.5 * lh'
 				newoptions.parameters = ['x', 'y', 'w', 'h']
 				
-				const pathToLayer = ['device','screenList','items',screen,'presetList','items',this.state.getPreset(screen, newoptions.preset),'layerList','items',layer,'position','pp']
+				const pathToLayer = ['device','screenList','items',screen,'presetList','items',this.choices.getPreset(screen, newoptions.preset),'layerList','items',layer,'position','pp']
 				const w = this.state.get(['DEVICE', ...pathToLayer, 'sizeH'])
 				const h = this.state.get(['DEVICE', ...pathToLayer, 'sizeV'])
 				newoptions.w = w.toString()
@@ -1653,21 +1628,21 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				let layers: {screenAuxKey: string, layerKey: string}[]
 				if (action.options.screen === 'sel') {
 					if (action.options.layersel === 'sel') {
-						layers = this.state.getSelectedLayers()
+						layers = this.choices.getSelectedLayers()
 					} else {
 						layers = [{screenAuxKey: action.options.screen, layerKey: action.options.layersel}]
 					}
 				} else {
 					if (action.options[`layer${action.options.screen}`] === 'sel') {
-						layers = this.state.getSelectedLayers().filter(layer => layer.screenAuxKey == action.options.screen)
+						layers = this.choices.getSelectedLayers().filter(layer => layer.screenAuxKey == action.options.screen)
 					} else {
 						layers = [{screenAuxKey: action.options.screen, layerKey: action.options[`layer${action.options.screen}`]}]
 					}
 				}
 
-				const preset = action.options.preset === 'sel' ? this.device.getPresetSelection('sel') : action.options.preset
+				const preset = action.options.preset === 'sel' ? this.choices.getPresetSelection('sel') : action.options.preset
 				console.log('layers before match', layers)
-				layers = layers.filter(layer => (!this.state.isLocked(layer.screenAuxKey, preset) && layer.layerKey.match(/^\d+$/))) // wipe out layers of locked screens and native layer
+				layers = layers.filter(layer => (!this.choices.isLocked(layer.screenAuxKey, preset) && layer.layerKey.match(/^\d+$/))) // wipe out layers of locked screens and native layer
 				if (layers.length === 0) return
 
 				const parseExpressionString = (expression: string, context: {[name: string]: number | string | boolean}, initialValue = 0) => {
@@ -1698,7 +1673,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 
 				for (const layerIndex in layers as {screenAuxKey: string, layerKey: string, x: number, y: number, w: number, h: number, [name: string]: number | string}[]) {
 					const layer: any = layers[layerIndex]
-					const presetKey = this.state.getPreset(layer.screenAuxKey, preset)
+					const presetKey = this.choices.getPreset(layer.screenAuxKey, preset)
 					const pathToLayer = ['device','screenList','items',layer.screenAuxKey,'presetList','items',presetKey,'layerList','items',layer.layerKey]
 					layer.w = this.state.get(['DEVICE', ...pathToLayer,'position','pp', 'sizeH']) ?? 1920
 					layer.wOriginal = layer.w
@@ -1721,7 +1696,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 
 				for (const layerIndex in layers as {screenAuxKey: string, layerKey: string, x: number, y: number, w: number, h: number, [name: string]: number | string}[]) {
 					const layer: any = layers[layerIndex]
-					const presetKey = this.state.getPreset(layer.screenAuxKey, preset)
+					const presetKey = this.choices.getPreset(layer.screenAuxKey, preset)
 					const screenWidth = this.state.get(`DEVICE/device/screenList/items/${layer.screenAuxKey}/status/size/pp/sizeH`)
 					const screenHeight = this.state.get(`DEVICE/device/screenList/items/${layer.screenAuxKey}/status/size/pp/sizeV`)
 					
@@ -1854,7 +1829,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					}
 				}
 
-				this.device.sendXupdate()
+				this.instance.sendXupdate()
 			},
 		}
 
@@ -1875,13 +1850,13 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					id: 'screens',
 					type: 'multidropdown',
 					label: 'Screens / Auxscreens',
-					choices: [{ id: 'all', label: 'All' }, { id: 'sel', label: 'Selected Screens' }, ...getScreenAuxChoices(this.state)],
+					choices: [{ id: 'all', label: 'All' }, { id: 'sel', label: 'Selected Screens' }, ...this.choices.getScreenAuxChoices()],
 					default: ['sel'],
 				},
 			],
 			callback: (action) => {
-				for (const screen of this.state.getChosenScreenAuxes(action.options.screens)) {
-					if (this.state.isLocked(screen, 'PREVIEW')) return
+				for (const screen of this.choices.getChosenScreenAuxes(action.options.screens)) {
+					if (this.choices.isLocked(screen, 'PREVIEW')) return
 					this.connection.sendWSmessage(
 						['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'xCopyProgramToPreview'],
 						false
@@ -1926,7 +1901,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 		
 		const devicePresetToggle = this.devicePresetToggle_common
 		devicePresetToggle.callback = (act) => {
-			const allscreens = getScreensAuxArray(this.state, true).map((itm) => itm.id)
+			const allscreens = this.choices.getScreensAuxArray(true).map((itm) => itm.id)
 			// device/transition/screenList/items/1/control/pp/enablePresetToggle
 			// device/screenGroupList/items/S1/control/pp/copyMode
 			
@@ -1949,7 +1924,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 		
 		const devicePresetToggle = this.devicePresetToggle_common
 		devicePresetToggle.callback = (act) => {
-			const allscreens = getScreensAuxArray(this.state, true).map((itm) => itm.id)
+			const allscreens = this.choices.getScreensAuxArray(true).map((itm) => itm.id)
 			// device/transition/screenList/items/1/control/pp/enablePresetToggle
 			// device/screenGroupList/items/S1/control/pp/copyMode
 
@@ -1980,8 +1955,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					id: 'widget',
 					label: 'Widget',
 					type: 'dropdown',
-					choices: getWidgetChoices(this.state),
-					default: getWidgetChoices(this.state)[0]?.id,
+					choices: this.choices.getWidgetChoices(),
+					default: this.choices.getWidgetChoices()[0]?.id,
 				},
 				{
 					id: 'sel',
@@ -2103,15 +2078,15 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					id: 'widget',
 					label: 'Widget',
 					type: 'dropdown',
-					choices: [{ id: 'sel', label: 'Selected' }, ...getWidgetChoices(this.state)],
+					choices: [{ id: 'sel', label: 'Selected' }, ...this.choices.getWidgetChoices()],
 					default: 'sel',
 				},
 				{
 					id: 'source',
 					label: 'Source',
 					type: 'dropdown',
-					choices: getWidgetSourceChoices(this.state),
-					default: getWidgetSourceChoices(this.state)[0]?.id,
+					choices: this.choices.getWidgetSourceChoices(),
+					default: this.choices.getWidgetSourceChoices()[0]?.id,
 				},
 			],
 			callback: (action) => {
@@ -2167,8 +2142,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					id: 'screen',
 					label: 'Screen',
 					type: 'dropdown',
-					choices: getScreenAuxChoices(this.state),
-					default: getScreenAuxChoices(this.state)[0]?.id,
+					choices: this.choices.getScreenAuxChoices(),
+					default: this.choices.getScreenAuxChoices()[0]?.id,
 				},
 				{
 					id: 'sel',
@@ -2291,7 +2266,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					id: 'screens',
 					label: 'Screen',
 					type: 'multidropdown',
-					choices: [{ id: 'all', label: 'ALL' }, { id: 'sel', label: 'Selected' }, ...getScreenAuxChoices(this.state)],
+					choices: [{ id: 'all', label: 'ALL' }, { id: 'sel', label: 'Selected' }, ...this.choices.getScreenAuxChoices()],
 					default: ['all'],
 					tooltip:
 						'If you choose "All" and "Toggle", the behavior is exactly like in WebRCS, if you choose multiple screens they will be toggled individually',
@@ -2332,7 +2307,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				const pst = action.options.preset === 'PREVIEW' ? 'Prw' : 'Pgm'
 				if (this.state.syncSelection) {
 					if (action.options.lock === 'lock' || action.options.lock === 'unlock') {
-						const screen = this.state.getChosenScreenAuxes(screens)
+						const screen = this.choices.getChosenScreenAuxes(screens)
 						this.connection.sendWSdata(
 							'REMOTE',
 							action.options.lock + 'ScreenAuxes' + pst,
@@ -2341,7 +2316,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						)
 					} else if (action.options.lock === 'toggle') {
 						if (screens.includes('all')) {
-							const allscreens = this.state.getChosenScreenAuxes(screens)
+							const allscreens = this.choices.getChosenScreenAuxes(screens)
 							const allLocked =
 								allscreens.find((scr) => {
 									return this.state.get(['REMOTE', 'live', 'screens', 'presetModeLock', action.options.preset, scr]) === false
@@ -2357,7 +2332,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 								[allscreens]
 							)
 						} else {
-							for (const screen of this.state.getChosenScreenAuxes(screens)) {
+							for (const screen of this.choices.getChosenScreenAuxes(screens)) {
 								this.connection.sendWSdata(
 									'REMOTE',
 									'toggle',
@@ -2370,16 +2345,16 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				} else {
 					const localLocks = this.state.get(['LOCAL', 'presetModeLock', action.options.preset])
 					if (action.options.lock === 'lock') {
-						for (const screen of this.state.getChosenScreenAuxes(screens)) {
+						for (const screen of this.choices.getChosenScreenAuxes(screens)) {
 							localLocks[screen] = true
 						}
 					} else if (action.options.lock === 'unlock') {
-						for (const screen of this.state.getChosenScreenAuxes(screens)) {
+						for (const screen of this.choices.getChosenScreenAuxes(screens)) {
 							localLocks[screen] = false
 						}
 					} else if (action.options.lock === 'toggle') {
 						if (screens.includes('all')) {
-							const allscreens = this.state.getChosenScreenAuxes('all')
+							const allscreens = this.choices.getChosenScreenAuxes('all')
 							const allLocked =
 								allscreens.find((scr) => {
 									return this.state.get(['LOCAL', 'presetModeLock', action.options.preset, scr]) === false
@@ -2394,7 +2369,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 								}
 							}
 						} else {
-							for (const screen of this.state.getChosenScreenAuxes(screens)) {
+							for (const screen of this.choices.getChosenScreenAuxes(screens)) {
 								localLocks[screen] = localLocks[screen] === true ? false : true
 							}
 						}
@@ -2501,8 +2476,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					id: 'screen',
 					type: 'multidropdown',
 					label: 'Screen / Aux',
-					choices: getScreenAuxChoices(this.state),
-					default: [getScreenAuxChoices(this.state)[0]?.id],
+					choices: this.choices.getScreenAuxChoices(),
+					default: [this.choices.getScreenAuxChoices()[0]?.id],
 					isVisible: (options) => {
 						return options.method.startsWith('spec')
 					},
@@ -2513,7 +2488,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					label: 'Layer',
 					tooltip:
 						'Choose all the layers you want to be selected, every other layer on any screen will be deselected. This action does not change the preset, if you want a specific preset, add the according action.',
-					choices: getLayerChoices(this.state, 48, true),
+					choices: this.choices.getLayerChoices(48, true),
 					default: ['1'],
 					isVisible: (options) => {
 						return options.method.startsWith('sel')
@@ -2531,7 +2506,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				}
 				let scrs: string[] = []
 				if (action.options.method?.startsWith('sel')) {
-					scrs = this.state.getSelectedScreens()
+					scrs = this.choices.getSelectedScreens()
 				}
 				if (action.options.method?.startsWith('spec')) {
 					scrs = action.options.screen
@@ -2570,7 +2545,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			},
 		}
 		for (const screen of this.screens) {
-			const layerChoices = getLayerChoices(this.state, screen.id, true)
+			const layerChoices = this.choices.getLayerChoices(screen.id, true)
 			let defaultChoice: DropdownChoiceId
 			if (layerChoices.find((choice: DropdownChoice) => choice.id === '1')) defaultChoice = '1'
 			else defaultChoice = layerChoices[0].id
@@ -2792,8 +2767,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 	get deviceAudioRouteBlock_midra() {
 		
 
-		const audioOutputChoices =  getAudioCustomBlockChoices()
-		const audioInputChoices = getAudioInputChoices(this.state)
+		const audioOutputChoices =  this.choices.getAudioCustomBlockChoices()
+		const audioInputChoices = this.choices.getAudioInputChoices()
 		const deviceAudioRouteBlock = this.deviceAudioRouteBlock_common(audioOutputChoices, audioInputChoices)
 
 
@@ -2850,8 +2825,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 	get deviceAudioRouteBlock_livepremier() {
 		
 
-		const audioOutputChoices = getAudioOutputChoices(this.state)
-		const audioInputChoices = getAudioInputChoices(this.state)
+		const audioOutputChoices = this.choices.getAudioOutputChoices()
+		const audioInputChoices = this.choices.getAudioInputChoices()
 		const deviceAudioRouteBlock = this.deviceAudioRouteBlock_common(audioOutputChoices, audioInputChoices)
 		
 		deviceAudioRouteBlock.callback = (action) => {
@@ -2928,8 +2903,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 	get deviceAudioRouteChannels_livepremier() {
 		
 
-		const audioOutputChoices = getAudioOutputChoices(this.state)
-		const audioInputChoices = getAudioInputChoices(this.state)
+		const audioOutputChoices = this.choices.getAudioOutputChoices()
+		const audioInputChoices = this.choices.getAudioInputChoices()
 		const deviceAudioRouteChannels = this.deviceAudioRouteChannels_common(audioOutputChoices, audioInputChoices)
 
 		deviceAudioRouteChannels.callback = (action) => {
@@ -2985,8 +2960,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 	get deviceAudioRouteChannels_midra() {
 		
 
-		const audioOutputChoices =  getAudioCustomBlockChoices()
-		const audioInputChoices = getAudioInputChoices(this.state)
+		const audioOutputChoices =  this.choices.getAudioCustomBlockChoices()
+		const audioInputChoices = this.choices.getAudioInputChoices()
 		const deviceAudioRouteChannels = this.deviceAudioRouteChannels_common(audioOutputChoices, audioInputChoices)
 
 		deviceAudioRouteChannels.callback = (action) => {
@@ -3044,8 +3019,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					id: 'timer',
 					type: 'dropdown',
 					label: 'Timer',
-					choices: getTimerChoices(this.state),
-					default: getTimerChoices(this.state)[0]?.id,
+					choices: this.choices.getTimerChoices(),
+					default: this.choices.getTimerChoices()[0]?.id,
 				},
 				{
 					id: 'type',
@@ -3214,8 +3189,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					id: 'timer',
 					type: 'dropdown',
 					label: 'Timer',
-					choices: getTimerChoices(this.state),
-					default: getTimerChoices(this.state)[0]?.id,
+					choices: this.choices.getTimerChoices(),
+					default: this.choices.getTimerChoices()[0]?.id,
 				},
 				{
 					id: 'action',
@@ -3276,8 +3251,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					id: 'timer',
 					type: 'dropdown',
 					label: 'Timer',
-					choices: getTimerChoices(this.state),
-					default: getTimerChoices(this.state)[0]?.id,
+					choices: this.choices.getTimerChoices(),
+					default: this.choices.getTimerChoices()[0]?.id,
 				},
 				{
 					id: 'cmd',
@@ -3428,8 +3403,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				id: 'screenList',
 				type: 'dropdown',
 				label: 'Screen',
-				choices: getScreenAuxChoices(this.state),
-				default: getScreenAuxChoices(this.state)[0]?.id,
+				choices: this.choices.getScreenAuxChoices(),
+				default: this.choices.getScreenAuxChoices()[0]?.id,
 				isVisible: (options) => {
 					return options.group === 'screenList'
 				},
@@ -3438,8 +3413,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				id: 'outputList',
 				type: 'dropdown',
 				label: 'Output',
-				choices: getOutputChoices(this.state),
-				default: getOutputChoices(this.state)[0]?.id,
+				choices: this.choices.getOutputChoices(),
+				default: this.choices.getOutputChoices()[0]?.id,
 				isVisible: (options) => {
 					return options.group === 'outputList'
 				},
@@ -3448,8 +3423,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				id: 'inputList',
 				type: 'dropdown',
 				label: 'Input',
-				choices: getLiveInputChoices(this.state),
-				default: getLiveInputChoices(this.state)[0]?.id,
+				choices: this.choices.getLiveInputChoices(),
+				default: this.choices.getLiveInputChoices()[0]?.id,
 				isVisible: (options) => {
 					return options.group === 'inputList'
 				},
@@ -3575,8 +3550,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				id: 'screenList',
 				type: 'dropdown',
 				label: 'Screen',
-				choices: getScreenChoices(this.state),
-				default: getScreenChoices(this.state)[0]?.id,
+				choices: this.choices.getScreenChoices(),
+				default: this.choices.getScreenChoices()[0]?.id,
 				isVisible: (options) => {
 					return options.group === 'screenList'
 				},
@@ -3585,8 +3560,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				id: 'outputList',
 				type: 'dropdown',
 				label: 'Output',
-				choices: getOutputChoices(this.state),
-				default: getOutputChoices(this.state)[0]?.id,
+				choices: this.choices.getOutputChoices(),
+				default: this.choices.getOutputChoices()[0]?.id,
 				isVisible: (options) => {
 					return options.group === 'outputList'
 				},
@@ -3746,7 +3721,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						//this.device.sendRawWSmessage(`{"channel":"DEVICE","data":{"path":${JSON.stringify(path)},"value":${value}}}`)
 					}
 					if (action.options.xUpdate) {
-						this.device.sendXupdate()
+						this.instance.sendXupdate()
 					}
 				} catch (error) {
 					this.instance.log('warn', 'Custom command transmission failed')

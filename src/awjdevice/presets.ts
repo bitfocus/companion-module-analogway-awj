@@ -1,9 +1,6 @@
-import { State } from '../../types/State.js'
 import { Config } from '../config.js'
 import {AWJinstance} from '../index.js'
-import { AWJdevice } from './awjdevice.js'
-import {
-	Choices,
+import Choices, {
 	// choicesBackgroundSources,
 	// choicesBackgroundSourcesPlusNone,
 	// choicesForegroundImagesSource,
@@ -31,6 +28,8 @@ import {
 	CompanionPresetDefinitions,
 	splitRgb
 } from '@companion-module/base'
+import Constants from './constants.js'
+import { StateMachine } from '../state.js'
 
 type Dropdown<t> = { id: t, label: string }
 
@@ -38,9 +37,9 @@ export default class Presets {
 	/** reference to the instance */
 	private instance: AWJinstance
 	/** The state object to take the data from */
-	private state: State
+	private state: StateMachine
 	/** reference to the constants of the device */
-	private constants: Constants
+	private constants: typeof Constants
 	/** lists with choices */
 	private choices: Choices
 	/** configuration for the instance */
@@ -80,9 +79,10 @@ export default class Presets {
 	]
 
 	constructor(instance: AWJinstance) {
-		this.state = instance.device.state
-		this.constants = instance.device.constants
-		this.choices = instance.device.choices
+		this.instance = instance
+		this.state = this.instance.state
+		this.constants = this.instance.constants
+		this.choices = this.instance.choices
 		this.config= this.instance.config
 	}
 
@@ -100,7 +100,7 @@ export default class Presets {
 		const state = this.state
 		const ilabel = this.instance.label
 		const config= this.instance.config
-		const allscreens = this.state.getChosenScreenAuxes('all')
+		const allscreens = this.choices.getChosenScreenAuxes('all')
 		//const presets: ({ style: { show_topbar?: boolean } } & CompanionPreset)[] = []
 		const presets: CompanionPresetDefinitions = {}
 
@@ -110,7 +110,7 @@ export default class Presets {
 	/**
 	 * Object with all exported preset definitions
 	 */
-	get presets() {
+	get allPresets() {
 		const presetDefinitions: CompanionPresetDefinitions = this.presetsToUse.reduce(
 			(prev, curr) => { return {...prev, ...this[curr] }},
 			{}
@@ -519,7 +519,7 @@ export default class Presets {
 		const presets: CompanionPresetDefinitions = {}
 		const ilabel = this.instance.label
 
-		for (const screen of this.state.getChosenScreenAuxes('all')) {
+		for (const screen of this.choices.getChosenScreenAuxes('all')) {
 			presets['Take Screen ' + screen] = {
 			type: 'button',
 				name: 'Take Screen ' + screen,
@@ -632,7 +632,7 @@ export default class Presets {
 		const presets: CompanionPresetDefinitions = {}
 		const ilabel = this.instance.label
 
-		for (const screen of this.state.getChosenScreenAuxes('all')) {
+		for (const screen of this.choices.getChosenScreenAuxes('all')) {
 			presets['Cut Screen ' + screen] = {
 			type: 'button',
 				name: 'Cut Screen ' + screen,
@@ -837,7 +837,7 @@ export default class Presets {
 		const presets: CompanionPresetDefinitions = {}
 		const ilabel = this.instance.label
 
-		for (const screen of this.state.getChosenScreenAuxes('all')) {
+		for (const screen of this.choices.getChosenScreenAuxes('all')) {
 			presets['Do intelligent selection for screen ' + screen] = {
 				type: 'button',
 				name: 'Do intelligent selection for screen ' + screen,
@@ -1018,9 +1018,8 @@ export default class Presets {
 	// MARK: Toggle Lock PGM Screen ...
 	get toggleLockPgmScreen() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
-		for (const screen of this.state.getChosenScreenAuxes('all')) {
+		for (const screen of this.choices.getChosenScreenAuxes('all')) {
 			presets['Toggle Lock PGM Screen ' + screen] = {
 			type: 'button',
 				name: 'Toggle Lock PGM Screen ' + screen,
@@ -1072,7 +1071,6 @@ export default class Presets {
 	// MARK: Toggle Lock PVW All Screens
 	get toggleLockPvwAllScreens() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
 		presets['Toggle Lock PVW All Screens'] = {
 			type: 'button',
@@ -1124,9 +1122,8 @@ export default class Presets {
 	// MARK: Toggle Lock PVW Screen ...
 	get toggleLockPvwScreen() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
-		for (const screen of this.state.getChosenScreenAuxes('all')) {
+		for (const screen of this.choices.getChosenScreenAuxes('all')) {
 			presets['Toggle Lock PVW Screen ' + screen] = {
 			type: 'button',
 				name: 'Toggle Lock PVW Screen ' + screen,
@@ -1178,7 +1175,6 @@ export default class Presets {
 	// MARK: Select Layer
 	get selectLayer() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
 		for (const screen of this.choices.getScreensAuxArray()) {
 			for (const layer of this.choices.getLayerChoices(screen.id)) {
@@ -1274,6 +1270,7 @@ export default class Presets {
 	get chooseInput() {
 		const presets: CompanionPresetDefinitions = {}
 		const ilabel = this.instance.label
+		const self = this
 
 		function makeInputSelectionPreset(input: Dropdown<string>, layertypes: string[], layerdescription: string) {
 			let sourceLabelVariable = ''
@@ -1288,8 +1285,8 @@ export default class Presets {
 				style: {
 					text: input.label.replace(/^(\D+\d+)\s.+$/, '$1') + sourceLabelVariable,
 					size: 'auto',
-					color: this.config.color_bright,
-					bgcolor: this.config.color_dark,
+					color: self.config.color_bright,
+					bgcolor: self.config.color_dark,
 				},
 				steps: [
 					{
@@ -1313,8 +1310,8 @@ export default class Presets {
 							source: input.id,
 						},
 						style: {
-							color: this.inverseColorBW(this.config.color_green),
-							bgcolor: this.config.color_green,
+							color: self.inverseColorBW(self.config.color_green),
+							bgcolor: self.config.color_green,
 						},
 					},
 					{
@@ -1325,8 +1322,8 @@ export default class Presets {
 							source: input.id,
 						},
 						style: {
-							color: this.inverseColorBW(this.config.color_red),
-							bgcolor: this.config.color_red,
+							color: self.inverseColorBW(self.config.color_red),
+							bgcolor: self.config.color_red,
 						},
 					},
 				],
@@ -1370,7 +1367,6 @@ export default class Presets {
 	// MARK: Toggle Freeze Input ...
 	get toggleFreezeInput() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
 		for (const input of this.choices.getLiveInputArray()) {
 			presets['Toggle Freeze ' + input.id] = {
@@ -1420,7 +1416,6 @@ export default class Presets {
 	// MARK: Toggle Freeze Layer ...
 	get toggleFreezeLayer() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
 		if (this.state.platform === 'midra') {
 			const screens = this.choices.getScreensArray()
@@ -1482,7 +1477,6 @@ export default class Presets {
 	// MARK: Toggle Freeze Screen ...
 	get toggleFreezeScreen() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
 		if (this.state.platform === 'midra') {
 			const screens = this.choices.getScreensAuxArray()
@@ -1578,7 +1572,6 @@ export default class Presets {
 	// MARK: Select Widget
 	get selectWidget() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
 		for (const widget of this.choices.getWidgetChoices()) {
 			presets['Select ' + widget.label] = {
@@ -1626,7 +1619,6 @@ export default class Presets {
 	// MARK: Toggle Widget Selection
 	get toggleWidgetSelection() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
 		for (const widget of this.choices.getWidgetChoices()) {
 			presets['Toggle Selection of ' + widget.label] = {
@@ -1673,7 +1665,6 @@ export default class Presets {
 	// MARK: Select Widget Source
 	get selectWidgetSource() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
 		for (const source of this.choices.getWidgetSourceChoices()) {
 			presets['Select Widget Source' + source.label] = {
@@ -1710,7 +1701,6 @@ export default class Presets {
 	// MARK: Timers
 	get timers() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
 		for (const timer of this.choices.getTimerChoices()) {
 			presets['Play/Pause ' + timer.label] = {
@@ -1866,7 +1856,6 @@ export default class Presets {
 	// MARK: Stream
 	get stream() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
 		if (this.state.platform === 'midra') presets['Start/Stop Streaming '] = {
 			type: 'button',

@@ -1,24 +1,27 @@
+import { AWJinstance } from '..'
 import { State } from '../../types/State'
-import { AWJdevice } from './awjdevice'
+import Constants from './constants'
 
 type Dropdown<t> = {id: t, label: string}
 
 export type Choicemeta = { id: string, label: string, index?: string, longname?: string, device?: number }
 
 /**
- * Methods for generating lists (eventually formated as choices) out of the state data
+ * Methods for retrieving device dependent data like properties, lists, choices out of the state or generating it
  */
-class Choices {
+export default class Choices {
+	/** reference to the instance */
+	instance: AWJinstance
 	/** The state object to take the data from */
 	state: State
 	/** reference to the constants of the device */
-	constants: Constants
+	constants: typeof Constants
 
-	constructor(device: AWJdevice) {
-		this.state = device.state
-		this.constants = device.constants
+	constructor(instance: AWJinstance) {
+		this.instance = instance
+		this.state = this.instance.state
+		this.constants = instance.constants
 	}
-
 
 	choicesPreset: Dropdown<string>[] = [
 		{ id: 'pgm', label: 'Program' },
@@ -957,6 +960,208 @@ class Choices {
 				label: `Timer ${itm.index}${itm.label === '' ? '' : ' - ' + itm.label}`
 			}
 		})
+	}
+
+	/** Is a screen / preset combination locked */
+	public isLocked(screen: string, preset: string): boolean {
+		preset = preset.replace(/pgm/i, 'PROGRAM').replace(/pvw/i, 'PREVIEW')
+		let path = ['LOCAL']
+		if (this.instance.state.syncSelection) {
+			path = ['REMOTE', 'live', 'screens']
+		}
+		if (screen === 'all') {
+			const allscreens = this.getChosenScreenAuxes('all')
+			return (
+				allscreens.find((scr) => {
+					return this.state.get([...path, 'presetModeLock', preset, scr]) === false
+				}) === undefined
+			)
+		} else {
+			return this.state.get([...path, 'presetModeLock', preset, screen])
+		}
+	}
+
+	/**
+	 * Returns the currently selected preset or just the input if a specific preset is given.
+	 * @param preset if omitted or if 'sel' then the currently selected preset is returned
+	 * @param fullName if set to true the return value is PROGRAM/PREVIEW instead of pgm/pvw
+	 * @returns
+	 */
+	getPresetSelection(preset?: string, fullName = false): 'pgm' | 'pvw' | 'PROGRAM' | 'PREVIEW' {
+		let pst = preset
+		if (preset === undefined || preset.match(/^sel$/i)) {
+			if (this.instance.state.syncSelection) {
+				pst = this.state.get('REMOTE/live/screens/presetModeSelection/presetMode')
+			} else {
+				pst = this.state.get('LOCAL/presetMode')
+			}
+		}
+		if (pst && pst.match(/^pgm|program$/i) && !fullName) {
+			return 'pgm'
+		} else if (pst && pst.match(/^pvw|preview$/i) && !fullName) {
+			return 'pvw'
+		} else if (pst && pst.match(/^pgm|program$/i) && fullName) {
+			return 'PROGRAM'
+		} else if (pst && pst.match(/^pvw|preview$/i) && fullName) {
+			return 'PREVIEW'
+		} else if (fullName) {
+			return 'PREVIEW'
+		} else {
+			return 'pvw'
+		}
+	}
+
+	/**
+	 * Returns the actual preset (A or B) representing program or preview of the given input or of the selection
+	 * @param screen S1-S... or A1-A...
+	 * @param preset can be A or B or PGM or PVW or 'sel', A and B are returned unchanged
+	 * @returns A or B, whichever is the actual preset for program or preview, during fades the preset is changed only at the end of the fade
+	 */
+	public getPreset(screen: string, preset: string): string {
+		if (screen.match(/^S|A\d+$/) === null) return ''
+		if (preset.match(/^A|B|PGM|PVW|SEL$/i) === null) return ''
+		if (preset.toLowerCase() === 'sel') {
+			preset = this.getPresetSelection()
+		}
+		let ret: string
+		if (preset.match(/^A|B$/i)) {
+			ret = preset.toUpperCase()
+		} else {
+			ret = this.state.get(`LOCAL/screens/${screen}/${preset.toLowerCase()}/preset`)
+		}
+		return ret
+	}
+
+	/**
+	 * Returns the program or preview representing the given preset A or B of the screen
+	 * @param screen S1-S... or A1-A...
+	 * @param preset can be A or B
+	 * @param fullName if true returnes PROGRAM/PREVIEW else pgm/pvw
+	 * @returns program or preview, during fades the preset is changed only at the end of the fade
+	 */
+	public getPresetRev(screen: string, preset: 'A' | 'B' | 'a' | 'b', fullName = false): string | null {
+		if (screen.match(/^S|A\d+$/) === null) return null
+		if (preset.match(/^A|B$/i) === null) return null
+		let ret: string
+		if (this.state.get(`LOCAL/screens/${screen}/pgm/preset`) === preset.toUpperCase()) {
+			ret = fullName ? 'PROGRAM' : 'pgm'
+		} else {
+			ret = fullName ? 'PREVIEW' : 'pvw'
+		}
+		return ret
+	}
+
+	/**
+	 * Returnes the input array of screens but extends it by all active screens or the selected screens if the input array containes 'all' or 'sel'
+	 * @param input array of strings to check
+	 * @param prefix what to write in front of the screen number, defaults to 'S'
+	 * @returns either all active screens or the input
+	 */
+	public getChosenScreens(input: string | string[], prefix = 'S'): string[] {
+		if (typeof input === 'string') {
+			input = [input]
+		}
+		let screens: string[] = []
+		// get screens to check
+		if (input.includes('all')) {
+			this.getScreensArray().forEach((screen: Choicemeta) => screens.push(`${prefix}${screen.index}`))
+		} else if (input.includes('sel')) {
+			screens = [...input]
+			screens.splice(screens.indexOf('sel'), 1)
+			for (const selscr of this.getSelectedScreens()) {
+				if (screens.includes(selscr) === false) {
+					screens.push(selscr)
+				}
+			}
+		} else {
+			screens = input
+		}
+		return screens
+	}
+
+	/**
+	 * Returnes the input array of auxes but extends it by all active auxes or the selected auxes if the input array containes 'all' or 'sel'
+	 * @param input array of strings to check
+	 * @returns either all active auxes or the input
+	 */
+	public getChosenAuxes(input: string | string[]): string[] {
+		if (typeof input === 'string') {
+			input = [input]
+		}
+		let screens: string[] = []
+		// get screens to check
+		if (input.includes('all')) {
+			this.getAuxArray().forEach((screen: Choicemeta) => screens.push('A' + screen.index))
+		} else if (input.includes('sel')) {
+			screens = [...input]
+			screens.splice(screens.indexOf('sel'), 1)
+			for (const selscr of this.getSelectedScreens()) {
+				if (screens.includes(selscr) === false) {
+					screens.push(selscr)
+				}
+			}
+		} else {
+			screens = input
+		}
+		return screens
+	}
+
+	/**
+	 * Returnes the input array of screens and auxes but extends it by all active screens and auxes or the selected screens/auxes if the input array containes 'all' or 'sel'
+	 * @param input array of strings to check
+	 * @returns either all active screens or the input
+	 */
+	public getChosenScreenAuxes(input: string | string[] | undefined): string[] {
+		if (input === undefined) return []
+		if (typeof input === 'string') {
+			input = [input]
+		}
+		let screens: string[] = []
+		// get screens to check
+		if (input.includes('all')) {
+			screens.push(...this.getChosenScreens('all'))
+			screens.push(...this.getChosenAuxes('all'))
+
+		} else if (input.includes('sel')) {
+			screens = [...input]
+			screens.splice(screens.indexOf('sel'), 1)
+			for (const selscr of this.getSelectedScreens()) {
+				if (screens.includes(selscr) === false) {
+					screens.push(selscr)
+				}
+			}
+		} else {
+			screens = input
+		}
+		return screens
+	}
+
+	public getSelectedScreens(): string[] {
+		let path = 'LOCAL/screenAuxSelection/keys'
+		if (this.instance.state.syncSelection) {
+			path = 'REMOTE/live/screens/screenAuxSelection/keys'
+		}
+		return [...this.state.get(path)]
+	}
+
+	public getSelectedLayers(): { screenAuxKey: string; layerKey: string} [] {
+		let path = 'LOCAL/layerIds'
+		if (this.instance.state.syncSelection) {
+			path = 'REMOTE/live/screens/layerSelection/layerIds'
+		}
+		return this.state.get(path)
+	}
+	
+    /**
+	 * get MAC address for WOL
+	 */
+	public getMACaddress(): string {
+		return this.state
+			.get(this.constants.macAddressPath)
+			.map((elem: number) => {
+				return elem.toString(16).padStart(2,'0')
+			})
+			.join(':') ?? ''
 	}
 
 }

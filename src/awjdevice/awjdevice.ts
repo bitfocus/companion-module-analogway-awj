@@ -1,11 +1,13 @@
 import { AWJinstance } from ".."
 import { AWJconnection } from "../connection"
-import { getActions } from "./actions.js"
-import { getFeedbacks } from "./feedback.js"
-import { getPresets } from "./presets.js"
+import Actions from "./actions.js"
+import Feedbacks from "./feedback.js"
+import Presets from "./presets.js"
 import { StateMachine } from "../state.js"
-import { commonSubscriptions } from "./subscriptions.js"
-import { Subscription } from '../../types/Subscription.js'
+import Subscriptions from "./subscriptions.js"
+import Choices from "./choices.js"
+import { Subscription } from "../../types/Subscription.js"
+import Constants from "./constants.js"
 
 /**
  * This is the base class for providing action-, feedback- and preset-definitions, subscriptions for an AWJ device.
@@ -16,9 +18,30 @@ import { Subscription } from '../../types/Subscription.js'
  * @class Midra
  */
 class AWJdevice extends StateMachine{
+
+    /** reference to the instance itself, which is the root class and handles all Companion interfacing */
     instance: AWJinstance
+
+    /** holds all constants for this particular type of device */
+    constants: typeof Constants
+
+    /** reference to the connection with the device */
     connection: AWJconnection
-    subscriptions: Record<string, Subscription> = {}
+
+    /** generates lists and choices from current state */
+    choices: Choices
+
+    /** holds action definitions */
+    private actions: Actions
+
+    /** holds feedback definitions */
+    private feedbacks: Feedbacks
+
+    /** holds preset definitions */
+    private presets: Presets
+
+    /** holds subscription definitions and checks incoming data against them */
+    subscriptions: Subscriptions
 
     constructor(instance: AWJinstance, initialState?: {[name: string]: any}) {
         super(instance, initialState)
@@ -32,65 +55,55 @@ class AWJdevice extends StateMachine{
      * setup some initial data
      */
     init() {
+        this.constants = Constants // instanciate first because other classes may need the constants
+        this.choices = new Choices(this.instance) // instanciate second because actions/feedbacks need choices
+        this.actions = new Actions(this.instance)
+        this.feedbacks = new Feedbacks(this.instance)
+        this.presets = new Presets(this.instance)
+        this.subscriptions = new Subscriptions(this.instance)
+
         this.setUnmapped('LOCAL/config', this.instance.config)
         this.setUnmapped('LOCAL/platform', 'genericAWJ')
     }
 
     /**
      * Returns the action definitions for this device
-     * @param instance 
      * @returns action definitions
      */
-    getActionDefinitions(instance: AWJinstance) {
-        return getActions(instance)
+    get actionDefinitions() {   
+        return this.actions.allActions
     }
 
     /**
      * Returns the feedback definitions for this device
-     * @param instance 
-     * @returns 
+     * @returns feedback definitions
      */
-    getFeedbackDefinitions(instance: AWJinstance) {
-        return getFeedbacks(instance)
+    get feedbackDefinitions() {
+        return this.feedbacks.allFeedbacks
     }
 
     /**
      * Returns the feedback definitions for this device
-     * @param instance 
-     * @returns 
+     * @returns preset definitions
      */
-    getPresetDefinitions(instance: AWJinstance) {
-        return getPresets(instance)
+    get presetDefinitions() {
+        return this.presets.allPresets
     }
 
     /**
-	 * Returns the currently selected preset or just the input if a specific preset is given.
-	 * @param preset if omitted or if 'sel' then the currently selected preset is returned
-	 * @param fullName if set to true the return value is PROGRAM/PREVIEW instead of pgm/pvw
-	 * @returns
+	 * Adds one or more subscriptions to the active subscriptions
+	 * @param subscriptions Object containing one or more subscriptions 
 	 */
-	getPresetSelection(preset?: string, fullName = false): 'pgm' | 'pvw' | 'PROGRAM' | 'PREVIEW' {
-		let pst = preset
-		if (preset === undefined || preset.match(/^sel$/i)) {
-			if (this.syncSelection) {
-				pst = this.get('REMOTE/live/screens/presetModeSelection/presetMode')
-			} else {
-				pst = this.get('LOCAL/presetMode')
-			}
-		}
-		if (pst && pst.match(/^pgm|program$/i) && !fullName) {
-			return 'pgm'
-		} else if (pst && pst.match(/^pvw|preview$/i) && !fullName) {
-			return 'pvw'
-		} else if (pst && pst.match(/^pgm|program$/i) && fullName) {
-			return 'PROGRAM'
-		} else if (pst && pst.match(/^pvw|preview$/i) && fullName) {
-			return 'PREVIEW'
-		} else if (fullName) {
-			return 'PREVIEW'
-		} else {
-			return 'pvw'
-		}
+	public addSubscriptions(subscriptions: Record<string, Subscription>): void {
+        this.subscriptions.addSubscriptions(subscriptions)
+	}
+
+	/**
+	 * Removes the subscription with the given ID  from the active subscriptions
+	 * @param subscriptionId ID of the subscription to remove
+	 */
+	public removeSubscription(subscriptionId: string): void {
+		this.subscriptions.removeSubscription(subscriptionId)
 	}
 
     /**
@@ -98,7 +111,7 @@ class AWJdevice extends StateMachine{
 	 */
 	public getMACfromDevice(): string {
 		return this
-			.get('DEVICE/device/system/network/adapter/pp/macAddress')
+			.get(this.constants.macAddressPath)
 			.map((elem: number) => {
 				return elem.toString(16).padStart(2,'0')
 			})
@@ -109,36 +122,17 @@ class AWJdevice extends StateMachine{
 	 * Sends a global update command
 	 * @param platform 
 	 */
-	sendXupdate(platform?: string): void {
-		if (!platform) platform = this.platform
-		const updates: Record<string, string> = {
-			livepremier: '{"channel":"DEVICE","data":{"path":["device","screenGroupList","control","pp","xUpdate"],"value":',
-            livepremier4: '{"channel":"DEVICE","data":{"path":["device","screenGroupList","control","pp","xUpdate"],"value":',
-			midra: '{"channel":"DEVICE","data":{"path":["device","preset","control","pp","xUpdate"],"value":'
-		}
-		const xUpdate = updates[platform]
-		if (xUpdate) {
-			this.connection.sendRawWSmessage(xUpdate + 'false}}')
-			this.connection.sendRawWSmessage(xUpdate + 'true}}')
-		}
-
+	sendXupdate(): void {
+        this.connection.sendRawWSmessage(`{"channel":"DEVICE","data":{"path":[${this.constants.xUpdatePath}],"value":false}}`)
+        this.connection.sendRawWSmessage(`{"channel":"DEVICE","data":{"path":[${this.constants.xUpdatePath}],"value":true}}`)
 	}
 
+    /**
+     * Init all the subscriptions.  
+     */
     initSubscriptions() {
-        this.subscriptions = commonSubscriptions
+        this.subscriptions.initSubscriptions()
     }
-
-    public get maxScreens() : number {
-        return 24
-    }
-    public get maxAuxScreens() : number {
-        return 96
-    }
-    public get maxInputs() : number {
-        return 256
-    }
-
-    
 
 }
 

@@ -4,8 +4,6 @@ import * as net from 'net'
 import ky from 'ky'
 import URI from 'urijs'
 import WebSocket from 'ws'
-import { StateMachine } from './state.js'
-import { mapOut } from './mappings.js'
 import { InstanceStatus } from '@companion-module/base'
 
 const fetchDefaultParameters = {
@@ -16,52 +14,26 @@ const fetchDefaultParameters = {
 
 class AWJconnection {
 	instance: AWJinstance
-	public state: StateMachine
-	tcpsocket: net.Socket | undefined
-	websocket: WebSocket | undefined | null
-	wsTimeout: NodeJS.Timeout | undefined
-	port: number | undefined
-	host: string | undefined
-	addr: string | undefined
-	authcookie = ''
-	reconnectmin = 100
-	reconnectmax = 16_500
-	reconnectinterval = this.reconnectmin
-	readonly delimiter = '!' // '\x04'
-	readonly bufferMaxLength = 64_000
-	buffer = ''
-	shouldBeConnected: boolean
-	hadError: boolean
-	#messageHandler: (arg: string) => any = () => undefined
+	private tcpsocket: net.Socket | undefined
+	private websocket: WebSocket | undefined | null
+	private wsTimeout: NodeJS.Timeout | undefined
+	private port: number | undefined
+	private host: string | undefined
+	private addr: string | undefined
+	private authcookie = ''
+	private readonly reconnectmin = 100
+	private readonly reconnectmax = 16_500
+	private reconnectinterval = this.reconnectmin
+	private readonly delimiter = '!' // '\x04'
+	private readonly bufferMaxLength = 64_000
+	private buffer = ''
+	private shouldBeConnected: boolean
+	private hadError: boolean
 
 	constructor(instance: AWJinstance) {
 		this.instance = instance
 		this.hadError = false
 		this.shouldBeConnected = false
-	}
-
-	/**
-	 * Handle messages received from device
-	 * @param callback function to call for received data. Data will be passed in Argument as string.
-	 */
-	onMessage(callback: (arg: string) => any) {
-		if (callback === undefined) {
-			this.#messageHandler = () => undefined
-		} else {
-			this.#messageHandler = callback
-		}
-
-		if (this.websocket){
-			console.log('hooking websocket message ok')
-			this.websocket.on('message', (data, isBinary) => {
-				// console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
-				if (!isBinary) {
-					this.#messageHandler(data.toString())
-				}
-			})
-		} else {
-			console.log('hooking websocket message fail')
-		}
 	}
 
 	bufferFragment(data: string): void {
@@ -138,32 +110,163 @@ class AWJconnection {
 				// const swVerPatch = deviceObj.version?.patch
 
 				// create a device according to the data of the auth page
-				const createDevice = () => {	
-					if (device.substring(0, 3) === 'NLC') {
-						if (swVerMajor && swVerMajor == 4) {
-							return this.instance.createDevice(`livepremier${swVerMajor}`)
-						} else {
-							return this.instance.createDevice(`livepremier`)
+				// const setDevice = () => {	
+				// 	if (device.substring(0, 3) === 'NLC') {
+				// 		if (swVerMajor && swVerMajor == 4) {
+				// 			return this.instance.setDevice(`livepremier${swVerMajor}`)
+				// 		} else {
+				// 			return this.instance.setDevice(`livepremier`)
+				// 		}
+				// 	} else if (device.match(/^EIKOS/)) {
+				// 		return this.instance.setDevice('midra')
+				// 	} else if (device.match(/^PULSE/)) {
+				// 		return this.instance.setDevice('midra')
+				// 	} else if (device.match(/^QMX/)) {
+				// 		return this.instance.setDevice('midra')
+				// 	} else if (device.match(/^QVU/)) {
+				// 		return this.instance.setDevice('midra')
+				// 	} else if (device.match(/^ZEN/)) {
+				// 		return this.instance.setDevice('midra')
+				// 	} else if (device.match(/^DBG/)) {
+				// 		return this.instance.setDevice('midra')
+				// 	} else {
+				// 		return undefined
+				// 	}
+				// }
+
+				const handleApiStateResponse = (res: {[name: string]: any}): void => {
+					if (res.device) {
+						this.instance.state.setUnmapped('DEVICE', res)
+						//console.log('rest get API device state result')
+
+						const system = res.device.system // this.instance.state.getUnmapped('DEVICE/device/system')
+						const device = system.pp?.dev ?? system.deviceList?.items?.['1']?.pp?.dev ?? null
+						const fwVersion = system.version?.pp?.updater ?? system.deviceList?.items?.['1']?.version?.pp?.updater ?? '0.0.0' // this.state.getUnmapped('DEVICE/device/system/version/pp/updater') ?? this.state.getUnmapped('DEVICE/device/system/deviceList/items/1/version/pp/updater') ?? '0.0.0'
+
+						const serialAndFirmware = (): string => {
+							const sn = system.serial?.pp?.serialNumber ?? system.deviceList?.items?.['1']?.serial?.pp?.serialNumber ?? 'unknown'
+							if (sn.startsWith('ZZ99')) return ` Simulator, fw ${fwVersion}`
+							else return `, S/N: ${sn}, fw ${fwVersion}`
 						}
-					} else if (device.match(/^EIKOS/)) {
-						return this.instance.createDevice('midra')
-					} else if (device.match(/^PULSE/)) {
-						return this.instance.createDevice('midra')
-					} else if (device.match(/^QMX/)) {
-						return this.instance.createDevice('midra')
-					} else if (device.match(/^QVU/)) {
-						return this.instance.createDevice('midra')
-					} else if (device.match(/^ZEN/)) {
-						return this.instance.createDevice('midra')
-					} else if (device.match(/^DBG/)) {
-						return this.instance.createDevice('midra')
+
+						if (device) {
+							let newPlatform = ''
+							if (device.substring(0, 3) === 'NLC') {
+								this.instance.updateStatus(InstanceStatus.Ok)
+								this.instance.log(
+									'info',
+									'Connected to ' +
+									device.replace('NLC_', 'Aquilon ') + serialAndFirmware()
+								)
+								const major = parseInt(fwVersion.split('.')[0])
+								if (!isNaN(major) && major >= 4) {
+									newPlatform = `livepremier4`
+								} else {
+									newPlatform = 'livepremier'
+								}
+							} else if (device.match(/^EIKOS/)) {
+								this.instance.updateStatus(InstanceStatus.Ok)
+								this.instance.log(
+									'info',
+									'Connected to Eikos 4k' + serialAndFirmware()
+								)
+								newPlatform = 'midra'
+							} else if (device.match(/^PULSE/)) {
+								this.instance.updateStatus(InstanceStatus.Ok)
+								this.instance.log(
+									'info',
+									'Connected to Pulse 4k' + serialAndFirmware()
+								)
+								newPlatform = 'midra'
+							} else if (device.match(/^QMX/)) {
+								this.instance.updateStatus(InstanceStatus.Ok)
+								this.instance.log(
+									'info',
+									'Connected to QuikMatrix 4k' + serialAndFirmware()
+								)
+								newPlatform = 'midra'
+							} else if (device.match(/^QVU/)) {
+								this.instance.updateStatus(InstanceStatus.Ok)
+								this.instance.log(
+									'info',
+									'Connected to QuickVu 4k' + serialAndFirmware()
+								)
+								newPlatform = 'midra'
+							} else if (device.match(/^ZEN100/)) {
+								this.instance.updateStatus(InstanceStatus.Ok)
+								this.instance.log(
+									'info',
+									'Connected to Zenith 100' + serialAndFirmware()
+								)
+								newPlatform = 'midra'
+							} else if (device.match(/^ZEN200/)) {
+								this.instance.updateStatus(InstanceStatus.Ok)
+								this.instance.log(
+									'info',
+									'Connected to Zenith 200' + serialAndFirmware()
+								)
+								newPlatform = 'midra'
+							} else if (device.match(/^DBG/)) {
+								this.instance.updateStatus(InstanceStatus.Ok)
+								this.instance.log(
+									'info',
+									'Connected to MNG_DEBUG' + serialAndFirmware()
+								)
+								newPlatform = 'midra'
+							} else {
+								this.instance.updateStatus(InstanceStatus.ConnectionFailure)
+								this.instance.log('error', `Connected to an AWJ device of type '${device}', firmware '${fwVersion}'. Device type or firmware can not be determined or is not compatible with this module`)
+								return
+							}
+
+							try {
+								this.instance.setDevice(newPlatform)
+							} catch (error) {
+								this.instance.log('error', `setting device platform to ${newPlatform} failed:\n${error}`) 
+							}
+							try {
+								this.instance.subscriptions.initSubscriptions()
+							} catch (error) {
+								this.instance.log('error', `setting up subscriptions for device failed:\n${error.stack}`) 
+							}
+
+
+							if (this.instance.config.sync === true && this.hadError === false) {
+								console.log('switching sync on because of config')
+								this.instance.switchSync(1)
+							} else if (this.hadError === true) {
+								this.instance.switchSync(3)
+								console.log('setting sync again after reconnection')
+							} else {
+								this.instance.switchSync(0)
+								console.log('setting sync off by default')
+							}
+							this.hadError = false
+							
+
+							try {
+								const deviceMacaddr = this.instance.choices.getMACaddress()
+								const configMacaddr = this.instance.config.macaddress.split(/[,:-_.\s]/).join(':')
+								if (configMacaddr !== deviceMacaddr) {
+									this.instance.config.macaddress = deviceMacaddr
+									this.instance.saveConfig(this.instance.config)
+								}
+							} catch (error) {
+								this.instance.log('error', 'getting MAC address from device failed ' + error)
+							}
+							return
+						} else {
+							this.instance.updateStatus(InstanceStatus.ConnectionFailure)
+							this.instance.log('error', 'Connected to an Analog Way device but device type is not compatible with this module')
+						}
 					} else {
-						return undefined
+						this.instance.log('error', 'Got malformed state from device ' + res)
 					}
+					return
 				}
 
 				const setupDevice = async () => {
-					const _device = createDevice()
+					//const _device = setDevice()
 
 					const webSocketProtocol = urlObj.protocol() === 'https' ? 'wss://' : 'ws://'
 					this.websocket = new WebSocket(`${webSocketProtocol}${urlObj.host()}`, { handshakeTimeout: 1234, maxRedirects: 1 })
@@ -209,29 +312,22 @@ class AWJconnection {
 						}
 					})
 
-					this.onMessage(this.#messageHandler)
-
-					// this.websocket.on('message', (data, isBinary) => {
-					// 	//console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
-					// 	if (
-					// 		isBinary != true &&
-					// 		data.toString().match(/"op":"replace","path":"\/system\/status\/current(Device)?Time","value":/) === null &&
-					// 		data.toString().match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
-					// 		data.toString().match(/"device","system",("deviceList","items","[1-4]",)?"temperature",/) === null
-					// 	) {
-					// 		// console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
-					// 		this.#messageHandler(data.toString())
-					// 		this.state.apply(JSON.parse(data.toString()))
-					// 	}
-					// })
+					this.websocket.on('message', (data, isBinary) => {
+						//console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
+						if (
+							isBinary != true &&
+							data.toString().match(/"op":"replace","path":"\/system\/status\/current(Device)?Time","value":/) === null &&
+							data.toString().match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
+							data.toString().match(/"device","system",("deviceList","items","[1-4]",)?"temperature",/) === null
+						) {
+							// console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
+							this.instance.state.apply(JSON.parse(data.toString()))
+						}
+					})
 
 					const download = await this.downloadDevicestate(urlObj)
-					const returnedState = this.instance.handleApiStateResponse(download)
-					if (returnedState !== undefined) {
-						this.state = returnedState			
-					} else {
-						this.instance.log('error', "Error setting up device")	
-					}
+
+					handleApiStateResponse(download)
 
 				}
 
@@ -430,12 +526,20 @@ class AWJconnection {
 		path: string | string[],
 		value: string | string[] | number | boolean
 	): void {
-		const mapped = mapOut(this.state.mappings, path, value)
+		// const mapped = mapOut(this.state.mappings, path, value)
+		// const obj = {
+		// 	channel: 'DEVICE',
+		// 	data: {
+		// 		path: mapped.path.split('/'),
+		// 		value: mapped.value
+		// 	}
+		// }
+
 		const obj = {
 			channel: 'DEVICE',
 			data: {
-				path: mapped.path.split('/'),
-				value: mapped.value
+				path,
+				value
 			}
 		}
 		this.sendRawWSmessage(JSON.stringify(obj))
@@ -449,15 +553,26 @@ class AWJconnection {
 	 * @param value
 	 */
 	sendWSpatch(channel: string, op: string, path: string | string[], value: string | number | boolean | object): void {
-		const mapped = mapOut(this.state.mappings, path, value)
+		// const mapped = mapOut(this.state.mappings, path, value)
+		// const obj = {
+		// 	channel,
+		// 	data: {
+		// 		channel: 'PATCH',
+		// 		patch: {
+		// 			op: op,
+		// 			path: '/'+mapped.path,
+		// 			value: mapped.value
+		// 		}
+		// 	}
+		// }
 		const obj = {
 			channel,
 			data: {
 				channel: 'PATCH',
 				patch: {
 					op: op,
-					path: '/'+mapped.path,
-					value: mapped.value
+					path,
+					value
 				}
 			}
 		}
@@ -473,37 +588,56 @@ class AWJconnection {
 	 */
 	sendWSdata(channel: string, name: string, path: string | string[], args: unknown[]): void {
 		let obj = {}
+		// if (args.length === 0) {
+		// 	const mapped = mapOut(this.state.mappings, path, [])
+		// 	obj = {
+		// 		channel,
+		// 		data: {
+		// 			name,
+		// 			path: '/' + mapped.path,
+		// 			args: []
+		// 		}
+		// 	}
+		// } else {
+		// 	const mapped = mapOut(this.state.mappings, path, args[0])
+		// 	if (args.length === 1) {
+		// 		obj = {
+		// 			channel,
+		// 			data: {
+		// 				name,
+		// 				path: '/' + mapped.path,
+		// 				args: [mapped.value]
+		// 			}
+		// 		}
+		// 	} else {
+		// 		obj = {
+		// 			channel,
+		// 			data: {
+		// 				name,
+		// 				path: '/' + mapped.path,
+		// 				args: [mapped.value, ...args.splice(1)]
+		// 			}
+		// 		}
+		// 	}
+		// }
 		if (args.length === 0) {
-			const mapped = mapOut(this.state.mappings, path, [])
 			obj = {
 				channel,
 				data: {
 					name,
-					path: '/' + mapped.path,
+					path,
 					args: []
 				}
 			}
 		} else {
-			const mapped = mapOut(this.state.mappings, path, args[0])
-			if (args.length === 1) {
-				obj = {
-					channel,
-					data: {
-						name,
-						path: '/' + mapped.path,
-						args: [mapped.value]
-					}
+			obj = {
+				channel,
+				data: {
+					name,
+					path,
+					args
 				}
-			} else {
-				obj = {
-					channel,
-					data: {
-						name,
-						path: '/' + mapped.path,
-						args: [mapped.value, ...args.splice(1)]
-					}
-				}
-			}
+			}	
 		}
 		this.sendRawWSmessage(JSON.stringify(obj))
 	}

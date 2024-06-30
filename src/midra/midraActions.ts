@@ -123,15 +123,15 @@ export function getActions(instance: AWJinstance): any {
 			},
 		],
 		callback: (action) => {
-			const screens = state.getChosenScreens(action.options.screens)
-			const preset = device.getPresetSelection(action.options.preset, true)
+			const screens = choices.getChosenScreens(action.options.screens, 'SCREEN_')
+			const preset = choices.getPresetSelection(action.options.preset, true)
 			for (const screen of screens) {
-				if (state.isLocked(screen, preset)) continue
+				if (choices.isLocked(screen, preset)) continue
 				const fullpath = [
-					'device', 'presetBank',
+					'device', 'preset',
 					'control', 'load',
 					'slotList', 'items', action.options.memory,
-					'screenList', 'items', screen,
+					'screenList', 'items', screen.replaceAll(/\D/g,''),
 					'presetList', 'items', preset,
 					'pp', 'xRequest',
 				]
@@ -185,10 +185,10 @@ export function getActions(instance: AWJinstance): any {
 			},
 		],
 		callback: (action) => {
-			const screens = state.getChosenAuxes(action.options.screens as string[])
-			const preset = device.getPresetSelection(action.options.preset as string, true)
+			const screens = choices.getChosenAuxes(action.options.screens as string[])
+			const preset = choices.getPresetSelection(action.options.preset as string, true)
 			for (const screen of screens) {
-				if (state.isLocked(screen, preset)) continue
+				if (choices.isLocked(screen, preset)) continue
 				const fullpath = [
 					'device', 'preset', 'auxBank',
 					'control', 'load',
@@ -245,7 +245,7 @@ export function getActions(instance: AWJinstance): any {
 			},
 		],
 		callback: (action) => {
-			const preset = device.getPresetSelection(action.options.preset, true)
+			const preset = choices.getPresetSelection(action.options.preset, true)
 			const memorypath = ['device', 'preset', 'masterBank', 'slotList', 'items', action.options.memory]
 			const filterpath = state.getUnmapped(['DEVICE', ...memorypath, 'status', 'pp', 'isShadow']) ? ['status', 'shadow', 'pp'] : ['status', 'pp']			
 			
@@ -262,7 +262,7 @@ export function getActions(instance: AWJinstance): any {
 			
 			if (
 				screens.find((screen: string) => {
-					return state.isLocked(screen, preset)
+					return choices.isLocked(screen, preset)
 				})
 			) {
 				return // TODO: resembles original WebRCS behavior, but could be also individual screen handling
@@ -346,7 +346,7 @@ export function getActions(instance: AWJinstance): any {
 			},
 		],
 		callback: (action) => {
-			for (const screen of state.getChosenScreenAuxes(action.options.screens)) {
+			for (const screen of choices.getChosenScreenAuxes(action.options.screens)) {
 				connection.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'xTake'], true)
 			}
 		},
@@ -368,7 +368,7 @@ export function getActions(instance: AWJinstance): any {
 			},
 		],
 		callback: (action: any) => {
-			for (const screen of state.getChosenScreenAuxes(action.options.screens)) {
+			for (const screen of choices.getChosenScreenAuxes(action.options.screens)) {
 				connection.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'xCut'], true)
 			}
 		},
@@ -424,7 +424,7 @@ export function getActions(instance: AWJinstance): any {
 					value = position / maximum
 				}
 				const tbarint = Math.round(value * tbarmax)
-				for (const screen of state.getChosenScreenAuxes(action.options.screens)) {
+				for (const screen of choices.getChosenScreenAuxes(action.options.screens)) {
 					connection.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'tbarPosition'], tbarint)
 				}
 			}
@@ -467,7 +467,7 @@ export function getActions(instance: AWJinstance): any {
 		],
 		callback: (action) => {
 			const time = action.options.time * 10
-			state.getChosenScreenAuxes(action.options.screens).forEach((screen) =>
+			choices.getChosenScreenAuxes(action.options.screens).forEach((screen) =>
 				connection.sendWSmessage(['device', 'transition', 'screenList', 'items', screen, 'control', 'pp', 'takeTime'], time)
 			)
 		},
@@ -589,8 +589,8 @@ export function getActions(instance: AWJinstance): any {
 		callback: (action) => {
 			if (action.options.method === 'spec') {
 				for (const screen of action.options.screen) {
-					if (state.isLocked(screen, action.options.preset)) continue
-					const presetpath = ['device', 'screenList', 'items', screen, 'presetList', 'items', state.getPreset(screen, action.options.preset)]
+					if (choices.isLocked(screen, action.options.preset)) continue
+					const presetpath = ['device', 'screenList', 'items', screen, 'presetList', 'items', choices.getPreset(screen, action.options.preset)]
 					if (screen.startsWith('A') && action.options['sourceBack'] !== 'keep')
 						// on Midra on aux there is only background, so we don't show a layer dropdown and just set the background
 						connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'content'], action.options['sourceBack'])
@@ -607,11 +607,11 @@ export function getActions(instance: AWJinstance): any {
 						}
 				}
 			} else if (action.options.method === 'sel') {
-				const preset = device.getPresetSelection('sel')
-				state.getSelectedLayers()
-					.filter((selection) => state.isLocked(selection.screenAuxKey, preset) === false)
+				const preset = choices.getPresetSelection('sel')
+				choices.getSelectedLayers()
+					.filter((selection) => choices.isLocked(selection.screenAuxKey, preset) === false)
 					.forEach((layer) => {
-						const presetpath = ['device', 'screenList', 'items', layer.screenAuxKey, 'presetList', 'items', state.getPreset(layer.screenAuxKey, 'sel')]
+						const presetpath = ['device', 'screenList', 'items', layer.screenAuxKey, 'presetList', 'items', choices.getPreset(layer.screenAuxKey, 'sel')]
 						if (layer.layerKey === 'BKG' && layer.screenAuxKey.startsWith('S') && action.options['sourceNative'] !== 'keep') {
 								connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'set'], action.options['sourceNative'].replace(/\D/g, ''))
 							} else if (layer.layerKey === 'BKG' && layer.screenAuxKey.startsWith('A') && action.options['sourceBack'] !== 'keep') {
@@ -1045,13 +1045,13 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			let layers: {screenAuxKey: string, layerKey: string}[]
 			if (options.screen === 'sel') {
 				if (options.layersel === 'sel') {
-					layers = state.getSelectedLayers()
+					layers = choices.getSelectedLayers()
 				} else {
 					layers = [{screenAuxKey: options.screen, layerKey: options.layersel}]
 				}
 			} else {
 				if (options[`layer${options.screen}`] === 'sel') {
-					layers = state.getSelectedLayers().filter(layer => layer.screenAuxKey == options.screen)
+					layers = choices.getSelectedLayers().filter(layer => layer.screenAuxKey == options.screen)
 				} else {
 					layers = [{screenAuxKey: options.screen, layerKey: options[`layer${options.screen}`]}]
 				}
@@ -1063,12 +1063,12 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			
 			newoptions.screen = screen
 			newoptions.layersel = layer
-			newoptions.preset = device.getPresetSelection()
+			newoptions.preset = choices.getPresetSelection()
 			newoptions.xAnchor = 'lx + 0.5 * lw'
 			newoptions.yAnchor = 'ly + 0.5 * lh'
 			newoptions.parameters = ['x', 'y', 'w', 'h']
 			
-			const pathToLayer = ['device','screenList','items',screen,'presetList','items',state.getPreset(screen, newoptions.preset),'layerList','items',layer,'position','pp']
+			const pathToLayer = ['device','screenList','items',screen,'presetList','items',choices.getPreset(screen, newoptions.preset),'layerList','items',layer,'position','pp']
 			const w = state.get(['DEVICE', ...pathToLayer, 'sizeH'])
 			const h = state.get(['DEVICE', ...pathToLayer, 'sizeV'])
 			newoptions.w = w.toString()
@@ -1084,21 +1084,21 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			let layers: {screenAuxKey: string, layerKey: string}[]
 			if (action.options.screen === 'sel') {
 				if (action.options.layersel === 'sel') {
-					layers = state.getSelectedLayers()
+					layers = choices.getSelectedLayers()
 				} else {
 					layers = [{screenAuxKey: action.options.screen, layerKey: action.options.layersel}]
 				}
 			} else {
 				if (action.options[`layer${action.options.screen}`] === 'sel') {
-					layers = state.getSelectedLayers().filter(layer => layer.screenAuxKey == action.options.screen)
+					layers = choices.getSelectedLayers().filter(layer => layer.screenAuxKey == action.options.screen)
 				} else {
 					layers = [{screenAuxKey: action.options.screen, layerKey: action.options[`layer${action.options.screen}`]}]
 				}
 			}
 
-			const preset = action.options.preset === 'sel' ? device.getPresetSelection('sel') : action.options.preset
+			const preset = action.options.preset === 'sel' ? choices.getPresetSelection('sel') : action.options.preset
 			console.log('layers before match', layers)
-			layers = layers.filter(layer => (!state.isLocked(layer.screenAuxKey, preset) && layer.layerKey.match(/^\d+$/))) // wipe out layers of locked screens and native layer
+			layers = layers.filter(layer => (!choices.isLocked(layer.screenAuxKey, preset) && layer.layerKey.match(/^\d+$/))) // wipe out layers of locked screens and native layer
 			if (layers.length === 0) return
 
 			const parseExpressionString = (expression: string, context: {[name: string]: number | string | boolean}, initialValue = 0) => {
@@ -1129,7 +1129,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 
 			for (const layerIndex in layers as {screenAuxKey: string, layerKey: string, x: number, y: number, w: number, h: number, [name: string]: number | string}[]) {
 				const layer: any = layers[layerIndex]
-				const presetKey = state.getPreset(layer.screenAuxKey, preset)
+				const presetKey = choices.getPreset(layer.screenAuxKey, preset)
 				const pathToLayer = ['device','screenList','items',layer.screenAuxKey,'presetList','items',presetKey,'layerList','items',layer.layerKey]
 				layer.w = state.get(['DEVICE', ...pathToLayer,'position','pp', 'sizeH']) ?? 1920
 				layer.wOriginal = layer.w
@@ -1152,7 +1152,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 
 			for (const layerIndex in layers as {screenAuxKey: string, layerKey: string, x: number, y: number, w: number, h: number, [name: string]: number | string}[]) {
 				const layer: any = layers[layerIndex]
-				const presetKey = state.getPreset(layer.screenAuxKey, preset)
+				const presetKey = choices.getPreset(layer.screenAuxKey, preset)
 				const screenWidth = state.get(`DEVICE/device/screenList/items/${layer.screenAuxKey}/status/size/pp/sizeH`)
 				const screenHeight = state.get(`DEVICE/device/screenList/items/${layer.screenAuxKey}/status/size/pp/sizeV`)
 				
@@ -1306,8 +1306,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			},
 		],
 		callback: (action) => {
-			for (const screen of state.getChosenScreenAuxes(action.options.screens)) {
-				if (state.isLocked(screen, 'PREVIEW')) return
+			for (const screen of choices.getChosenScreenAuxes(action.options.screens)) {
+				if (choices.isLocked(screen, 'PREVIEW')) return
 				connection.sendWSmessage(
 					['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'xCopyProgramToPreview'],
 					false
@@ -1650,7 +1650,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			const pst = action.options.preset === 'PREVIEW' ? 'Prw' : 'Pgm'
 			if (state.syncSelection) {
 				if (action.options.lock === 'lock' || action.options.lock === 'unlock') {
-					const screen = state.getChosenScreenAuxes(screens)
+					const screen = choices.getChosenScreenAuxes(screens)
 					connection.sendWSdata(
 						'REMOTE',
 						action.options.lock + 'ScreenAuxes' + pst,
@@ -1659,7 +1659,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					)
 				} else if (action.options.lock === 'toggle') {
 					if (screens.includes('all')) {
-						const allscreens = state.getChosenScreenAuxes(screens)
+						const allscreens = choices.getChosenScreenAuxes(screens)
 						const allLocked =
 							allscreens.find((scr) => {
 								return state.get(['REMOTE', 'live', 'screens', 'presetModeLock', action.options.preset, scr]) === false
@@ -1675,7 +1675,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 							[allscreens]
 						)
 					} else {
-						for (const screen of state.getChosenScreenAuxes(screens)) {
+						for (const screen of choices.getChosenScreenAuxes(screens)) {
 							connection.sendWSdata(
 								'REMOTE',
 								'toggle',
@@ -1688,16 +1688,16 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			} else {
 				const localLocks = state.get(['LOCAL', 'presetModeLock', action.options.preset])
 				if (action.options.lock === 'lock') {
-					for (const screen of state.getChosenScreenAuxes(screens)) {
+					for (const screen of choices.getChosenScreenAuxes(screens)) {
 						localLocks[screen] = true
 					}
 				} else if (action.options.lock === 'unlock') {
-					for (const screen of state.getChosenScreenAuxes(screens)) {
+					for (const screen of choices.getChosenScreenAuxes(screens)) {
 						localLocks[screen] = false
 					}
 				} else if (action.options.lock === 'toggle') {
 					if (screens.includes('all')) {
-						const allscreens = state.getChosenScreenAuxes('all')
+						const allscreens = choices.getChosenScreenAuxes('all')
 						const allLocked =
 							allscreens.find((scr) => {
 								return state.get(['LOCAL', 'presetModeLock', action.options.preset, scr]) === false
@@ -1712,7 +1712,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 							}
 						}
 					} else {
-						for (const screen of state.getChosenScreenAuxes(screens)) {
+						for (const screen of choices.getChosenScreenAuxes(screens)) {
 							localLocks[screen] = localLocks[screen] === true ? false : true
 						}
 					}
@@ -1854,7 +1854,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			}
 			let scrs: string[] = []
 			if (action.options.method?.startsWith('sel')) {
-				scrs = state.getSelectedScreens()
+				scrs = choices.getSelectedScreens()
 			}
 			if (action.options.method?.startsWith('spec')) {
 				scrs = action.options.screen

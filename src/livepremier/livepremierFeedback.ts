@@ -147,7 +147,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 		],
 		callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screens: string[], preset: string, memory: string, unmodified: number } }) => {
 			//if (!state.platform.startsWith('livepremier') && state.platform !== 'midra') return false // we are not connected
-			const screens = state.getChosenScreenAuxes(feedback.options.screens)
+			const screens = choices.getChosenScreenAuxes(feedback.options.screens)
 			const presets = feedback.options.preset === 'all' ? ['pgm', 'pvw'] : [feedback.options.preset]
 			for (const screen of screens) {
 				for (const preset of presets) {
@@ -155,7 +155,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 						state.get([
 							'DEVICE', 'device',
 							'screenList', 'items', screen,
-							'presetList', 'items', state.getPreset(screen, preset),
+							'presetList', 'items', choices.getPreset(screen, preset),
 							'presetId','status','pp','id',
 						]) == feedback.options.memory
 					) {
@@ -168,7 +168,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 							screen,
 							'presetList',
 							'items',
-							state.getPreset(screen, preset),
+							choices.getPreset(screen, preset),
 							'presetId','status','pp','isNotModified',
 						])
 						if ( ((!true && modified) || (true && !modified)) === (feedback.options.unmodified === 0 ? false : true)) {
@@ -221,8 +221,8 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 			//if (!state.platform.startsWith('livepremier') && state.platform !== 'midra') return false // we are not connected
 			const checkTally = (): boolean => {
 				// go thru the screens
-				for (const screen of state.getChosenScreenAuxes(feedback.options.screens)) {
-					const preset = state.getPreset(screen, feedback.options.preset)
+				for (const screen of choices.getChosenScreenAuxes(feedback.options.screens)) {
+					const preset = choices.getPreset(screen, feedback.options.preset)
 					for (const layer of getLayerChoices(state, screen)) {
 						const screenpath = [
 							'DEVICE', 'device',
@@ -319,7 +319,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 			},
 		],
 		callback: (feedback: CompanionFeedbackBooleanEvent & {options: {screens: string}}) => {
-			if (state.getChosenScreenAuxes(feedback.options.screens)
+			if (choices.getChosenScreenAuxes(feedback.options.screens)
 				.find((screen: string) => {
 					return state.get(`DEVICE/device/screenGroupList/items/${screen}/status/pp/transition`).match(/FROM/)
 				})) return true
@@ -347,7 +347,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 		],
 		callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screen: string } }) => {
 			//if (!state.platform.startsWith('livepremier') && state.platform !== 'midra') return false // we are not connected
-			return state.getSelectedScreens()?.includes(feedback.options.screen)
+			return choices.getSelectedScreens()?.includes(feedback.options.screen)
 		},
 	}
 
@@ -382,7 +382,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 		],
 		callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screen: string, preset: string } }) => {
 			//if (!state.platform.startsWith('livepremier') && state.platform !== 'midra') return false // we are not connected
-			return state.isLocked(feedback.options.screen, feedback.options.preset)
+			return choices.isLocked(feedback.options.screen, feedback.options.preset)
 		},
 	}
 
@@ -476,13 +476,13 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 			}
 			if (feedback.options.layer === 'all') {
 				return (
-					JSON.stringify(state.getSelectedLayers()).includes(
+					JSON.stringify(choices.getSelectedLayers()).includes(
 						`{"screenAuxKey":"${feedback.options.screen}","layerKey":"`
 					) && pst
 				)
 			} else {
 				return (
-					JSON.stringify(state.getSelectedLayers()).includes(
+					JSON.stringify(choices.getSelectedLayers()).includes(
 						`{"screenAuxKey":"${feedback.options.screen}","layerKey":"${feedback.options.layer}"}`
 					) && pst
 				)
@@ -928,7 +928,7 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 					fbk: `id:${feedback.id}`
 				}
 				// console.log('add sub', sub)
-				instance.addSubscriptions(sub)
+				instance.device.addSubscriptions(sub)
 				// console.log('subscriptions', Object.keys(state.subscriptions).map(key => `${key} : ${state.subscriptions[key].pat}`))
 
 			} else {
@@ -947,8 +947,8 @@ export function getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinition
 			})
 		},
 		unsubscribe: (feedback: CompanionFeedbackBooleanEvent & FeedbackDeviceCustomOptions) => {
-			instance.removeSubscription(feedback.id)
-			instance.removeSubscription(feedback.id + '-take')
+			instance.device.removeSubscription(feedback.id)
+			instance.device.removeSubscription(feedback.id + '-take')
 			instance.removeVariable(feedback.id)
 		}
 	}

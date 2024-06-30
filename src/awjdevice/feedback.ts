@@ -2,148 +2,39 @@ import { Config } from '../config.js'
 import {AWJinstance, regexAWJpath} from '../index.js'
 import { StateMachine } from '../state.js'
 import { AWJdevice } from './awjdevice.js'
+import Choices, {Choicemeta} from './choices.js'
 import {
-	Choicemeta,
-	choicesBackgroundSources,
-	choicesPreset,
-	getAuxChoices,
-	getAuxMemoryChoices,
-	getLayerChoices,
-	getLayersAsArray,
-	getLiveInputChoices,
-	getMasterMemoryChoices,
-	getScreenAuxChoices,
-	getScreenChoices,
-	getScreenMemoryChoices,
-	getScreensArray,
-	getScreensAuxArray,
-	getSourceChoices,
-	getTimerChoices,
-	getWidgetChoices,
-} from './choices.js'
-import { combineRgb, CompanionActionEvent, CompanionBooleanFeedbackDefinition, CompanionFeedbackBooleanEvent, CompanionFeedbackButtonStyleResult, CompanionFeedbackDefinition, CompanionFeedbackDefinitions, CompanionOptionValues, SomeCompanionActionInputField } from '@companion-module/base'
+	combineRgb, 
+	CompanionBooleanFeedbackDefinition, 
+	CompanionFeedbackBooleanEvent, 
+	CompanionFeedbackDefinition, 
+	CompanionFeedbackDefinitions, 
+	CompanionOptionValues
+} from '@companion-module/base'
 
 
-// type DeepReplace2<T, OldType, NewType> =
-//     T extends OldType ? NewType :
-//     T extends (...args: infer A) => infer R
-//         ? (...args: DeepReplaceArray<A, OldType, NewType>) => DeepReplace<R, OldType, NewType> :
-//     T extends Array<infer U>
-//         ? Array<DeepReplace<U, OldType, NewType>> :
-//     T extends ReadonlyArray<infer U>
-//         ? ReadonlyArray<DeepReplace<U, OldType, NewType>> :
-//     T extends Set<infer U>
-//         ? Set<DeepReplace<U, OldType, NewType>> :
-//     T extends ReadonlySet<infer U>
-//         ? ReadonlySet<DeepReplace<U, OldType, NewType>> :
-//     T extends Map<infer K, infer V>
-//         ? Map<DeepReplace<K, OldType, NewType>, DeepReplace<V, OldType, NewType>> :
-//     T extends ReadonlyMap<infer K, infer V>
-//         ? ReadonlyMap<DeepReplace<K, OldType, NewType>, DeepReplace<V, OldType, NewType>> :
-//     T extends object
-//         ? { [K in keyof T]: DeepReplace<T[K], OldType, NewType> } :
-//     T;
+/** Helper type for replacing the very generic options with the real structure of options */
+type ReplaceOptionsInFunctions<T, NewOptionsType> = T extends (...args: any[]) => any
+  ? T extends (first: infer First, ...rest: infer Rest) => infer Return
+    ? First extends { options: any } | { options?: any }
+      ? (first: Omit<First, 'options'> & { options: NewOptionsType }, ...rest: Rest) => Return
+      : T
+    : T
+  : T extends Array<infer U>
+    ? Array<ReplaceOptionsInFunctions<U, NewOptionsType>>
+    : T extends ReadonlyArray<infer U>
+      ? ReadonlyArray<ReplaceOptionsInFunctions<U, NewOptionsType>>
+      : T extends object
+        ? { [K in keyof T]: ReplaceOptionsInFunctions<T[K], NewOptionsType> }
+        : T;
 
-// type DeepReplace<T, OldType, NewType> =
-//     T extends OldType ? NewType :
-//     T extends (...args: infer A) => infer R
-//         ? (...args: DeepReplaceArray<A, OldType, NewType>) => DeepReplace<R, OldType, NewType> :
-//     T extends Array<infer U>
-//         ? Array<DeepReplace<U, OldType, NewType>> :
-//     T extends ReadonlyArray<infer U>
-//         ? ReadonlyArray<DeepReplace<U, OldType, NewType>> :
-//     T extends Set<infer U>
-//         ? Set<DeepReplace<U, OldType, NewType>> :
-//     T extends ReadonlySet<infer U>
-//         ? ReadonlySet<DeepReplace<U, OldType, NewType>> :
-//     T extends Map<infer K, infer V>
-//         ? Map<DeepReplace<K, OldType, NewType>, DeepReplace<V, OldType, NewType>> :
-//     T extends ReadonlyMap<infer K, infer V>
-//         ? ReadonlyMap<DeepReplace<K, OldType, NewType>, DeepReplace<V, OldType, NewType>> :
-//     T extends object
-//         ? { [K in keyof T]: DeepReplace<T[K], OldType, NewType> } :
-//     T;
-
-// // Helper type for handling function argument arrays
-// type DeepReplaceArray<T extends any[], OldType, NewType> = {
-//     [K in keyof T]: DeepReplace<T[K], OldType, NewType>
-// };
-
-// // Helper type to extract and replace generic type arguments
-// type ReplaceGenericArgs<T, OldType, NewType> = T extends any
-//     ? { [K in keyof T]: DeepReplace<T[K], OldType, NewType> }
-//     : never;
-
-// Helper type to carry both the type and its name
-type Named<T, Name extends string> = T & { __typeName: Name };
-
-// Type to extract the name from a Named type
-type ExtractName<T> = T extends Named<any, infer Name> ? Name : never;
-
-// Main replacement utility
-type DeepReplace<T, OldNamed, NewNamed> =
-    ExtractName<T> extends ExtractName<OldNamed> ? NewNamed :
-    T extends (...args: infer A) => infer R
-        ? (...args: DeepReplaceArray<A, OldNamed, NewNamed>) => DeepReplace<R, OldNamed, NewNamed> :
-    T extends Array<infer U>
-        ? Array<DeepReplace<U, OldNamed, NewNamed>> :
-    T extends ReadonlyArray<infer U>
-        ? ReadonlyArray<DeepReplace<U, OldNamed, NewNamed>> :
-    T extends Set<infer U>
-        ? Set<DeepReplace<U, OldNamed, NewNamed>> :
-    T extends ReadonlySet<infer U>
-        ? ReadonlySet<DeepReplace<U, OldNamed, NewNamed>> :
-    T extends Map<infer K, infer V>
-        ? Map<DeepReplace<K, OldNamed, NewNamed>, DeepReplace<V, OldNamed, NewNamed>> :
-    T extends ReadonlyMap<infer K, infer V>
-        ? ReadonlyMap<DeepReplace<K, OldNamed, NewNamed>, DeepReplace<V, OldNamed, NewNamed>> :
-    T extends object
-        ? { [K in keyof T]: DeepReplace<T[K], OldNamed, NewNamed> } :
-    T;
-
-// Helper type for handling function argument arrays
-type DeepReplaceArray<T extends any[], OldNamed, NewNamed> = {
-    [K in keyof T]: DeepReplace<T[K], OldNamed, NewNamed>
-};
-
-type replaceme = Named<unknown, 'CompanionOptionValues'>;
-
-type AWJfeedback<K> = DeepReplace<CompanionFeedbackDefinition, replaceme, K>
-
-/**
- * T = Object like {option1id: type, option2id: type}
- */
-// type AWJfeedback2<T> = {
-// 	name: string
-// 	description?: string
-// 	tooltip?: string
-// 	defaultStyle: Partial<CompanionFeedbackButtonStyleResult>
-// 	options: SomeAWJfeedbackInputfield<T>[]
-// 	callback?: (action: ActionEvent<T>) => void
-// 	subscribe?: (action: ActionEvent<T>) => void
-// 	unsubscribe?: (action: ActionEvent<T>) => void
-// 	learn?: (
-// 		action: ActionEvent<T>
-// 	) => AWJoptionValues<T> | undefined | Promise<AWJoptionValues<T> | undefined>
-// }
-
-// type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
-
-// type SomeAWJfeedbackInputfield<T> = { isVisible?: ((options: AWJoptionValues<T>, [string]?: any) => boolean) }
-// 	& DistributiveOmit<SomeCompanionActionInputField, 'isVisible'>
-
-// type ActionEvent<T> = Omit<CompanionActionEvent, 'options'> & {
-// 	options: AWJoptionValues<T>
-// }
-
-// type AWJoptionValues<T> = T
-// type AWJoptionValuesExtended<T> = T
-
-// type Dropdown<t> = {id: t, label: string}
+/** Type which gives CompanionFeedbackDefinition but replaces the generic options with the structure givien in the parameter */
+type AWJfeedback<K> = ReplaceOptionsInFunctions<CompanionFeedbackDefinition, K>
 
 export default class Feedbacks {
 	private instance: AWJinstance
-	private state: AWJdevice
+	private state: StateMachine
+	private choices: Choices
 	private config: Config
 
 	readonly feedbacksToUse = [		
@@ -171,7 +62,8 @@ export default class Feedbacks {
 
 	constructor (instance: AWJinstance) {
 		this.instance = instance
-		this.state = instance.device
+		this.state = instance.state
+		this.choices = this.instance.choices
 		this.config = instance.config
 	}
 
@@ -185,7 +77,7 @@ export default class Feedbacks {
 	/**
 	 * Object with all exported feedback definitions
 	 */
-	get feedbacks() {
+	get allFeedbacks() {
 		const feedbackDefinitions: CompanionFeedbackDefinitions = Object.fromEntries(
             this.feedbacksToUse.map((key) => [key, this[key]])
         )
@@ -196,7 +88,7 @@ export default class Feedbacks {
 	// MARK: syncselection
 	get syncselection()  {
 		
-		const syncselection: AWJfeedback<{a: string}> = {
+		const syncselection: CompanionBooleanFeedbackDefinition = {
 			type: 'boolean',
 			name: 'Synchronization of the selection',
 			description: 'Shows wether this client synchronizes its selection to the device',
@@ -205,8 +97,7 @@ export default class Feedbacks {
 				bgcolor: this.config.color_highlight,
 			},
 			options: [],
-			callback: (feedback) => {
-				feedback.options
+			callback: (_feedback) => {
 				const clients = this.state.getUnmapped('REMOTE/system/network/websocketServer/clients')
 				if (clients === undefined || Array.isArray(clients) === false) return false
 				const myid: string = this.state.getUnmapped('LOCAL/socketId')
@@ -251,7 +142,7 @@ export default class Feedbacks {
 			},
 		}
 
-		return { presetToggle }
+		return presetToggle
 	}
 
 	// MARK: Master Memory
@@ -270,14 +161,14 @@ export default class Feedbacks {
 					id: 'memory',
 					type: 'dropdown',
 					label: 'Screen Memory',
-					choices: getMasterMemoryChoices(this.state),
-					default: getMasterMemoryChoices(this.state)[0]?.id,
+					choices: this.choices.getMasterMemoryChoices(),
+					default: this.choices.getMasterMemoryChoices()[0]?.id,
 				},
 				{
 					id: 'preset',
 					type: 'dropdown',
 					label: 'Preset',
-					choices: [{ id: 'all', label: 'Any' }, ...choicesPreset],
+					choices: [{ id: 'all', label: 'Any' }, ...this.choices.choicesPreset],
 					default: 'all',
 				},
 			],
@@ -294,7 +185,7 @@ export default class Feedbacks {
 			},
 		}
 
-		return { deviceMasterMemory }
+		return deviceMasterMemory
 	}
 
 	// MARK: Screen Memory
@@ -313,15 +204,15 @@ export default class Feedbacks {
 					id: 'preset',
 					type: 'dropdown',
 					label: 'Preset',
-					choices: [{ id: 'all', label: 'Any' }, ...choicesPreset],
+					choices: [{ id: 'all', label: 'Any' }, ...this.choices.choicesPreset],
 					default: 'all',
 				},
 				{
 					id: 'memory',
 					type: 'dropdown',
 					label: 'Screen Memory',
-					choices: getScreenMemoryChoices(this.state),
-					default: getScreenMemoryChoices(this.state)[0]?.id,
+					choices: this.choices.getScreenMemoryChoices(),
+					default: this.choices.getScreenMemoryChoices()[0]?.id,
 				},
 				{
 					id: 'unmodified',
@@ -337,10 +228,11 @@ export default class Feedbacks {
 			],
 			callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screens: string[], preset: string, memory: string, unmodified: number } }) => {
 				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
-				const screens = this.state.platform === 'midra' ? this.state.getChosenScreens(feedback.options.screens) : this.state.getChosenScreenAuxes(feedback.options.screens)
+				const screens = this.state.platform === 'midra' ? this.choices.getChosenScreens(feedback.options.screens) : this.choices.getChosenScreenAuxes(feedback.options.screens)
 				const presets = feedback.options.preset === 'all' ? ['pgm', 'pvw'] : [feedback.options.preset]
 				const map = {
 					livepremier: { id: ['presetId','status','pp','id'], modified: ['presetId','status','pp','isNotModified'], modyes: true },
+					livepremier4: { id: ['presetId','status','pp','id'], modified: ['presetId','status','pp','isNotModified'], modyes: true },
 					midra: {id: ['status','pp','memoryId'], modified: ['status','pp','isModified'], modyes: false}
 				}
 				for (const screen of screens) {
@@ -354,7 +246,7 @@ export default class Feedbacks {
 								screen,
 								'presetList',
 								'items',
-								this.state.getPreset(screen, preset),
+								this.choices.getPreset(screen, preset),
 								...map[this.state.platform].id,
 							]) == feedback.options.memory
 						) {
@@ -367,7 +259,7 @@ export default class Feedbacks {
 								screen,
 								'presetList',
 								'items',
-								this.state.getPreset(screen, preset),
+								this.choices.getPreset(screen, preset),
 								...map[this.state.platform].modified,
 							])
 							if ( ((!map[this.state.platform].modyes && modified) || (map[this.state.platform].modyes && !modified)) == feedback.options.unmodified) {
@@ -384,22 +276,22 @@ export default class Feedbacks {
 					id: 'screens',
 					type: 'dropdown',
 					label: 'Screens / Auxscreens',
-					choices: [{ id: 'all', label: 'Any' }, ...getScreenAuxChoices(this.state)],
+					choices: [{ id: 'all', label: 'Any' }, ...this.choices.getScreenAuxChoices()],
 					multiple: true,
 					default: ['all'],
-				},
+				} as any, // TODO: fix type of dropdown with multiple: true property
 		)
 		if (this.state.platform === 'midra') deviceScreenMemory.options.unshift(
 			{
 					id: 'screens',
 					type: 'dropdown',
 					label: 'Screens',
-					choices: [{ id: 'all', label: 'Any' }, ...getScreenChoices(this.state)],
+					choices: [{ id: 'all', label: 'Any' }, ...this.choices.getScreenChoices()],
 					multiple: true,
 					tags: true,
 					regex: '/^S([1-9]|[1-3][0-9]|4[0-8])$/',
 					default: ['all'],
-				},
+				} as any, // TODO: fix type of dropdown with multiple: true property
 		)
 
 		return deviceScreenMemory
@@ -408,7 +300,7 @@ export default class Feedbacks {
 	// MARK: Aux Memory - Midra
 	get deviceAuxMemory() {
 		
-		const deviceAuxMemory: CompanionBooleanFeedbackDefinition = {
+		const deviceAuxMemory: AWJfeedback<{ screens: string[], preset: string, memory: string, unmodified: number }> = {
 			type: 'boolean',
 			name: 'Aux Memory',
 			description: 'Shows wether a Aux Memory is loaded on a auxscreen',
@@ -421,25 +313,25 @@ export default class Feedbacks {
 					id: 'screens',
 					type: 'dropdown',
 					label: 'Aux Screens',
-					choices: [{ id: 'all', label: 'Any' }, ...getAuxChoices(this.state)],
+					choices: [{ id: 'all', label: 'Any' }, ...this.choices.getAuxChoices()],
 					multiple: true,
 					tags: true,
 					regex: '/^S([1-9]|[1-3][0-9]|4[0-8])$/',
 					default: ['all'],
-				},
+				} as any, // TODO: fix type of dropdown with multiple: true property
 				{
 					id: 'preset',
 					type: 'dropdown',
 					label: 'Preset',
-					choices: [{ id: 'all', label: 'Any' }, ...choicesPreset],
+					choices: [{ id: 'all', label: 'Any' }, ...this.choices.choicesPreset],
 					default: 'all',
 				},
 				{
 					id: 'memory',
 					type: 'dropdown',
 					label: 'Aux Memory',
-					choices: getAuxMemoryChoices(this.state),
-					default: getAuxMemoryChoices(this.state)[0]?.id,
+					choices: this.choices.getAuxMemoryChoices(),
+					default: this.choices.getAuxMemoryChoices()[0]?.id,
 				},
 				{
 					id: 'unmodified',
@@ -453,9 +345,9 @@ export default class Feedbacks {
 					default: 2,
 				},
 			],
-			callback: (feedback: CompanionFeedbackBooleanEvent | { options: { screens: string[], preset: string, memory: string, unmodified: number } }) => {
+			callback: (feedback) => {
 				if (this.state.platform !== 'midra') return false // we are not connected or connected to a livepremier
-				const screens = this.state.getChosenAuxes(feedback.options.screens)
+				const screens = this.choices.getChosenAuxes(feedback.options.screens)
 				const presets = feedback.options.preset === 'all' ? ['pgm', 'pvw'] : [feedback.options.preset]
 				const map = {
 					livepremier: { id: ['presetId','status','pp','id'], modified: ['presetId','status','pp','isNotModified'], modyes: true },
@@ -472,7 +364,7 @@ export default class Feedbacks {
 								screen,
 								'presetList',
 								'items',
-								this.state.getPreset(screen, preset),
+								this.choices.getPreset(screen, preset),
 								...map[this.state.platform].id,
 							]) == feedback.options.memory
 						) {
@@ -485,7 +377,7 @@ export default class Feedbacks {
 								screen,
 								'presetList',
 								'items',
-								this.state.getPreset(screen, preset),
+								this.choices.getPreset(screen, preset),
 								...map[this.state.platform].modified,
 							])
 							if ( ((!map[this.state.platform].modyes && modified) || (map[this.state.platform].modyes && !modified)) == feedback.options.unmodified) {
@@ -504,7 +396,7 @@ export default class Feedbacks {
 	// MARK: deviceSourceTally
 	get deviceSourceTally() {
 		
-		const deviceSourceTally: CompanionBooleanFeedbackDefinition = {
+		const deviceSourceTally: AWJfeedback<{ screens: string[], preset: string, source: string }> = {
 			type: 'boolean',
 			name: 'Source Tally',
 			description: 'Shows wether a source is visible on program or preview in a screen',
@@ -517,34 +409,34 @@ export default class Feedbacks {
 					id: 'screens',
 					type: 'dropdown',
 					label: 'Screens / Auxscreens',
-					choices: [{ id: 'all', label: 'Any' }, ...getScreenAuxChoices(this.state)],
+					choices: [{ id: 'all', label: 'Any' }, ...this.choices.getScreenAuxChoices()],
 					multiple: true,
 					tags: true,
 					regex: '/^(S|A)([1-9]|[1-3][0-9]|4[0-8])$/',
 					default: ['all'],
-				},
+				} as any, // TODO: fix type of dropdown with multiple: true property
 				{
 					id: 'preset',
 					type: 'dropdown',
 					label: 'Preset',
-					choices: choicesPreset,
+					choices: this.choices.choicesPreset,
 					default: 'pgm',
 				},
 				{
 					id: 'source',
 					type: 'dropdown',
 					label: 'Source',
-					choices: [...getSourceChoices(this.state), ...choicesBackgroundSources],
+					choices: [...this.choices.getSourceChoices(), ...this.choices.choicesBackgroundSources],
 					default: 'NONE',
 				},
 			],
-			callback: (feedback: CompanionFeedbackBooleanEvent | { options: { screens: string[], preset: string, source: string } }) => {  
+			callback: (feedback) => {  
 				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
 				const checkTally = (): boolean => {
 					// go thru the screens
-					for (const screen of this.state.getChosenScreenAuxes(feedback.options.screens)) {
-						const preset = this.state.getPreset(screen, feedback.options.preset)
-						for (const layer of getLayerChoices(this.state, screen)) {
+					for (const screen of this.choices.getChosenScreenAuxes(feedback.options.screens)) {
+						const preset = this.choices.getPreset(screen, feedback.options.preset)
+						for (const layer of this.choices.getLayerChoices(screen)) {
 							const screenpath = [
 								'DEVICE',
 								'device',
@@ -650,7 +542,7 @@ export default class Feedbacks {
 	// MARK: deviceTake
 	get deviceTake() {
 		
-		const deviceTake: CompanionBooleanFeedbackDefinition = {
+		const deviceTake: AWJfeedback<{screens: string}> = {
 			type: 'boolean',
 			name: 'Transition active',
 			description: 'Shows wether a screen is currently in a take/fade transition',
@@ -663,35 +555,35 @@ export default class Feedbacks {
 					id: 'screens',
 					type: 'dropdown',
 					label: 'Screens / Auxscreens',
-					choices: [{ id: 'all', label: 'Any' }, ...getScreenAuxChoices(this.state)],
+					choices: [{ id: 'all', label: 'Any' }, ...this.choices.getScreenAuxChoices()],
 					multiple: true,
 					tags: true,
 					regex: '/^(S|A)([1-9]|[1-3][0-9]|4[0-8])$/',
 					default: 'all',
-				},
+				} as any, // TODO: fix type of dropdown with multiple: true property
 			],
-			callback: (feedback: CompanionFeedbackBooleanEvent & {options: {screens: string}}) => {
-				if (this.state.platform.startsWith('livepremier') && this.state.getChosenScreenAuxes(feedback.options.screens)
+			callback: (feedback) => {
+				if (this.state.platform.startsWith('livepremier') && this.choices.getChosenScreenAuxes(feedback.options.screens)
 					.find((screen: string) => {
-						return this.state.get(`DEVICE/device/screenGroupList/items/${screen}/status/pp/transition`).match(/FROM/)
+						return this.state.get(`DEVICE/device/screenGroupList/items/${screen}/status/pp/transition`)?.match(/FROM/)
 					})) return true
 		
-				else if (this.state.platform === 'midra' && this.state.getChosenScreenAuxes(feedback.options.screens)
+				else if (this.state.platform === 'midra' && this.choices.getChosenScreenAuxes(feedback.options.screens)
 					.find((screen: string) => {
-						return this.state.get(`DEVICE/device/transition/screenList/items/${screen}/status/pp/transition`).match(/FROM/)
+						return this.state.get(`DEVICE/device/transition/screenList/items/${screen}/status/pp/transition`)?.match(/FROM/)
 					})) return true
 				
 				return false
 			},
 		}
 
-		return { deviceTake }
+		return deviceTake
 	}
 
 	// MARK: liveScreenSelection
 	get liveScreenSelection() {
 		
-		const liveScreenSelection: CompanionBooleanFeedbackDefinition = {
+		const liveScreenSelection: AWJfeedback<{screen: string}> = {
 			type: 'boolean',
 			name: 'Screen Selection',
 			description: 'Shows wether a screen is currently selected',
@@ -704,13 +596,13 @@ export default class Feedbacks {
 					id: 'screen',
 					type: 'dropdown',
 					label: 'Screen / Auxscreen',
-					choices: getScreenAuxChoices(this.state),
-					default: getScreenAuxChoices(this.state)[0]?.id
+					choices: this.choices.getScreenAuxChoices(),
+					default: this.choices.getScreenAuxChoices()[0]?.id
 				},
 			],
-			callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screen: string } }) => {
+			callback: (feedback) => {
 				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
-				return this.state.getSelectedScreens()?.includes(feedback.options.screen)
+				return this.choices.getSelectedScreens()?.includes(feedback.options.screen)
 			},
 		}
 
@@ -720,7 +612,7 @@ export default class Feedbacks {
 	// MARK: liveScreenLock
 	get liveScreenLock() {
 		
-		const liveScreenLock: CompanionBooleanFeedbackDefinition = {
+		const liveScreenLock: AWJfeedback<{screen: string, preset: string }> = {
 			type: 'boolean',
 			name: 'Screen Lock',
 			description: 'Shows wether a screen currently is locked',
@@ -733,7 +625,7 @@ export default class Feedbacks {
 					id: 'screen',
 					type: 'dropdown',
 					label: 'Screen',
-					choices: [{ id: 'all', label: 'ALL' }, ...getScreenAuxChoices(this.state)],
+					choices: [{ id: 'all', label: 'ALL' }, ...this.choices.getScreenAuxChoices()],
 					default: 'all',
 					tooltip: '"All" resembels the state of the lock-all button in WebRCS.',
 				},
@@ -750,7 +642,7 @@ export default class Feedbacks {
 			],
 			callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screen: string, preset: string } }) => {
 				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
-				return this.state.isLocked(feedback.options.screen, feedback.options.preset)
+				return this.choices.isLocked(feedback.options.screen, feedback.options.preset)
 			},
 		}
 
@@ -760,7 +652,7 @@ export default class Feedbacks {
 	// MARK: livePresetSelection
 	get livePresetSelection() {
 		
-		const livePresetSelection: CompanionBooleanFeedbackDefinition = {
+		const livePresetSelection: AWJfeedback<{preset: string }> = {
 			type: 'boolean',
 			name: 'Preset Selection',
 			description: 'Shows wether program or preview is currently selected',
@@ -780,7 +672,7 @@ export default class Feedbacks {
 					default: 'PROGRAM'
 				},
 			],
-			callback: (feedback: CompanionFeedbackBooleanEvent & { options: { preset: string } }) => {
+			callback: (feedback) => {
 				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
 				let preset: string,
 					vartext = 'PGM'
@@ -803,7 +695,7 @@ export default class Feedbacks {
 	// MARK: remoteLayerSelection
 	get remoteLayerSelection() {
 		
-		const remoteLayerSelection: CompanionBooleanFeedbackDefinition = {
+		const remoteLayerSelection: AWJfeedback<{screen: string, layer: string, preset: string }> = {
 			type: 'boolean',
 			name: 'Layer Selection',
 			description: 'Shows wether a layer is currently selected',
@@ -816,14 +708,14 @@ export default class Feedbacks {
 					id: 'screen',
 					type: 'dropdown',
 					label: 'Screen / Auxscreen',
-					choices: getScreenAuxChoices(this.state),
-					default: getScreenAuxChoices(this.state)[0]?.id,
+					choices: this.choices.getScreenAuxChoices(),
+					default: this.choices.getScreenAuxChoices()[0]?.id,
 				},
 				{
 					id: 'layer',
 					type: 'dropdown',
 					label: 'Layer',
-					choices: [{ id: 'all', label: 'Any' }, ...getLayerChoices(state, 48, true)],
+					choices: [{ id: 'all', label: 'Any' }, ...this.choices.getLayerChoices(48, true)],
 					default: 'all',
 				},
 				{
@@ -838,7 +730,7 @@ export default class Feedbacks {
 					default: 'all',
 				},
 			],
-			callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screen: string, layer: string, preset: string } }) => {
+			callback: (feedback) => {
 				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
 				let pst = true
 				if (feedback.options.preset != 'all') {
@@ -854,13 +746,13 @@ export default class Feedbacks {
 				}
 				if (feedback.options.layer === 'all') {
 					return (
-						JSON.stringify(this.state.getSelectedLayers()).includes(
+						JSON.stringify(this.choices.getSelectedLayers()).includes(
 							`{"screenAuxKey":"${feedback.options.screen}","layerKey":"`
 						) && pst
 					)
 				} else {
 					return (
-						JSON.stringify(this.state.getSelectedLayers()).includes(
+						JSON.stringify(this.choices.getSelectedLayers()).includes(
 							`{"screenAuxKey":"${feedback.options.screen}","layerKey":"${feedback.options.layer}"}`
 						) && pst
 					)
@@ -874,7 +766,7 @@ export default class Feedbacks {
 	// MARK: remoteWidgetSelection
 	get remoteWidgetSelection() {
 		
-		const remoteWidgetSelection: CompanionBooleanFeedbackDefinition = {
+		const remoteWidgetSelection: AWJfeedback<{widget: string }> = {
 			type: 'boolean',
 			name: 'Widget Selection',
 			description: 'Shows wether a multiviewer widget is currently selected',
@@ -887,11 +779,11 @@ export default class Feedbacks {
 					id: 'widget',
 					type: 'dropdown',
 					label: 'Widget',
-					choices: getWidgetChoices(this.state),
-					default: getWidgetChoices(this.state)[0]?.id,
+					choices: this.choices.getWidgetChoices(),
+					default: this.choices.getWidgetChoices()[0]?.id,
 				},
 			],
-			callback: (feedback: CompanionFeedbackBooleanEvent & { options: { widget: string } }) => {
+			callback: (feedback) => {
 				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
 				const mvw = feedback.options.widget?.toString().split(':')[0] ?? '1'
 				const widget = feedback.options.widget?.toString().split(':')[1] ?? '0'
@@ -911,7 +803,7 @@ export default class Feedbacks {
 	// MARK: deviceInputFreeze
 	get deviceInputFreeze() {
 		
-		const deviceInputFreeze: CompanionBooleanFeedbackDefinition = {
+		const deviceInputFreeze: AWJfeedback<{input: string}> = {
 			type: 'boolean',
 			name: 'Input Freeze',
 			description: 'Shows wether an input currently is frozen',
@@ -926,11 +818,11 @@ export default class Feedbacks {
 					id: 'input',
 					type: 'dropdown',
 					label: 'Input',
-					choices: getLiveInputChoices(this.state),
-					default: getLiveInputChoices(this.state)[0]?.id,
+					choices: this.choices.getLiveInputChoices(),
+					default: this.choices.getLiveInputChoices()[0]?.id,
 				},
 			],
-			callback: (feedback: CompanionFeedbackBooleanEvent & { options: { input: string } }) => {
+			callback: (feedback) => {
 				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
 				const input = feedback.options.input?.toString().replace('LIVE', 'IN') || ''
 				const freeze = this.state.get('DEVICE/device/inputList/items/' + input + '/control/pp/freeze')
@@ -950,7 +842,7 @@ export default class Feedbacks {
 	// Midra only
 	get deviceLayerFreeze() {
 		
-		const deviceLayerFreeze: CompanionBooleanFeedbackDefinition = {
+		const deviceLayerFreeze: AWJfeedback<{screen: string}> = {
 			type: 'boolean',
 			name: 'Layer Freeze',
 			description: 'Shows wether a layer currently is frozen',
@@ -965,12 +857,12 @@ export default class Feedbacks {
 					id: 'screen',
 					type: 'dropdown',
 					label: 'Screen',
-					choices: [{id: 'any', label:'Any'}, ...getScreenChoices(this.state)],
-					default: getScreenChoices(this.state)[0]?.id,
+					choices: [{id: 'any', label:'Any'}, ...this.choices.getScreenChoices()],
+					default: this.choices.getScreenChoices()[0]?.id,
 				},
 				...[
 					{id: 'any', label:'Any'},
-					...getScreenChoices(this.state)
+					...this.choices.getScreenChoices()
 				].map(
 					(screen) => {
 						const opt = {
@@ -988,22 +880,22 @@ export default class Feedbacks {
 							}
 						}
 						if (screen.id === 'any') {
-							opt.choices.push(...getLayerChoices(state, 8, false))
+							opt.choices.push(...this.choices.getLayerChoices(8, false))
 						} else {
 							opt.label += ' ' + screen.id
-							opt.choices.push(...getLayerChoices(state, screen.id, false))
+							opt.choices.push(...this.choices.getLayerChoices(screen.id, false))
 						}
 						return opt
 					}
 				),
 			],
-			callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screen: string } }) => {
+			callback: (feedback) => {
 				if (this.state.platform !== 'midra') return false // we are not connected
 				//const screen = feedback.options.screen.substring(1)
 				let retval = false
 				let screens: Choicemeta[]
 				if (feedback.options.screen === 'any') {
-					screens = getScreensArray(this.state)
+					screens = this.choices.getScreensArray()
 				} else {
 					screens = [{id: feedback.options.screen, label: feedback.options.screen}]
 				}
@@ -1011,7 +903,7 @@ export default class Feedbacks {
 				for (const screen of screens) {
 					let layers: string[]
 					if (layeropt === 'any') {
-						layers = getLayersAsArray(state, screen.id, false)
+						layers = this.choices.getLayersAsArray(screen.id, false)
 					} else {
 						layers = [layeropt]
 					}
@@ -1038,7 +930,7 @@ export default class Feedbacks {
 	// Midra only
 	get deviceScreenFreeze() {
 		
-		const deviceScreenFreeze: CompanionBooleanFeedbackDefinition = {
+		const deviceScreenFreeze: AWJfeedback<{screen: string}> = {
 			type: 'boolean',
 			name: 'Screen Freeze',
 			description: 'Shows wether a screen currently is frozen',
@@ -1053,17 +945,17 @@ export default class Feedbacks {
 					id: 'screen',
 					type: 'dropdown',
 					label: 'Screen',
-					choices: [{id: 'any', label:'Any'}, ...getScreenAuxChoices(this.state)],
-					default: getScreenAuxChoices(this.state)[0]?.id,
+					choices: [{id: 'any', label:'Any'}, ...this.choices.getScreenAuxChoices()],
+					default: this.choices.getScreenAuxChoices()[0]?.id,
 				}
 			],
-			callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screen: string } }) => {
+			callback: (feedback) => {
 				if (this.state.platform !== 'midra') return false // we are not connected
 				//const screen = feedback.options.screen.substring(1)
 				let retval = false
 				let screens: Choicemeta[]
 				if (feedback.options.screen === 'any') {
-					screens = getScreensAuxArray(this.state)
+					screens = this.choices.getScreensAuxArray()
 				} else {
 					screens = [{id: feedback.options.screen, label: feedback.options.screen}]
 				}
@@ -1081,7 +973,7 @@ export default class Feedbacks {
 	// MARK: timerState
 	get timerState() {
 		
-		const timerState: CompanionBooleanFeedbackDefinition = {
+		const timerState: AWJfeedback<{timer: string, state: string }> = {
 			type: 'boolean',
 			name: 'Timer State',
 			description: 'Shows wether a timer is currently stopped or running',
@@ -1094,8 +986,8 @@ export default class Feedbacks {
 					id: 'timer',
 					type: 'dropdown',
 					label: 'Timer',
-					choices: getTimerChoices(this.state),
-					default: getTimerChoices(this.state)[0]?.id,
+					choices: this.choices.getTimerChoices(),
+					default: this.choices.getTimerChoices()[0]?.id,
 				},
 				{
 					id: 'state',
@@ -1110,7 +1002,7 @@ export default class Feedbacks {
 					default: 'RUNNING',
 				},
 			],
-			callback: (feedback: CompanionFeedbackBooleanEvent & { options: { timer: string, state: string } }) => {
+			callback: (feedback) => {
 				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
 				return (
 					this.state.get('DEVICE/device/timerList/items/' + feedback.options.timer + '/status/pp/state') ===
@@ -1126,7 +1018,7 @@ export default class Feedbacks {
 	// LivePremier only
 	get deviceGpioOut() {
 		
-		const deviceGpioOut: CompanionBooleanFeedbackDefinition = {
+		const deviceGpioOut: AWJfeedback<{gpo: number, state: number }> = {
 			type: 'boolean',
 			name: 'GPO State',
 			description: 'Shows wether a general purpose output is currently active',
@@ -1147,7 +1039,7 @@ export default class Feedbacks {
 				{
 					id: 'state',
 					type: 'dropdown',
-					label: 'StateMachine',
+					label: 'State',
 					choices: [
 						{ id: 0, label: 'GPO is off' },
 						{ id: 1, label: 'GPO is on' },
@@ -1155,7 +1047,7 @@ export default class Feedbacks {
 					default: 1,
 				},
 			],
-			callback: (feedback: CompanionFeedbackBooleanEvent & { options: { gpo: number, state: number } }) => {
+			callback: (feedback) => {
 				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
 				const val = feedback.options.state === 1 ? true : false
 				return (
@@ -1181,7 +1073,7 @@ export default class Feedbacks {
 	// LivePremier only
 	get deviceGpioIn() {
 		
-		const deviceGpioIn: CompanionBooleanFeedbackDefinition = {
+		const deviceGpioIn: AWJfeedback<{gpi: number, state: number }> = {
 			type: 'boolean',
 			name: 'GPI StateMachine',
 			description: 'Shows wether a general purpose input is currently active',
@@ -1202,7 +1094,7 @@ export default class Feedbacks {
 				{
 					id: 'state',
 					type: 'dropdown',
-					label: 'StateMachine',
+					label: 'State',
 					choices: [
 						{ id: 0, label: 'GPI is off' },
 						{ id: 1, label: 'GPI is on' },
@@ -1210,7 +1102,7 @@ export default class Feedbacks {
 					default: 1,
 				},
 			],
-			callback: (feedback: CompanionFeedbackBooleanEvent & { options: { gpi: number, state: number } }) => {
+			callback: (feedback) => {
 				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
 				const val = feedback.options.state === 1 ? true : false
 				return (
@@ -1220,7 +1112,7 @@ export default class Feedbacks {
 						'gpio',
 						'gpiList',
 						'items',
-						feedback.options.gpo?.toString() || '1',
+						feedback.options.gpi?.toString() || '1',
 						'status',
 						'pp',
 						'state',
@@ -1236,9 +1128,9 @@ export default class Feedbacks {
 	// Midra only
 	get deviceStreaming() {
 		
-		const deviceStreaming: CompanionBooleanFeedbackDefinition = {
+		const deviceStreaming: AWJfeedback<{state: string}> = {
 			type: 'boolean',
-			name: 'Stream Runnning StateMachine',
+			name: 'Stream Runnning State',
 			description: 'Shows status of streaming',
 			defaultStyle: {
 				color: this.config.color_dark,
@@ -1248,7 +1140,7 @@ export default class Feedbacks {
 				{
 					id: 'state',
 					type: 'dropdown',
-					label: 'StateMachine',
+					label: 'State',
 					choices: [
 						{ id: 'NONE', label: 'Stream is off' },
 						{ id: 'LIVE', label: 'Stream is on' },
@@ -1256,7 +1148,7 @@ export default class Feedbacks {
 					default: 'LIVE',
 				},
 			],
-			callback: (feedback: CompanionFeedbackBooleanEvent & { options: { state: string } }) => {
+			callback: (feedback) => {
 				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
 				return (
 					this.state.getUnmapped([
@@ -1288,10 +1180,14 @@ export default class Feedbacks {
 			variable: string
 		}
 		
-		const deviceCustom: CompanionBooleanFeedbackDefinition = {
+		const deviceCustom: AWJfeedback<FeedbackDeviceCustomOptions> = {
 			type: 'boolean',
 			name: 'Custom Feedback',
 			description: 'Generates feedback and a variable from a custom AWJ path',
+			defaultStyle: {
+				color: this.config.color_dark,
+				bgcolor: this.config.color_highlight,
+			},
 			options: [
 				{
 					type: 'textinput',
@@ -1324,14 +1220,14 @@ export default class Feedbacks {
 						{ id: '4', label: 'Text matches regular expression' },
 					],
 					default: '1',
-					isVisible: (thisOptions: FeedbackDeviceCustomOptions) => { return thisOptions.valuetype === 't' },
+					isVisible: (thisOptions) => { return thisOptions.valuetype === 't' },
 				},
 				{
 					type: 'textinput',
 					id: 'textValue',
 					label: 'value',
 					default: '',
-					isVisible: (thisOptions: FeedbackDeviceCustomOptions) => { return thisOptions.valuetype === 't' },
+					isVisible: (thisOptions) => { return thisOptions.valuetype === 't' },
 				},
 				{
 					type: 'dropdown',
@@ -1344,21 +1240,25 @@ export default class Feedbacks {
 						{ id: '%', label: 'Number modulo value is value2' },
 					],
 					default: '==',
-					isVisible: (thisOptions: FeedbackDeviceCustomOptions) => { return thisOptions.valuetype === 'n' },
+					isVisible: (thisOptions) => { return thisOptions.valuetype === 'n' },
 				},
 				{
 					type: 'number',
 					id: 'numericValue',
 					label: 'value1',
 					default: 0,
-					isVisible: (thisOptions: FeedbackDeviceCustomOptions) => { return thisOptions.valuetype === 'n' },
+					min: Number.MIN_VALUE,
+					max: Number.MAX_VALUE,
+					isVisible: (thisOptions) => { return thisOptions.valuetype === 'n' },
 				},
 				{
 					type: 'number',
 					id: 'numericValue2',
 					label: 'value 2',
 					default: 0,
-					isVisible: (thisOptions: FeedbackDeviceCustomOptions) => { return thisOptions.valuetype === 'n' && (thisOptions.actionsn === '...' || thisOptions.actionsn === '%') },
+					min: Number.MIN_VALUE,
+					max: Number.MAX_VALUE,
+					isVisible: (thisOptions) => { return thisOptions.valuetype === 'n' && (thisOptions.actionsn === '...' || thisOptions.actionsn === '%') },
 				},
 				{
 					type: 'checkbox',
@@ -1375,7 +1275,7 @@ export default class Feedbacks {
 					tooltip: 'Can be left empty, if filled this will be the name of the variable with the value of the feedback.\nOnly letters, numbers, underscore and minus is allowed.'
 				}
 			],
-			learn: (feedback: CompanionFeedbackBooleanEvent & { options: FeedbackDeviceCustomOptions }) => {
+			learn: (feedback) => {
 				const newoptions = {
 				}
 				const lastMsg = this.state.get('LOCAL/lastMsg')
@@ -1384,7 +1284,7 @@ export default class Feedbacks {
 				if (JSON.stringify(value).length > 132) {
 					return undefined
 				}
-				newoptions['path'] = instance.jsonToAWJpath(path)
+				newoptions['path'] = this.instance.jsonToAWJpath(path)
 				switch (typeof value) {
 					case 'string':
 						newoptions['valuetype'] = 't'
@@ -1489,7 +1389,7 @@ export default class Feedbacks {
 				}
 				return feedback.options.invert ? !ret : ret
 			},
-			subscribe: (feedback: CompanionFeedbackBooleanEvent & { options: FeedbackDeviceCustomOptions }) => {
+			subscribe: (feedback) => {
 				// console.log('subscribe', feedback.id, feedback.options.path);
 				let varId = ''
 				const sub = {}
@@ -1522,7 +1422,7 @@ export default class Feedbacks {
 						fbk: `id:${feedback.id}`
 					}
 					// console.log('add sub', sub)
-					this.instance.addSubscriptions(sub)
+					this.instance.device.addSubscriptions(sub)
 					// console.log('subscriptions', Object.keys(this.state.subscriptions).map(key => `${key} : ${this.state.subscriptions[key].pat}`))
 
 				} else {
@@ -1540,9 +1440,9 @@ export default class Feedbacks {
 					name: varname,
 				})
 			},
-			unsubscribe: (feedback: CompanionFeedbackBooleanEvent & FeedbackDeviceCustomOptions) => {
-				this.instance.removeSubscription(feedback.id)
-				this.instance.removeSubscription(feedback.id + '-take')
+			unsubscribe: (feedback) => {
+				this.instance.device.removeSubscription(feedback.id)
+				this.instance.device.removeSubscription(feedback.id + '-take')
 				this.instance.removeVariable(feedback.id)
 			}
 		}

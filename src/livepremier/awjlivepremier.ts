@@ -1,8 +1,7 @@
 import { AWJinstance } from "../index.js"
 import { AWJdevice } from "../awjdevice/awjdevice.js"
-import { commonSubscriptions } from "../awjdevice/subscriptions.js"
 import { livepremierSubscriptions } from './livepremierSubscriptions.js'
-import { getActions as getCommonActions} from "../awjdevice/actions.js"
+import actions from "../awjdevice/actions.js"
 import { getActions as getLivepremierActions } from "./livepremierActions.js"
 import { getFeedbacks as getLivepremierFeedbacks } from "./livepremierFeedback.js"
 
@@ -32,11 +31,8 @@ class AWJLivePremier extends AWJdevice{
      * @param instance 
      * @returns action definitions
      */
-    override getActionDefinitions(instance: AWJinstance) {
-        return {
-            ...getCommonActions(instance),
-            ...getLivepremierActions(instance)
-        } 
+    getActionDefinitions(instance: AWJinstance) {
+        return {} 
     }
 
     /**
@@ -44,25 +40,8 @@ class AWJLivePremier extends AWJdevice{
      * @param instance 
      * @returns 
      */
-    override getFeedbackDefinitions(instance: AWJinstance) {
+    getFeedbackDefinitions(instance: AWJinstance) {
         return getLivepremierFeedbacks(instance)
-    }
-
-    /**
-     * Sets the subscriptions object to combination of the common subscriptions and the platform specific ones
-     */
-    override initSubscriptions() {
-        this.subscriptions = { ...commonSubscriptions, ...livepremierSubscriptions}
-    }
-
-    public get maxScreens() : number {
-        return 24
-    }
-    public get maxAuxScreens() : number {
-        return 96
-    }
-    public get maxInputs() : number {
-        return 256
     }
 
 }
