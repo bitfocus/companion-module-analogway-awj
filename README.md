@@ -17,7 +17,7 @@ For a complete explanation see [HELP](HELP.md)
 
 ## :warning: Attention
 
-Starting with release 2.4.0 this module supports also software version 4.x of the LivePremier series. Analog Way did change some internal paths with v4.0 If you are upgrading this module from an earlier version and have programmed AWJ get or AWJ replace actions or custom feedbacks, make sure that the paths you are using are not affected from that change or change them accordingly. Otherwise these actions and feedbacks may stop working or give wrong results.  
+Starting with release 2.4.0 this module supports also software version 4.x of the LivePremier series. Analog Way did change many internal paths with v4.0 If you are upgrading this module from an earlier version and have programmed AWJ get or AWJ replace actions or custom feedbacks, make sure that the paths you are using are not affected from that change or change them accordingly. Otherwise these actions and feedbacks may stop working or give wrong results.  
 
 ## :rocket: Version history:
 
@@ -43,9 +43,11 @@ Starting with release 2.4.0 this module supports also software version 4.x of th
 * Bugfix: input freeze presets were only generated for inputs with a name
 * Bugfix: add default value for feedback showing preset selection
 * Bugfix: add default value for feedback showing screen selection
+* Bugfix: update options when still is renamed on Midra or Alta
+* Bugfix: change several numbers to reflect correct values during initialisation, e.g. maximum amount of still images on Livepremier is 47 
 * Chore: update isVisible functions to newly available syntax avoiding additional code evaluation
 * Chore: refactor from commonjs to ESM
-* Chore: replace superagent by ky
+* Chore: replace dependency superagent by ky
 * Chore: bump @companion-module/base from 1.2.1 to 1.7.0
 * Chore: bump @companion-module/tools from 1.2.0 to 1.5.0
 * Chore: bump semver from 6.3.0 to 6.3.1

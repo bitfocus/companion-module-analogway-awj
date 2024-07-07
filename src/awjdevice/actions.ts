@@ -16,6 +16,7 @@ import { AWJconnection } from '../connection.js'
 import { InstanceStatus, splitRgb } from '@companion-module/base'
 import { AWJdevice } from './awjdevice.js'
 import { StateMachine } from '../state.js'
+import Constants from './constants.js'
 
 /**
  * T = Object like {option1id: type, option2id: type}
@@ -54,34 +55,28 @@ export default class Actions {
 	instance: AWJinstance
 	state: StateMachine
 	connection: AWJconnection
-	device: AWJdevice
 	config: Config
-	private choices: Choices
+	choices: Choices
+	constants: typeof Constants
 	screens: Choicemeta[]
 
 	readonly actionsToUse = [
-		'deviceScreenMemory_livepremier',
-		'deviceScreenMemory_midra', 
-		'deviceAuxMemory_midra',
-		'deviceMasterMemory_livepremier',
-		'deviceMasterMemory_midra',
+		'deviceScreenMemory',
+		'deviceAuxMemory',
+		'deviceMasterMemory',
 		'deviceMultiviewerMemory',
 		'deviceCutScreen',
 		'deviceTbar',
-		'deviceTakeTime_livepremier',
-		'deviceTakeTime_midra',
-		'deviceSelectSource_livepremier',
-		'deviceSelectSource_midra',
+		'deviceTakeTime',
+		'deviceSelectSource',
 		'deviceInputKeying',
 		'deviceInputFreeze',
 		'deviceLayerFreeze',
 		'deviceScreenFreeze',
-		'devicePositionSize_livepremier',
+		'devicePositionSize',
 		'deviceCopyProgram',
-		'devicePresetToggle_livepremier',
-		'devicePresetToggle_midra',
-		'remoteMultiviewerSelectWidget_livepremier',
-		'remoteMultiviewerSelectWidget_midra',
+		'devicePresetToggle',
+		'remoteMultiviewerSelectWidget',
 		'deviceMultiviewerSource',
 		'selectScreen',
 		'lockScreen',
@@ -108,11 +103,15 @@ export default class Actions {
 	
 	constructor (instance: AWJinstance) {
 		this.instance = instance
-		this.state = instance.state
-		this.connection = instance.connection
-		//this.device = instance.device
-		this.config = instance.config
+		this.init()
+	}
+
+	protected init() {
+		this.state = this.instance.state
+		this.connection = this.instance.connection
+		this.config = this.instance.config
 		this.choices = this.instance.choices
+		this.constants = this.instance.constants
 		this.screens = this.choices.getScreensAuxArray()
 	}
 
@@ -150,7 +149,7 @@ export default class Actions {
 	/**
 	 *  MARK: Recall Screen Memory Common
 	 */
-	get deviceScreenMemory_common()  {
+	get deviceScreenMemory()  {
 		const returnAction: AWJaction<{ screens: string[], preset: string, memory: string, selectScreens: boolean}> = {
 			name: 'Recall Screen Memory',
 			options: [
@@ -158,7 +157,7 @@ export default class Actions {
 					id: 'screens',
 					type: 'multidropdown',
 					label: 'Screen',
-					choices: [{ id: 'sel', label: 'Selected' }, ...this.choices.getScreenAuxChoices()],
+					choices: [{ id: 'sel', label: 'Selected' }],
 					default: ['sel'],
 				},
 				{
@@ -173,7 +172,7 @@ export default class Actions {
 					type: 'dropdown',
 					label: 'Screen Memory',
 					choices: this.choices.getScreenMemoryChoices(),
-					default: this.choices.getScreenMemoryChoices()[0]?.id,
+					default: this.choices.getScreenMemoryChoices()[0]?.id ?? '',
 				},
 				{
 					id: 'selectScreens',
@@ -188,152 +187,9 @@ export default class Actions {
 
 		return returnAction
 	}
-
-
-	/**
-	 *  MARK: Recall Screen Memory LivePremier
-	 */
-	get deviceScreenMemory_livepremier(): AWJaction<{ screens: string[], preset: string, memory: string, selectScreens: boolean}> {
-		
-		const returnAction  = this.deviceScreenMemory_common
-
-		returnAction.callback = (action) => {
-			const screens = this.choices.getChosenScreenAuxes(action.options.screens)
-			const preset = this.choices.getPresetSelection(action.options.preset, true)
-			for (const screen of screens) {
-				if (this.choices.isLocked(screen, preset)) continue
-				this.connection.sendWSmessage(
-					[
-						'device',
-						'presetBank',
-						'control',
-						'load',
-						'slotList',
-						'items',
-						action.options.memory,
-						'screenList',
-						'items',
-						screen,
-						'presetList',
-						'items',
-						preset,
-						'pp',
-						'xRequest',
-					],
-					false
-				)
-				this.connection.sendWSmessage(
-					[
-						'device',
-						'presetBank',
-						'control',
-						'load',
-						'slotList',
-						'items',
-						action.options.memory,
-						'screenList',
-						'items',
-						screen,
-						'presetList',
-						'items',
-						preset,
-						'pp',
-						'xRequest',
-					],
-					true
-				)
-
-				this.instance.sendXupdate()
-
-				if (action.options.selectScreens) {
-					if (this.state.syncSelection) {
-						this.connection.sendRawWSmessage(
-							`{"channel":"REMOTE","data":{"name":"replace","path":"/live/screens/screenAuxSelection","args":[${JSON.stringify(
-								screens
-							)}]}}`
-						)
-					} else {
-						this.state.set('LOCAL/screenAuxSelection/keys', screens)
-						this.instance.checkFeedbacks('liveScreenSelection')
-					}
-				}
-			}
-		}
-
-		return returnAction
-	}
-
-	/**
-	 *  MARK: Recall Screen Memory Midra
-	 */
-	get deviceScreenMemory_midra(): AWJaction<{ screens: string[], preset: string, memory: string, selectScreens: boolean}>  {
-		
-		const deviceScreenMemory  = this.deviceScreenMemory_common
-
-		deviceScreenMemory.callback = (action) => {
-			const screens = this.choices.getChosenScreens(action.options.screens)
-			const preset = this.choices.getPresetSelection(action.options.preset, true)
-			for (const screen of screens) {
-				if (this.choices.isLocked(screen, preset)) continue
-				this.connection.sendWSmessage(
-					[
-						'device',
-						'presetBank',
-						'control',
-						'load',
-						'slotList',
-						'items',
-						action.options.memory,
-						'screenList',
-						'items',
-						screen,
-						'presetList',
-						'items',
-						preset,
-						'pp',
-						'xRequest',
-					],
-					false
-				)
-				this.connection.sendWSmessage(
-					[
-						'device',
-						'presetBank',
-						'control',
-						'load',
-						'slotList',
-						'items',
-						action.options.memory,
-						'screenList',
-						'items',
-						screen,
-						'presetList',
-						'items',
-						preset,
-						'pp',
-						'xRequest',
-					],
-					true
-				)
-
-				this.instance.sendXupdate()
-
-				if (action.options.selectScreens) {
-					if (this.state.syncSelection) {
-						this.connection.sendWSdata('REMOTE', 'replace', 'live/screens/screenAuxSelection', [screens])
-					} else {
-						this.state.set('LOCAL/screenAuxSelection/keys', screens)
-						this.instance.checkFeedbacks('liveScreenSelection')
-					}
-				}
-			}
-		}
-
-		return deviceScreenMemory
-	}
 		
 	// MARK: recall Aux memory
-	get deviceAuxMemory_midra() {
+	get deviceAuxMemory() {
 		
 		const deviceAuxMemory: AWJaction<{ screens: string[], preset: string, memory: string, selectScreens: boolean}> = {
 			name: 'Recall Aux Memory',
@@ -357,7 +213,7 @@ export default class Actions {
 					type: 'dropdown',
 					label: 'Aux Memory',
 					choices: this.choices.getAuxMemoryChoices(),
-					default: this.choices.getAuxMemoryChoices()[0]?.id,
+					default: this.choices.getAuxMemoryChoices()[0]?.id ?? '',
 				},
 				{
 					id: 'selectScreens',
@@ -366,66 +222,7 @@ export default class Actions {
 					default: true,
 				},
 			],
-			callback: (action) => {
-				const screens = this.choices.getChosenAuxes(action.options.screens as string[])
-				const preset = this.choices.getPresetSelection(action.options.preset as string, true)
-				for (const screen of screens) {
-					if (this.choices.isLocked(screen, preset)) continue
-					this.connection.sendWSmessage(
-						[
-							'device',
-							'preset',
-							'auxBank',
-							'control',
-							'load',
-							'slotList',
-							'items',
-							action.options.memory,
-							'auxiliaryScreenList',
-							'items',
-							screen.replace(/\D/g, ''),
-							'presetList',
-							'items',
-							preset,
-							'pp',
-							'xRequest',
-						],
-						false
-					)
-					this.connection.sendWSmessage(
-						[
-							'device',
-							'preset',
-							'auxBank',
-							'control',
-							'load',
-							'slotList',
-							'items',
-							action.options.memory,
-							'auxiliaryScreenList',
-							'items',
-							screen.replace(/\D/g, ''),
-							'presetList',
-							'items',
-							preset,
-							'pp',
-							'xRequest',
-						],
-						true
-					)
-
-					this.instance.sendXupdate()
-
-					if (action.options.selectScreens) {
-						if (this.state.syncSelection) {
-							this.connection.sendWSdata('REMOTE', 'replace', 'live/screens/screenAuxSelection', [screens])
-						} else {
-							this.state.set('LOCAL/screenAuxSelection/keys', screens)
-							this.instance.checkFeedbacks('liveScreenSelection')
-						}
-					}
-				}
-			},
+			callback: (action) => {},
 		}
 	return deviceAuxMemory
 	}
@@ -434,7 +231,7 @@ export default class Actions {
 	 * MARK: Recall Master Memory
 	 */
 	//type DeviceMasterMemory = {preset: string, memory: string, selectScreens: boolean}
-	get deviceMasterMemory_common() {
+	get deviceMasterMemory() {
 		
 		const deviceMasterMemory: AWJaction<{preset: string, memory: string, selectScreens: boolean}> = {
 			name: 'Recall Master Memory',
@@ -467,173 +264,8 @@ export default class Actions {
 	}
 
 	/**
-	 * MARK: Recall Master Memory - LivePremier
-	 */
-	get deviceMasterMemory_livepremier() {
-		
-		const deviceMasterMemory = this.deviceMasterMemory_common
-		
-		deviceMasterMemory.callback = (action) => {
-			const preset = this.choices.getPresetSelection(action.options.preset, true)
-			const bankpath = ['device', 'masterPresetBank']
-			const list = 'bankList'	
-			const memorypath = ['items', action.options.memory]
-			const loadpath = ['control', 'load', 'slotList']
-
-			const filterpath = this.state.getUnmapped(['DEVICE', ...bankpath, list, ...memorypath, 'status', 'pp', 'isShadow']) ? ['status', 'shadow', 'pp'] : ['status', 'pp']			
-			
-			const screens = this.state.getUnmapped([
-				'DEVICE',
-				...bankpath,
-				list,
-				...memorypath,
-				...filterpath,
-				'screenFilter',
-			])
-
-			if (
-				screens.find((screen: string) => {
-					return this.choices.isLocked(screen, preset)
-				})
-			) {
-				return // TODO: resembles original WebRCS behavior, but could be also individual screen handling
-			}
-			// if (this.choices.isLocked(layer.screenAuxKey, preset)) continue
-			this.connection.sendWSmessage(
-				[
-					...bankpath,
-					...loadpath,
-					...memorypath,
-					'presetList',
-					'items',
-					preset,
-					'pp',
-					'xRequest',
-				],
-				false
-			)
-
-			if (action.options.selectScreens) {
-				if (this.state.syncSelection) {
-					this.connection.sendWSdata('REMOTE', 'replace', 'live/screens/screenAuxSelection', [screens])
-				} else {
-					this.state.set('LOCAL/screenAuxSelection/keys', screens)
-					this.instance.checkFeedbacks('liveScreenSelection')
-				}
-			}
-
-			this.connection.sendWSmessage(
-				[
-					...bankpath,
-					...loadpath,
-					...memorypath,
-					'presetList',
-					'items',
-					preset,
-					'pp',
-					'xRequest',
-				],
-				true
-			)
-
-			this.instance.sendXupdate()
-
-		}
-
-		return deviceMasterMemory
-	}
-
-	/**
-	 * MARK: Recall Master Memory - Midra
-	 */
-	get deviceMasterMemory_midra() {
-		
-		const deviceMasterMemory = this.deviceMasterMemory_common
-		
-		deviceMasterMemory.callback = (action) => {
-			const preset = this.choices.getPresetSelection(action.options.preset, true)
-			const bankpath = ['device', 'preset', 'masterBank']
-			const list = 'slotList'
-			const memorypath = ['items', action.options.memory]
-			const loadpath = ['control', 'load', 'slotList']
-
-			const filterpath = this.state.getUnmapped(['DEVICE', ...bankpath, list, ...memorypath, 'status', 'pp', 'isShadow']) ? ['status', 'shadow', 'pp'] : ['status', 'pp']			
-			
-			const screens = [
-				...this.state.getUnmapped([
-					'DEVICE',
-					...bankpath,
-					list,
-					...memorypath,
-					...filterpath,
-					'screenFilter',
-				]).map((scr: string) => 'S' + scr),
-				...this.state.getUnmapped([
-					'DEVICE',
-					...bankpath,
-					list,
-					...memorypath,
-					...filterpath,
-					'auxFilter',
-				]).map((scr: string) => 'A' + scr)
-			]
-
-			if (
-				screens.find((screen: string) => {
-					return this.choices.isLocked(screen, preset)
-				})
-			) {
-				return // TODO: resembles original WebRCS behavior, but could be also individual screen handling
-			}
-			// if (this.choices.isLocked(layer.screenAuxKey, preset)) continue
-			this.connection.sendWSmessage(
-				[
-					...bankpath,
-					...loadpath,
-					...memorypath,
-					'presetList',
-					'items',
-					preset,
-					'pp',
-					'xRequest',
-				],
-				false
-			)
-
-			if (action.options.selectScreens) {
-				if (this.state.syncSelection) {
-					this.connection.sendWSdata('REMOTE', 'replace', 'live/screens/screenAuxSelection', [screens])
-				} else {
-					this.state.set('LOCAL/screenAuxSelection/keys', screens)
-					this.instance.checkFeedbacks('liveScreenSelection')
-				}
-			}
-
-			this.connection.sendWSmessage(
-				[
-					...bankpath,
-					...loadpath,
-					...memorypath,
-					'presetList',
-					'items',
-					preset,
-					'pp',
-					'xRequest',
-				],
-				true
-			)
-
-			this.instance.sendXupdate()
-
-		}
-
-		return deviceMasterMemory
-	}
-
-	/**
 	 * MARK: Recall Multiviewer Memory
 	 */
-	//type DeviceMultiviewerMemory = {memory: string, multiviewer: string[]}
 	get deviceMultiviewerMemory() {
 		
 		const deviceMultiviewerMemory: AWJaction<{memory: string, multiviewer: string[]}> = {
@@ -649,40 +281,22 @@ export default class Actions {
 			],
 			callback: (action) => {
 				for (const mv of action.options.multiviewer) {
-					this.connection.sendWSmessage(
-						[
-							'device',
-							'monitoringBank',
-							'control',
-							'load',
-							'slotList',
-							'items',
-							action.options.memory,
-							'outputList',
-							'items',
-							mv,
-							'pp',
-							'xRequest',
-						],
-						false
-					)
-					this.connection.sendWSmessage(
-						[
-							'device',
-							'monitoringBank',
-							'control',
-							'load',
-							'slotList',
-							'items',
-							action.options.memory,
-							'outputList',
-							'items',
-							mv,
-							'pp',
-							'xRequest',
-						],
-						true
-					)
+					const fullpath = [
+						'device',
+						'monitoringBank',
+						'control',
+						'load',
+						'slotList',
+						'items',
+						action.options.memory,
+						'outputList',
+						'items',
+						mv,
+						'pp',
+						'xRequest',
+					]
+					this.connection.sendWSmessage( fullpath, false, true )
+
 				}
 			},
 		}
@@ -729,12 +343,22 @@ export default class Actions {
 					default: ['sel'],
 				},
 			],
-			callback: (action: any) => {
+			callback: (action) => {
 				for (const screen of this.choices.getChosenScreenAuxes(action.options.screens)) {
-					this.connection.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'xCut'], true)
+					this.connection.sendWSmessage(
+						[
+							...this.constants.screenGroupPath,
+							'items', 
+							screen, 
+							'control', 
+							'pp', 
+							'xCut'
+						], 
+						true
+					)
 				}
 			},
-		} as AWJaction<DeviceCutScreen>
+		}
 
 		return deviceCutScreen
 	}
@@ -751,7 +375,8 @@ export default class Actions {
 				{
 					id: 'info',
 					type: 'static-text',
-					label: 'Beware: in WebRCS you always set the T-Bar Position for ALL screens. T-Bar position is never syncronized.'
+					label: 'Beware: in WebRCS you always set the T-Bar Position for ALL screens. T-Bar position is never syncronized.',
+					value: ''
 				},
 				{
 					id: 'screens',
@@ -779,7 +404,7 @@ export default class Actions {
 					tooltip: 'Enter maximum as a numeric string. Can be floating point or integer number. Variables can be used.'
 				}
 			],
-			callback: async (action: any) => {
+			callback: async (action) => {
 				const position = parseFloat(await this.instance.parseVariablesInString(action.options.position))
 				const maximum = parseFloat(await this.instance.parseVariablesInString(action.options.maximum))
 				const tbarmax = 65535
@@ -792,11 +417,11 @@ export default class Actions {
 					}
 					const tbarint = Math.round(value * tbarmax)
 					for (const screen of this.choices.getChosenScreenAuxes(action.options.screens)) {
-						this.connection.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'tbarPosition'], tbarint)
+						this.connection.sendWSmessage([...this.constants.screenGroupPath, 'items', screen, 'control', 'pp', 'tbarPosition'], tbarint)
 					}
 				}
 			},
-		} as AWJaction<DeviceTbar>
+		}
 
 		return deviceTbar
 	}
@@ -804,7 +429,7 @@ export default class Actions {
 	/**
 	 * MARK: Change the transition time of a preset per screen
 	 */
-	get deviceTakeTime_common() {
+	get deviceTakeTime() {
 		type DeviceTakeTime = {screens: string[], preset: string, time: number}
 		
 		const deviceTakeTime: AWJaction<DeviceTakeTime> = {
@@ -835,60 +460,33 @@ export default class Actions {
 					range: true,
 				},
 			],
-			callback: (action) => {},
-		}
-
-		return deviceTakeTime
-	}
-
-	/**
-	 * MARK: Change the transition time of a preset per screen - LivePremier
-	 */
-	get deviceTakeTime_livepremier()  {
-		
-		const deviceTakeTime = this.deviceTakeTime_common
-		deviceTakeTime.callback = (action) => {
-			const time = action.options.time as number * 10
-			this.choices.getChosenScreenAuxes(action.options.screens).forEach((screen) => {
-				const presetPgm = this.choices.getPreset(screen, 'PGM')
-				if (
-					action.options.preset === 'all' ||
-					(action.options.preset === 'pgm' && presetPgm === 'A') ||
-					(action.options.preset === 'pvw' && presetPgm === 'B')
-				) {
-					this.connection.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeDownTime'], time)
-				}
-				if (
-					action.options.preset === 'all' ||
-					(action.options.preset === 'pvw' && presetPgm === 'A') ||
-					(action.options.preset === 'pgm' && presetPgm === 'B')
-				) {
-					this.connection.sendWSmessage(['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'], time)
-				}
-			})
-		}
-
-		return deviceTakeTime
-	}
-
-	/**
-	 * MARK: Change the transition time of a preset per screen - LivePremier
-	 */
-	get deviceTakeTime_midra() {
-		
-		const deviceTakeTime = this.deviceTakeTime_common
-		deviceTakeTime.callback = (action) => {
-			const time = action.options.time * 10
-			this.choices.getChosenScreenAuxes(action.options.screens).forEach((screen) =>
-				this.connection.sendWSmessage(['device', 'transition', 'screenList', 'items', screen, 'control', 'pp', 'takeTime'], time)
-			)
+			callback: (action) => {
+				const time = action.options.time as number * 10
+				this.choices.getChosenScreenAuxes(action.options.screens).forEach((screen) => {
+					const presetPgm = this.choices.getPreset(screen, 'PGM')
+					if (
+						action.options.preset === 'all' ||
+						(action.options.preset === 'pgm' && presetPgm === 'A') ||
+						(action.options.preset === 'pvw' && presetPgm === 'B')
+					) {
+						this.connection.sendWSmessage([...this.constants.screenGroupPath, 'items', screen, 'control', 'pp', 'takeDownTime'], time)
+					}
+					if (
+						action.options.preset === 'all' ||
+						(action.options.preset === 'pvw' && presetPgm === 'A') ||
+						(action.options.preset === 'pgm' && presetPgm === 'B')
+					) {
+						this.connection.sendWSmessage([...this.constants.screenGroupPath, 'items', screen, 'control', 'pp', 'takeUpTime'], time)
+					}
+				})
+			},
 		}
 
 		return deviceTakeTime
 	}
 
 	// MARK: Select the source in a layer
-	get deviceSelectSource_common() {
+	get deviceSelectSource() {
 		type DeviceSelectSource = {method: string, screen: string[], preset: string}
 		
 		const deviceSelectSource: AWJaction<DeviceSelectSource> = {
@@ -931,269 +529,6 @@ export default class Actions {
 		return deviceSelectSource
 	}
 
-
-	/**
-	 * MARK: Select the source in a layer livepremier
-	 */
-	get deviceSelectSource_livepremier() {
-		
-		const deviceSelectSource = this.deviceSelectSource_common
-		deviceSelectSource.callback = (action) => {
-			if (action.options.method === 'spec') {
-				for (const screen of action.options.screen) {
-					if (this.choices.isLocked(screen, action.options.preset)) continue
-					for (const layer of action.options[`layer${screen}`]) {
-						let sourcetype = 'sourceLayer'
-						if (screen.startsWith('A')) {
-							sourcetype = 'sourceBack'
-						}
-						if (layer === 'NATIVE') {
-							sourcetype = 'sourceNative'
-						}
-						this.connection.sendWSmessage([
-							'device', 'screenList', 'items', screen,
-							'presetList', 'items', this.choices.getPreset(screen, action.options.preset),
-							'layerList', 'items', layer,
-							'source', 'pp', 'inputNum'
-						], action.options[sourcetype])
-					}
-				}
-			}
-			else if (action.options.method === 'sel') {
-				const preset = this.choices.getPresetSelection('sel')
-				this.choices.getSelectedLayers()
-					.filter((selection) => this.choices.isLocked(selection.screenAuxKey, preset) === false)
-					.forEach((layer) => {
-						let source = 'keep'
-						if (
-							layer.screenAuxKey.startsWith('S') &&
-							layer.layerKey === 'NATIVE' &&
-							action.options['sourceNative'] !== 'keep'
-						) source = action.options['sourceNative']
-						else if (
-							layer.screenAuxKey.startsWith('S') &&
-							layer.layerKey.match(/^\d+$/) &&
-							action.options['sourceLayer'] !== 'keep'
-						) source = action.options['sourceLayer']
-						else if (
-							layer.screenAuxKey.startsWith('A') &&
-							layer.layerKey.match(/^\d+$/) &&
-							action.options['sourceBack'] !== 'keep'
-						) source = action.options['sourceBack']
-						if (source !== 'keep'){
-							this.connection.sendWSmessage([
-								'device', 'screenList', 'items', layer.screenAuxKey,
-								'presetList', 'items', this.choices.getPreset(layer.screenAuxKey, preset),
-								'layerList', 'items', layer.layerKey,
-								'source', 'pp', 'inputNum'
-							], source)
-						}
-				})
-			}
-			this.instance.sendXupdate()
-		}
-		this.screens.forEach((screen) => {
-			const isScreen = screen.id.startsWith('S')
-			
-			deviceSelectSource.options.push({
-				id: `layer${screen.id}`,
-				type: 'multidropdown',
-				label: 'Layer ' + screen.id,
-				choices: this.choices.getLayerChoices(screen.id, isScreen),
-				default: ['1'],
-				isVisibleData: screen.id,
-				isVisible: (options, screenId) => {
-					return options.method === 'spec' && options.screen.includes(screenId)
-				},
-			})
-		})
-		deviceSelectSource.options.push(
-			{
-				id: 'sourceLayer',
-				type: 'dropdown',
-				label: 'Screen Layer Source',
-				choices: [{ id: 'keep', label: "Don't change source"}, ...this.choices.getSourceChoices()],
-				default: 'keep',
-				isVisible: (options) => {
-					if (options.method === 'sel') return true
-					if (options.method === 'spec') {
-						for (const screen of options.screen.filter((screen) => screen.startsWith('S'))) {
-							if (options[`layer${screen}`].find((elem: string) => elem.match(/^\d+$/))) return true
-						}
-					}
-					return false
-				},
-			},
-			{
-				id: 'sourceNative',
-				type: 'dropdown',
-				label: 'Screen Background Source',
-				choices: [{ id: 'keep', label: "Don't change source"}, ...this.choices.choicesBackgroundSourcesPlusNone],
-				default: 'keep',
-				isVisible: (options) => {
-					if (options.method === 'sel') return true
-					if (options.method === 'spec') {
-						for (const screen of options.screen.filter((screen) => screen.startsWith('S'))) {
-							if (options[`layer${screen}`].find((elem: string) => elem === 'NATIVE')) return true
-						}
-					}
-					return false
-				},
-			},
-			{
-				id: 'sourceBack',
-				type: 'dropdown',
-				label: 'Aux Layer Source',
-				choices: [{ id: 'keep', label: "Don't change source"}, ...this.choices.getAuxSourceChoices()],
-				default: 'keep',
-				isVisible: (options) => {
-					if (options.method === 'sel') return true
-					if (options.method === 'spec') {
-						for (const screen of options.screen.filter((screen) => screen.startsWith('A'))) {
-							if (options[`layer${screen}`].find((elem: string) => elem.match(/^\d+$/))) return true
-						}
-					}
-					return false
-				},
-			},
-		)
-		
-		return deviceSelectSource
-	}
-
-
-	// MARK: Select the source in a layer midra
-	get deviceSelectSource_midra() {
-		
-		const deviceSelectSource = this.deviceSelectSource_common
-		deviceSelectSource.callback = (action) => {
-			if (action.options.method === 'spec') {
-				for (const screen of action.options.screen) {
-					if (this.choices.isLocked(screen, action.options.preset)) continue
-					const presetpath = ['device', 'screenList', 'items', screen, 'presetList', 'items', this.choices.getPreset(screen, action.options.preset)]
-					if (screen.startsWith('A') && action.options['sourceBack'] !== 'keep')
-						// on Midra on aux there is only background, so we don't show a layer dropdown and just set the background
-						this.connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'content'], action.options['sourceBack'])
-					else
-						// else decide which dropdown to use for which layer
-						for (const layer of action.options[`layer${screen}`]) {
-							if (layer === 'NATIVE' && action.options['sourceNative'] !== 'keep') {
-								this.connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'set'], action.options['sourceNative'].replace(/\D/g, ''))
-							} else if (layer === 'TOP' && action.options['sourceFront'] !== 'keep') {
-								this.connection.sendWSmessage([...presetpath, 'top', 'source', 'pp', 'frame'], action.options['sourceFront'].replace(/\D/g, ''))
-							} else if ( action.options['sourceLayer'] !== 'keep') {
-								this.connection.sendWSmessage([...presetpath, 'liveLayerList', 'items', layer, 'source', 'pp', 'input'], action.options['sourceLayer'])
-							}
-						}
-				}
-			} else if (action.options.method === 'sel') {
-				const preset = this.choices.getPresetSelection('sel')
-				this.choices.getSelectedLayers()
-					.filter((selection) => this.choices.isLocked(selection.screenAuxKey, preset) === false)
-					.forEach((layer) => {
-						const presetpath = ['device', 'screenList', 'items', layer.screenAuxKey, 'presetList', 'items', this.choices.getPreset(layer.screenAuxKey, 'sel')]
-						if (layer.layerKey === 'BKG' && layer.screenAuxKey.startsWith('S') && action.options['sourceNative'] !== 'keep') {
-								this.connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'set'], action.options['sourceNative'].replace(/\D/g, ''))
-							} else if (layer.layerKey === 'BKG' && layer.screenAuxKey.startsWith('A') && action.options['sourceBack'] !== 'keep') {
-								this.connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'content'], action.options['sourceBack'])
-							} else if (layer.layerKey === 'TOP' && action.options['sourceFront'] !== 'keep') {
-								this.connection.sendWSmessage([...presetpath, 'top', 'source', 'pp', 'frame'], action.options['sourceFront'].replace(/\D/g, ''))
-							} else if ( action.options['sourceLayer'] !== 'keep') {
-								this.connection.sendWSmessage([...presetpath, 'liveLayerList', 'items', layer.layerKey, 'source', 'pp', 'input'], action.options['sourceLayer'])
-							}
-					})
-			}
-			this.instance.sendXupdate()
-		}
-
-		// don't build a dropdown for aux on midra
-		this.choices.getScreensArray().forEach((screen) => {
-			
-			deviceSelectSource.options.push({
-				id: `layer${screen.id}`,
-				type: 'multidropdown',
-				label: 'Layer ' + screen.id,
-				choices: this.choices.getLayerChoices(screen.id),
-				default: ['1'],
-				isVisibleData: screen.id,
-				isVisible: (options, screenId) => {
-					return options.method === 'spec' && options.screen.includes(screenId)	
-				},
-			})
-		})
-		deviceSelectSource.options.push(
-			{
-				id: 'sourceNative',
-				type: 'dropdown',
-				label: 'Screen Background Source',
-				choices: [{ id: 'keep', label: "Don't change source"}, ...this.choices.choicesBackgroundSourcesPlusNone],
-				default: 'keep',
-				isVisible: (options) => {
-					if (options.method === 'sel') return true
-					if (options.method === 'spec') {
-						for (const screen of options.screen.filter((screen) => screen.startsWith('S'))) {
-							if (options[`layer${screen}`].find((elem: string) => elem === 'NATIVE')) return true
-						}
-					}
-					return false
-				},
-			},
-			{
-				id: 'sourceLayer',
-				type: 'dropdown',
-				label: 'Screen Layer Source',
-				choices: [{ id: 'keep', label: "Don't change source"}, ...this.choices.getSourceChoices()],
-				default: 'keep',
-				isVisible: (options) => {
-					if (options.method === 'sel') return true
-					for (const screen of options.screen) {
-						if (
-							options[`layer${screen}`]?.find((layer: string) => {
-								return layer.match(/^\d+$/)
-							})
-						) return true
-					}
-					return false
-				},
-			},
-			{
-				id: 'sourceFront',
-				type: 'dropdown',
-				label: 'Screen Foreground Source',
-				choices: [{ id: 'keep', label: "Don't change source"}, ...this.choices.choicesForegroundImagesSource],
-				default: 'keep',
-				isVisible: (options) => {
-					if (options.method === 'sel') return true
-					if (options.method === 'spec') {
-						for (const screen of options.screen.filter((screen) => screen.startsWith('S'))) {
-							if (options[`layer${screen}`].find((elem: string) => elem === 'TOP')) return true
-						}
-					}
-					return false
-				},
-			},
-			{
-				id: 'sourceBack',
-				type: 'dropdown',
-				label: 'Aux Background Source',
-				choices: [{ id: 'keep', label: "Don't change source"}, ...this.choices.getAuxBackgroundChoices()],
-				default: 'keep',
-				isVisible: (options) => {
-					if (options.method === 'sel') return true
-					if (options.method === 'spec') {
-						for (const screen of options.screen.filter((screen) => screen.startsWith('A'))) {
-							if (options[`layer${screen}`].find((elem: string) => elem === 'BKG')) return true
-						}
-					}
-					return false
-				},
-			},
-		)
-
-		return deviceSelectSource
-	}
-
-
 	/**
 	 * MARK: Set input keying
 	 */
@@ -1231,7 +566,7 @@ export default class Actions {
 						action.options.input,
 						'plugList',
 						'items',
-						this.state.get('DEVICE/device/inputList/items/' + action.options.input + '/status/pp/plug'),
+						this.state.getUnmapped('DEVICE/device/inputList/items/' + action.options.input + '/status/pp/plug'),
 						'settings',
 						'keying',
 						'control',
@@ -1281,7 +616,7 @@ export default class Actions {
 				if (action.options.mode === 1) {
 					val = true
 				} else if (action.options.mode === 2) {
-					val = !this.state.get('DEVICE/device/inputList/items/' + input + '/control/pp/freeze')
+					val = !this.state.getUnmapped('DEVICE/device/inputList/items/' + input + '/control/pp/freeze')
 				}
 				this.connection.sendWSmessage(['device', 'inputList', 'items', input, 'control', 'pp', 'freeze'], val)
 			},
@@ -1333,18 +668,23 @@ export default class Actions {
 			],
 			callback: (action) => {
 				for (const screen of action.options.screen) {
+					const screeninfo = this.choices.getScreenInfo(screen)
 					for (const layer of action.options[`layer${screen}`]) {
 						let val = false
-						let path: string[]
+						let path: string[] = [
+							'device', 
+							screeninfo.prefixverylong + 'List', 
+							'items', screeninfo.numstr, 
+						]
 						if (layer === 'NATIVE') {
-							path = ['device', 'screenList', 'items', screen, 'background', 'control', 'pp', 'freeze']
+							path.push('background', 'control', 'pp', 'freeze')
 						} else {
-							path = ['device', 'screenList', 'items', screen, 'liveLayerList', 'items', layer, 'control', 'pp', 'freeze']
+							path.push('liveLayerList', 'items', layer, 'control', 'pp', 'freeze')
 						}
 						if (action.options.mode === 1) {
 							val = true
 						} else if (action.options.mode === 2) {
-							val = !this.state.get(['DEVICE', ...path])
+							val = !this.state.getUnmapped(['DEVICE', ...path])
 						}
 						this.connection.sendWSmessage(path, val)
 					}
@@ -1385,14 +725,13 @@ export default class Actions {
 			],
 			callback: (action) => {
 				for (const screen of action.options.screen) {
+					const screeninfo = this.choices.getScreenInfo(screen)
 					let val = false
-					let path: string[]
-					const screenNum = screen.substring(1)
-					if (screen.startsWith('A')) {
-						path = ['device', 'auxiliaryScreenList', 'items', screenNum, 'control', 'pp', 'freeze']
-					} else if (screen.startsWith('S')){
-						path = ['device', 'screenList', 'items', screenNum, 'control', 'pp', 'freeze']
-					} else return
+					const path = [
+						'device', 
+						 screeninfo.prefixverylong + 'List',
+						 'items', screeninfo.numstr, 
+						 'control', 'pp', 'freeze']
 					if (action.options.mode === 1) {
 						val = true
 					} else if (action.options.mode === 2) {
@@ -1410,7 +749,7 @@ export default class Actions {
 	/**
 	 * MARK: Layer position and size
 	 */
-	get devicePositionSize_livepremier() {
+	get devicePositionSize() {
 		type DevicePositionSize = {screen: string, preset: string, layersel: string, parameters: string[], x: string, xAnchor: string, y: string, yAnchor: string, w: string, h: string, ar: string} & Record<string, string>
 		
 		const calculateAr = (widthOrAr: number, height?: number) => {
@@ -1466,6 +805,31 @@ lw: layer width, lh: layer height, lx: layer left edge, ly: layer top edge, la: 
 bw: box width, bh: box height, bx: box left edge, by: box top edge, ba: box aspect ratio,
 iw: layer source width, ih: layer source height, ia: layer source aspect ratio,
 sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name, screen: screen name`
+		
+		const parseExpressionString = (expression: string, context: {[name: string]: number | string | boolean}, initialValue = 0) => {
+			let relate: (n: number) => number
+			if (expression.toLowerCase().startsWith('inc')) {
+				relate = (n) => initialValue + n
+				expression = expression.substring(3)
+			} else if (expression.toLowerCase().startsWith('dec')) {
+				relate = (n) => initialValue - n
+				expression = expression.substring(3)
+			} else {
+				relate = (n) => n
+			}
+			let result:any = undefined
+			try {
+				const expressionFn = compileExpression(expression)
+				result = expressionFn(context)
+			} catch (_error) {
+				// fail silent
+			}
+			if (typeof result === 'number') {
+				return relate(result)
+			}
+			return 0
+		}
+
 		const devicePositionSize: AWJaction<DevicePositionSize> = {
 			name: 'Set Position and Size',
 			options: [
@@ -1488,7 +852,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					type: 'dropdown',
 					label: 'Layer',
 					tooltip: 'When using "selected layer" and screen or preset are not using "Selected", you can narrow the selection',
-					choices: [{ id: 'sel', label: 'Selected Layer(s)' }, ...Array.from({length: 128}, (_i, e:number) => {return {id: e+1, label: `Layer ${e+1}`}})],
+					choices: [{ id: 'sel', label: 'Selected Layer(s)' }, ...Array.from({length: this.constants.maxLayers}, (_i, e:number) => {return {id: e+1, label: `Layer ${e+1}`}})],
 					default: 'sel',
 					isVisible: (options) => {return options.screen === 'sel'},
 				},
@@ -1604,21 +968,32 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				if (layers.length === 0) return options
 
 				const [screen, layer] = [layers[0].screenAuxKey, layers[0].layerKey]
+				const screeninfo = this.choices.getScreenInfo(screen)
 				
-				newoptions.screen = screen
-				newoptions.layersel = layer
+				newoptions.screen = screeninfo.id
+				newoptions[`layer${screeninfo.id}`] = layer.replace(/^\w+_/, '')
 				newoptions.preset = this.choices.getPresetSelection()
 				newoptions.xAnchor = 'lx + 0.5 * lw'
 				newoptions.yAnchor = 'ly + 0.5 * lh'
 				newoptions.parameters = ['x', 'y', 'w', 'h']
 				
-				const pathToLayer = ['device','screenList','items',screen,'presetList','items',this.choices.getPreset(screen, newoptions.preset),'layerList','items',layer,'position','pp']
-				const w = this.state.get(['DEVICE', ...pathToLayer, 'sizeH'])
-				const h = this.state.get(['DEVICE', ...pathToLayer, 'sizeV'])
+				const pathToLayer = [
+					...(screeninfo.isAux ? this.constants.auxPath : this.constants.screenPath),
+					'items', screeninfo.platformId,
+					'presetList', 'items', this.choices.getPreset(screeninfo.id, newoptions.preset),
+					...this.choices.getLayerPath(layer)]
+				const props = this.state.get(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath])
+				if (props === undefined) {
+					this.instance.log('warn', `Selected layer ${layer} of screen ${screeninfo.id} does not support positioning, position and size couldn't be learned.`)
+					return undefined
+				}
+				
+				const w = this.state.get(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath, 'sizeH'])
+				const h = this.state.get(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath, 'sizeV'])
 				newoptions.w = w.toString()
 				newoptions.h = h.toString()
-				newoptions.x = this.state.get(['DEVICE', ...pathToLayer, 'posH']).toString()
-				newoptions.y = this.state.get(['DEVICE', ...pathToLayer, 'posV']).toString()
+				newoptions.x = this.state.get(['DEVICE', ...pathToLayer, ...this.constants.propsPositionPath, 'posH']).toString()
+				newoptions.y = this.state.get(['DEVICE', ...pathToLayer, ...this.constants.propsPositionPath, 'posV']).toString()
 				
 				newoptions.ar = h !== 0 ? calculateAr(w,h)?.string ?? '' : ''
 
@@ -1641,47 +1016,30 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				}
 
 				const preset = action.options.preset === 'sel' ? this.choices.getPresetSelection('sel') : action.options.preset
-				console.log('layers before match', layers)
 				layers = layers.filter(layer => (!this.choices.isLocked(layer.screenAuxKey, preset) && layer.layerKey.match(/^\d+$/))) // wipe out layers of locked screens and native layer
 				if (layers.length === 0) return
-
-				const parseExpressionString = (expression: string, context: {[name: string]: number | string | boolean}, initialValue = 0) => {
-					let relate: (n: number) => number
-					if (expression.toLowerCase().startsWith('inc')) {
-						relate = (n) => initialValue + n
-						expression = expression.substring(3)
-					} else if (expression.toLowerCase().startsWith('dec')) {
-						relate = (n) => initialValue - n
-						expression = expression.substring(3)
-					} else {
-						relate = (n) => n
-					}
-					let result:any = undefined
-					try {
-						const expressionFn = compileExpression(expression)
-						result = expressionFn(context)
-					} catch (_error) {
-						// fail silent
-					}
-					if (typeof result === 'number') {
-						return relate(result)
-					}
-					return 0
-				}
 
 				const boundingBoxes = {}
 
 				for (const layerIndex in layers as {screenAuxKey: string, layerKey: string, x: number, y: number, w: number, h: number, [name: string]: number | string}[]) {
 					const layer: any = layers[layerIndex]
 					const presetKey = this.choices.getPreset(layer.screenAuxKey, preset)
-					const pathToLayer = ['device','screenList','items',layer.screenAuxKey,'presetList','items',presetKey,'layerList','items',layer.layerKey]
-					layer.w = this.state.get(['DEVICE', ...pathToLayer,'position','pp', 'sizeH']) ?? 1920
+					const screninfo = this.choices.getScreenInfo(layer.screenAuxKey)
+					const pathToLayer = [
+						...(screninfo.isAux ? this.constants.auxPath : this.constants.screenPath),
+						'items', screninfo.platformId,
+						'presetList','items',presetKey,
+						...this.choices.getLayerPath(layer.layerKey)
+					]
+					if (this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath]) === undefined) continue // this layer does not allow for sizing
+
+					layer.w = this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath, 'sizeH']) ?? 1920
 					layer.wOriginal = layer.w
-					layer.h = this.state.get(['DEVICE', ...pathToLayer,'position','pp', 'sizeV']) ?? 1080
+					layer.h = this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath, 'sizeV']) ?? 1080
 					layer.hOriginal = layer.h
-					layer.x = (this.state.get(['DEVICE', ...pathToLayer,'position','pp', 'posH']) ?? 0) - layer.w / 2
+					layer.x = (this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsPositionPath, 'posH']) ?? 0) - layer.w / 2
 					layer.xOriginal = layer.x
-					layer.y = (this.state.get(['DEVICE', ...pathToLayer,'position','pp', 'posV']) ?? 0) - layer.h / 2
+					layer.y = (this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsPositionPath, 'posV']) ?? 0) - layer.h / 2
 					layer.yOriginal = layer.y
 
 					if (boundingBoxes[layer.screenAuxKey] === undefined ) boundingBoxes[layer.screenAuxKey] = {}
@@ -1696,18 +1054,31 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 
 				for (const layerIndex in layers as {screenAuxKey: string, layerKey: string, x: number, y: number, w: number, h: number, [name: string]: number | string}[]) {
 					const layer: any = layers[layerIndex]
+					const screninfo = this.choices.getScreenInfo(layer.screenAuxKey)
 					const presetKey = this.choices.getPreset(layer.screenAuxKey, preset)
-					const screenWidth = this.state.get(`DEVICE/device/screenList/items/${layer.screenAuxKey}/status/size/pp/sizeH`)
-					const screenHeight = this.state.get(`DEVICE/device/screenList/items/${layer.screenAuxKey}/status/size/pp/sizeV`)
+					const screenpath = screninfo.isAux ? this.constants.auxPath : this.constants.screenPath
+					const path = [
+						...screenpath,
+						'items', screninfo.platformId,
+						...this.constants.screenSizePath
+					]
+					const screenWidth = this.state.getUnmapped(['DEVICE', ...path, 'sizeH'])
+					const screenHeight = this.state.getUnmapped(['DEVICE', ...path, 'sizeV'])
 					
-					const pathToLayer = ['device','screenList','items',layer.screenAuxKey,'presetList','items',presetKey,'layerList','items',layer.layerKey]
+					const pathToLayer = [
+						...screenpath,
+						'items', screninfo.platformId,
+						'presetList','items',presetKey,
+						...this.choices.getLayerPath(layer.layerKey)
+					]
+					if (this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath]) === undefined) continue // this layer does not allow for sizing
 
-					layer.input = this.state.get(['DEVICE', ...pathToLayer,'source','pp','inputNum']) ?? 'NONE'
+					layer.input = this.state.getUnmapped(['DEVICE', ...pathToLayer,'source','pp','inputNum']) ?? 'NONE'
 					//console.log('layer before match', layer)
 					if (layer.input?.match(/^IN/)) {
-						layer.inPlug = this.state.get(`DEVICE/device/inputList/items/${layer.input}/control/pp/plug`) || '1'
-						layer.inWidth = this.state.get(`DEVICE/device/inputList/items/${layer.input}/plugList/items/${layer.inPlug}/status/signal/pp/imageWidth`) || 0
-						layer.inHeight = this.state.get(`DEVICE/device/inputList/items/${layer.input}/plugList/items/${layer.inPlug}/status/signal/pp/imageHeight`) || 0
+						layer.inPlug = this.state.getUnmapped(`DEVICE/device/inputList/items/${layer.input}/control/pp/plug`) || '1'
+						layer.inWidth = this.state.getUnmapped(`DEVICE/device/inputList/items/${layer.input}/plugList/items/${layer.inPlug}/status/signal/pp/imageWidth`) || 0
+						layer.inHeight = this.state.getUnmapped(`DEVICE/device/inputList/items/${layer.input}/plugList/items/${layer.inPlug}/status/signal/pp/imageHeight`) || 0
 					} else {
 						layer.inWidth = 0
 						layer.inHeight = 0
@@ -1857,12 +1228,14 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			callback: (action) => {
 				for (const screen of this.choices.getChosenScreenAuxes(action.options.screens)) {
 					if (this.choices.isLocked(screen, 'PREVIEW')) return
+					const screeninfo = this.choices.getScreenInfo(screen)
 					this.connection.sendWSmessage(
-						['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'xCopyProgramToPreview'],
-						false
-					)
-					this.connection.sendWSmessage(
-						['device', 'screenGroupList', 'items', screen, 'control', 'pp', 'xCopyProgramToPreview'],
+						[
+							...(screeninfo.isAux ? this.constants.auxGroupPath : this.constants.screenGroupPath),
+							'items', screeninfo.platformId,
+							'control', 'pp', 'xCopyProgramToPreview'
+						],
+						false, 
 						true
 					)
 				}
@@ -1873,7 +1246,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 	}
 
 	// MARK: Set Preset Toggle
-	get devicePresetToggle_common() {
+	get devicePresetToggle() {
 		type DevicePresetToggle = {action: string}
 		
 		const devicePresetToggle: AWJaction<DevicePresetToggle> = {
@@ -1891,52 +1264,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					default: 'on',
 				},
 			],
-		}
-
-		return devicePresetToggle
-	}
-
-	// MARK: Set Preset Toggle - LivePremier
-	get devicePresetToggle_livepremier() {
-		
-		const devicePresetToggle = this.devicePresetToggle_common
-		devicePresetToggle.callback = (act) => {
-			const allscreens = this.choices.getScreensAuxArray(true).map((itm) => itm.id)
-			// device/transition/screenList/items/1/control/pp/enablePresetToggle
-			// device/screenGroupList/items/S1/control/pp/copyMode
-			
-			let action = act.options.action
-			if (action === 'toggle') {
-				if (this.state.get('DEVICE/device/screenGroupList/items/S1/control/pp/copyMode') === false) action = 'off'
-				else action = 'on'
-			}
-			if (action === 'on') allscreens.forEach((screen: string) =>
-				this.connection.sendWSmessage('device/screenGroupList/items/' + screen + '/control/pp/copyMode', false))
-			if (action === 'off') allscreens.forEach((screen: string) =>
-				this.connection.sendWSmessage('device/screenGroupList/items/' + screen + '/control/pp/copyMode', true))
-		}
-
-		return devicePresetToggle
-	}
-
-	// MARK: Set Preset Toggle - Midra
-	get devicePresetToggle_midra() {
-		
-		const devicePresetToggle = this.devicePresetToggle_common
-		devicePresetToggle.callback = (act) => {
-			const allscreens = this.choices.getScreensAuxArray(true).map((itm) => itm.id)
-			// device/transition/screenList/items/1/control/pp/enablePresetToggle
-			// device/screenGroupList/items/S1/control/pp/copyMode
-
-			let action = act.options.action
-			if (action === 'toggle') {
-				if (this.state.get('DEVICE/device/screenGroupList/items/S1/control/pp/enablePresetToggle') === true) action = 'off'
-				else action = 'on'
-			}
-			if (action === 'on') allscreens.forEach((screen: string) =>
-				this.connection.sendWSmessage('device/screenGroupList/items/' + screen + '/control/pp/enablePresetToggle', true))
-			if (action === 'off') allscreens.forEach((screen: string) =>
-				this.connection.sendWSmessage('device/screenGroupList/items/' + screen + '/control/pp/enablePresetToggle', false))
+			callback: () => {}
 		}
 
 		return devicePresetToggle
@@ -1945,7 +1273,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 	/**
 	 *MARK:  Select Multiviewer Widget
 	*/
-	get remoteMultiviewerSelectWidget_common() {
+	get remoteMultiviewerSelectWidget() {
 		type RemoteMultiviewerSelectWidget = {widget: string, sel: string}
 		
 		const remoteMultiviewerSelectWidget: AWJaction<RemoteMultiviewerSelectWidget> = {
@@ -1990,82 +1318,6 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 	}
 
 	/**
-	 *MARK:  Select Multiviewer Widget - LivePremier
-	*/
-	get remoteMultiviewerSelectWidget_livepremier() {
-		
-		const remoteMultiviewerSelectWidget = this.remoteMultiviewerSelectWidget_common
-		remoteMultiviewerSelectWidget.callback = (action) => {
-			const mvw = action.options.widget?.split(':')[0] ?? '1'
-			const widget = action.options.widget?.split(':')[1] ?? '0'
-			let widgetSelection: Record<'multiviewerKey' | 'widgetKey', string>[] = []
-			if (this.state.syncSelection) {
-				widgetSelection = [...this.state.getUnmapped('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
-			} else {
-				widgetSelection = [...this.state.get('LOCAL/widgetSelection/widgetIds')]
-			}
-			const idx = widgetSelection.findIndex((elem) => {
-				return elem.widgetKey == widget && elem.multiviewerKey == mvw
-			})
-
-			if ((action.options.sel === 'deselect' || action.options.sel === 'toggle') && idx >= 0) {
-				widgetSelection.splice(idx, 1)
-			} else if ((action.options.sel === 'select' || action.options.sel === 'toggle') && idx < 0) {
-				widgetSelection.push({ widgetKey: widget, multiviewerKey: mvw })
-			} else if (action.options.sel === 'selectExclusive') {
-				widgetSelection = [{ widgetKey: widget, multiviewerKey: mvw }]
-			}
-
-			if (this.state.syncSelection) {
-				this.connection.sendWSdata('REMOTE', 'replace', 'live/multiviewers/widgetSelection', [widgetSelection])
-			} else {
-				this.state.set('LOCAL/widgetSelection/widgetIds', widgetSelection)
-				this.instance.checkFeedbacks('remoteWidgetSelection')
-			}
-		}
-
-		return remoteMultiviewerSelectWidget
-	}
-
-	/**
-	 *MARK:  Select Multiviewer Widget - Midra
-	*/
-	get remoteMultiviewerSelectWidget_midra() {
-		
-		const remoteMultiviewerSelectWidget = this.remoteMultiviewerSelectWidget_common
-		remoteMultiviewerSelectWidget.callback = (action) => {
-			const mvw = action.options.widget?.split(':')[0] ?? '1'
-			const widget = action.options.widget?.split(':')[1] ?? '0'
-			let widgetSelection: Record<'multiviewerKey' | 'widgetKey', string>[] = []
-			if (this.state.syncSelection) {
-				widgetSelection = [...this.state.getUnmapped('REMOTE/live/multiviewer/widgetSelection/widgetKeys').map((key: string) => {return {multiviewerKey: '1', widgetKey: key}})]
-			} else {
-				widgetSelection = [...this.state.get('LOCAL/widgetSelection/widgetIds')]
-			}
-			const idx = widgetSelection.findIndex((elem) => {
-				return elem.widgetKey == widget && elem.multiviewerKey == mvw
-			})
-
-			if ((action.options.sel === 'deselect' || action.options.sel === 'toggle') && idx >= 0) {
-				widgetSelection.splice(idx, 1)
-			} else if ((action.options.sel === 'select' || action.options.sel === 'toggle') && idx < 0) {
-				widgetSelection.push({ widgetKey: widget, multiviewerKey: mvw })
-			} else if (action.options.sel === 'selectExclusive') {
-				widgetSelection = [{ widgetKey: widget, multiviewerKey: mvw }]
-			}
-
-			if (this.state.syncSelection) {
-				this.connection.sendWSdata('REMOTE', 'replace', 'live/multiviewer/widgetSelection', [widgetSelection.map((itm: {widgetKey: string}) => itm.widgetKey)])
-			} else {
-				this.state.set('LOCAL/widgetSelection/widgetIds', widgetSelection)
-				this.instance.checkFeedbacks('remoteWidgetSelection')
-			}
-		}
-
-		return { remoteMultiviewerSelectWidget}
-	}
-
-	/**
 	 * MARK: Select the source in a multiviewer widget
 	 */
 	get deviceMultiviewerSource() {
@@ -2089,41 +1341,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					default: this.choices.getWidgetSourceChoices()[0]?.id,
 				},
 			],
-			callback: (action) => {
-				let widgetSelection: Record<'multiviewerKey' | 'widgetKey', string>[] = []
-				if (action.options.widget === 'sel') {
-					if (this.state.syncSelection) {
-						widgetSelection = [...this.state.get('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
-					} else {
-						widgetSelection = [...this.state.get('LOCAL/widgetSelection/widgetIds')]
-					}
-				} else {
-					widgetSelection = [
-						{
-							widgetKey: action.options.widget.split(':')[1] ?? '0',
-							multiviewerKey: action.options.widget.split(':')[0] ?? '1',
-						},
-					]
-				}
-				for (const widget of widgetSelection) {
-					this.connection.sendWSmessage(
-						[
-							'device',
-							'monitoringList',
-							'items',
-							widget.multiviewerKey,
-							'layout',
-							'widgetList',
-							'items',
-							widget.widgetKey,
-							'control',
-							'pp',
-							'source',
-						],
-						action.options.source
-					)
-				}
-			},
+			callback: (action) => {},
 		}
 
 		return deviceMultiviewerSource
@@ -2204,25 +1422,25 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				} else if (sel === 4 && !id.length) {
 					sel = 2
 				}
-				const screen = action.options.screen as string
+				const screeninfo = this.choices.getScreenInfo(action.options.screen)
 				if (this.state.syncSelection) {
 					switch (sel) {
 						case 0:
-							this.connection.sendWSdata('REMOTE', 'remove', 'live/screens/screenAuxSelection', [screen])
+							this.connection.sendWSdata('REMOTE', 'remove', '/live/screens/screenAuxSelection', [screeninfo.platformLongId])
 							break
 						case 1:
-							this.connection.sendWSdata('REMOTE', 'add', 'live/screens/screenAuxSelection', [screen])
+							this.connection.sendWSdata('REMOTE', 'add', '/live/screens/screenAuxSelection', [screeninfo.platformLongId])
 							break
 						case 2:
-							this.connection.sendWSdata('REMOTE', 'replace', 'live/screens/screenAuxSelection', [[screen]])
+							this.connection.sendWSdata('REMOTE', 'replace', '/live/screens/screenAuxSelection', [[screeninfo.platformLongId]])
 							break
 						case 3:
-							this.connection.sendWSdata('REMOTE', 'toggle', 'live/screens/screenAuxSelection', [screen])
+							this.connection.sendWSdata('REMOTE', 'toggle', '/live/screens/screenAuxSelection', [screeninfo.platformLongId])
 							break
 					}
 				} else {
 					const localSelection = this.state.getUnmapped('LOCAL/screenAuxSelection/keys') as string[]
-					const idx = localSelection.indexOf(screen)
+					const idx = localSelection.indexOf(screeninfo.id)
 					switch (sel) {
 						case 0:
 							if (idx >= 0) {
@@ -2231,17 +1449,17 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 							break
 						case 1:
 							if (idx === -1) {
-								localSelection.push(screen)
+								localSelection.push(screeninfo.id)
 							}
 							break
 						case 2:
-								this.state.setUnmapped('LOCAL/screenAuxSelection/keys', [ screen ]) 
+								this.state.setUnmapped('LOCAL/screenAuxSelection/keys', [ screeninfo.id ]) 
 							break
 						case 3:
 							if (idx >= 0) {
 								localSelection.splice(idx, 1)
 							} else {
-								localSelection.push(screen)
+								localSelection.push(screeninfo.id)
 							}
 							break
 					}
@@ -2263,6 +1481,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			name: 'Lock Screen',
 			options: [
 				{
+					
 					id: 'screens',
 					label: 'Screen',
 					type: 'multidropdown',
@@ -2307,19 +1526,21 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				const pst = action.options.preset === 'PREVIEW' ? 'Prw' : 'Pgm'
 				if (this.state.syncSelection) {
 					if (action.options.lock === 'lock' || action.options.lock === 'unlock') {
-						const screen = this.choices.getChosenScreenAuxes(screens)
+						const scrs = this.choices.getChosenScreenAuxes(screens)
+							.map( screenId => this.choices.getScreenInfo(screenId).platformLongId )
 						this.connection.sendWSdata(
 							'REMOTE',
 							action.options.lock + 'ScreenAuxes' + pst,
-							'live/screens/presetModeLock',
-							[screen]
+							'/live/screens/presetModeLock',
+							[scrs]
 						)
 					} else if (action.options.lock === 'toggle') {
 						if (screens.includes('all')) {
 							const allscreens = this.choices.getChosenScreenAuxes(screens)
+								.map(scr => this.choices.getScreenInfo(scr).platformLongId)
 							const allLocked =
 								allscreens.find((scr) => {
-									return this.state.get(['REMOTE', 'live', 'screens', 'presetModeLock', action.options.preset, scr]) === false
+									return this.state.getUnmapped(['REMOTE', 'live', 'screens', 'presetModeLock', action.options.preset, scr]) === false
 								}) === undefined
 							let lock = 'lock'
 							if (allLocked) {
@@ -2328,7 +1549,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 							this.connection.sendWSdata(
 								'REMOTE',
 								lock + 'ScreenAuxes' + pst,
-								'live/screens/presetModeLock',
+								'/live/screens/presetModeLock',
 								[allscreens]
 							)
 						} else {
@@ -2336,14 +1557,14 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 								this.connection.sendWSdata(
 									'REMOTE',
 									'toggle',
-									'live/screens/presetModeLock/' + action.options.preset,
-									[screen]
+									'/live/screens/presetModeLock/' + action.options.preset,
+									[this.choices.getScreenInfo(screen).platformLongId]
 								)
 							}
 						}
 					}
 				} else {
-					const localLocks = this.state.get(['LOCAL', 'presetModeLock', action.options.preset])
+					const localLocks = this.state.getUnmapped(['LOCAL', 'presetModeLock', action.options.preset])
 					if (action.options.lock === 'lock') {
 						for (const screen of this.choices.getChosenScreenAuxes(screens)) {
 							localLocks[screen] = true
@@ -2357,7 +1578,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 							const allscreens = this.choices.getChosenScreenAuxes('all')
 							const allLocked =
 								allscreens.find((scr) => {
-									return this.state.get(['LOCAL', 'presetModeLock', action.options.preset, scr]) === false
+									return this.state.getUnmapped(['LOCAL', 'presetModeLock', action.options.preset, scr]) === false
 								}) === undefined
 							if (allLocked) {
 								for (const screen of allscreens) {
@@ -2407,19 +1628,13 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				if (this.state.syncSelection) {
 					switch (action.options.mode) {
 						case 'pgm':
-							this.connection.sendRawWSmessage(
-								'{"channel":"REMOTE","data":{"name":"set","path":"/live/screens/presetModeSelection","args":["PROGRAM"]}}'
-							)
+							this.connection.sendWSdata('REMOTE', 'set', '/live/screens/presetModeSelection', ['PROGRAM'])
 							break
 						case 'pvw':
-							this.connection.sendRawWSmessage(
-								'{"channel":"REMOTE","data":{"name":"set","path":"/live/screens/presetModeSelection","args":["PREVIEW"]}}'
-							)
+							this.connection.sendWSdata('REMOTE', 'set', '/live/screens/presetModeSelection', ['PREVIEW'])
 							break
 						case 'tgl':
-							this.connection.sendRawWSmessage(
-								'{"channel":"REMOTE","data":{"name":"toggle","path":"/live/screens/presetModeSelection","args":[]}}'
-							)
+							this.connection.sendWSdata('REMOTE', 'toggle', '/live/screens/presetModeSelection', [])
 							break
 					}
 				} else {
@@ -2537,7 +1752,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					}
 				}
 				if (this.state.syncSelection) {
-					this.connection.sendWSdata('REMOTE', 'replace', 'live/screens/layerSelection', [ret])
+					this.connection.sendWSdata('REMOTE', 'replace', '/live/screens/layerSelection', [ret])
 				} else {
 					this.state.set('LOCAL/layerIds', ret)
 					this.instance.checkFeedbacks('remoteLayerSelection')
@@ -2588,9 +1803,9 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				},
 			],
 			callback: (action) => {
-				const clients: {id: string}[] = this.state.get('REMOTE/system/network/websocketServer/clients')
+				const clients: {id: string}[] = this.state.getUnmapped('REMOTE/system/network/websocketServer/clients') // TODO: handle secure connections
 				let syncstate: boolean
-				const myid: string = this.state.get('LOCAL/socketId')
+				const myid: string = this.state.getUnmapped('LOCAL/socketId')
 				const myindex = clients.findIndex((elem) => {
 					if (elem.id === myid) {
 						return true
@@ -2606,7 +1821,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						syncstate = true
 						break
 					case 2:
-						if (this.state.get(`REMOTE/system/network/websocketServer/clients/${myindex}/isRemoteSelectionEnabled`)) {
+						if (this.state.getUnmapped(`REMOTE/system/network/websocketServer/clients/${myindex}/isRemoteSelectionEnabled`)) {
 							syncstate = false
 						} else {
 							syncstate = true
@@ -2616,7 +1831,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						syncstate = false
 						break
 				}
-				this.state.set('LOCAL/syncSelection', syncstate)
+				this.state.setUnmapped('LOCAL/syncSelection', syncstate)
 				this.connection.sendRawWSmessage(
 					`{"channel":"REMOTE","data":{"name":"enableRemoteSelection","path":"/system/network/websocketServer/clients/${myindex}","args":[${syncstate}]}}`
 				)
@@ -2631,9 +1846,9 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				let preset: string,
 					vartext = 'PGM'
 				if (syncstate) {
-					preset = this.state.get('REMOTE/live/screens/presetModeSelection/presetMode')
+					preset = this.state.getUnmapped('REMOTE/live/screens/presetModeSelection/presetMode')
 				} else {
-					preset = this.state.get('LOCAL/presetMode')
+					preset = this.state.getUnmapped('LOCAL/presetMode')
 				}
 				if (preset === 'PREVIEW') {
 					vartext = 'PVW'
@@ -2723,25 +1938,35 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 	/**
 	 * MARK: Route audio block
 	 */
-	deviceAudioRouteBlock_common(audioOutputChoices: DropdownChoice[], audioInputChoices: DropdownChoice[]) {
-		type DeviceAudioRouteBlock = {out: string, in: string, blocksize: number}
+	get deviceAudioRouteBlock() {
+		type DeviceAudioRouteBlock = {device: number, out1: string, in1: string, out2?: string, in2?: string, out3?: string, in3?: string, out4?: string, in4?: string, blocksize: number}
 
 		const deviceAudioRouteBlock: AWJaction<DeviceAudioRouteBlock> = {
 			name: 'Route Audio (Block)',
 			options: [
 				{
 					type: 'dropdown',
+					label: 'Device',
+					id: 'device',
+					choices: this.choices.getLinkedDevicesChoices(),
+					default: '1',
+					isVisibleData: this.choices.getLinkedDevicesChoices(),
+					isVisible: (_opt, choices) => {return choices.length > 1},
+					minChoicesForSearch: 3,
+				},
+				{
+					type: 'dropdown',
 					label: 'First Output Channel',
-					id: 'out',
-					choices: audioOutputChoices,
-					default: audioOutputChoices[0]?.id,
+					id: 'out1',
+					choices: this.choices.getAudioOutputChoices(),
+					default: this.choices.getAudioOutputChoices()[0]?.id,
 					minChoicesForSearch: 0,
 				},
 				{
 					type: 'dropdown',
 					label: 'First Input Channel',
-					id: 'in',
-					choices: audioInputChoices,
+					id: 'in1',
+					choices: this.choices.getAudioInputChoices(),
 					default: 'NONE',
 					minChoicesForSearch: 0,
 					tooltip: 'If you choose "No Source" the whole Block will be unrouted',
@@ -2752,7 +1977,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					id: 'blocksize',
 					default: 8,
 					min: 1,
-					max: audioInputChoices.length,
+					max: this.choices.getAudioInputChoices().length,
 					range: true,
 				},
 			],
@@ -2762,122 +1987,31 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 	}
 
 	/**
-	 * MARK: Route audio block - Midra
+	 * MARK: Route audio channels
 	 */
-	get deviceAudioRouteBlock_midra() {
-		
-
-		const audioOutputChoices =  this.choices.getAudioCustomBlockChoices()
-		const audioInputChoices = this.choices.getAudioInputChoices()
-		const deviceAudioRouteBlock = this.deviceAudioRouteBlock_common(audioOutputChoices, audioInputChoices)
-
-
-		deviceAudioRouteBlock.callback = (action) => {
-			const outstart = audioOutputChoices.findIndex((item) => {
-				return item.id === action.options.out
-			})
-			const instart = audioInputChoices.findIndex((item) => {
-				return item.id === action.options.in
-			})
-			if (outstart > -1 && instart > -1) {
-				const max = Math.min(
-					audioOutputChoices.length - outstart,
-					audioInputChoices.length - instart,
-					action.options.blocksize
-				) // since 'None' is input at index 0 no extra test is needed, it is possible to fill all outputs with none
-				const routings: Record<string, string[]> = {}
-				for (let s = 0; s < max; s += 1) {
-					const sink = audioOutputChoices[outstart + s].id
-					const source = audioInputChoices[instart === 0 ? 0 : instart + s].id
-					const block = sink.toString().split(':')[0]
-					const channel = sink.toString().split(':')[1]
-					if (!routings[block]) {
-						routings[block] = [...this.state.getUnmapped('DEVICE/device/audio/custom/sourceList/items/' + block + '/control/pp/channelMapping')] as string[]
-					}
-					routings[block][parseInt(channel) - 1] = source.toString()
-
-				}
-				Object.keys(routings).forEach((block) => {
-					const path = [
-						'device',
-						'audio',
-						'custom',
-						'sourceList',
-						'items',
-						block,
-						'control',
-						'pp',
-						'channelMapping',
-					]
-					this.connection.sendWSmessage(path, routings[block])
-				})
-			} else {
-				console.error("%s can't be found in available outputs or %s can't be found in available inputs", action.options.out, action.options.in)
-			}
-		}
-		
-		return deviceAudioRouteBlock
-	}
-
-	/**
-	 * MARK: Route audio block - LivePremier
-	 */
-	get deviceAudioRouteBlock_livepremier() {
-		
+	get deviceAudioRouteChannels() {
+		type DeviceAudioRouteChannels = {device: number, out1: string, in1: string[], out2?: string, in2?: string[], out3?: string, in3?: string[], out4?: string, in4?: string[]}
 
 		const audioOutputChoices = this.choices.getAudioOutputChoices()
 		const audioInputChoices = this.choices.getAudioInputChoices()
-		const deviceAudioRouteBlock = this.deviceAudioRouteBlock_common(audioOutputChoices, audioInputChoices)
-		
-		deviceAudioRouteBlock.callback = (action) => {
-			const outstart = audioOutputChoices.findIndex((item) => {
-				return item.id === action.options.out
-			})
-			const instart = audioInputChoices.findIndex((item) => {
-				return item.id === action.options.in
-			})
-			if (outstart > -1 && instart > -1) {
-				const max = Math.min(
-					audioOutputChoices.length - outstart,
-					audioInputChoices.length - instart,
-					action.options.blocksize
-				) // since 'None' is input at index 0 no extra test is needed, it is possible to fill all outputs with none
-				for (let s = 0; s < max; s += 1) {
-					const path = [
-						'device',
-						'audio',
-						'control',
-						'txList',
-						'items',
-						audioOutputChoices[outstart + s].id.toString().split(':')[0],
-						'channelList',
-						'items',
-						audioOutputChoices[outstart + s].id.toString().split(':')[1],
-						'control',
-						'pp',
-						'source',
-					]
-					this.connection.sendWSmessage(path, audioInputChoices[instart === 0 ? 0 : instart + s].id)
-				}
-			}
-		}
-		
-		return deviceAudioRouteBlock
-	}
-
-	/**
-	 * MARK: Route audio channels
-	 */
-	deviceAudioRouteChannels_common(audioOutputChoices: DropdownChoice[], audioInputChoices: DropdownChoice[]) {
-		type DeviceAudioRouteChannels = {out: string, in: string[]}
 		
 		const deviceAudioRouteChannels: AWJaction<DeviceAudioRouteChannels> = {
 			name: 'Route Audio (Channels)',
 			options: [
 				{
 					type: 'dropdown',
+					label: 'Device',
+					id: 'device',
+					choices: this.choices.getLinkedDevicesChoices(),
+					default: 1,
+					isVisibleData: this.choices.getLinkedDevicesChoices(),
+					isVisible: (_opt, choices) => {return choices.length > 1},
+					minChoicesForSearch: 3,
+				},
+				{
+					type: 'dropdown',
 					label: '(first) output channel',
-					id: 'out',
+					id: 'out1',
 					choices: audioOutputChoices,
 					default: audioOutputChoices[0]?.id,
 					minChoicesForSearch: 0,
@@ -2885,7 +2019,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				{
 					type: 'multidropdown',
 					label: 'input channel(s)',
-					id: 'in',
+					id: 'in1',
 					choices: audioInputChoices,
 					default: ['NONE'],
 					minChoicesForSearch: 0,
@@ -2898,118 +2032,9 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 	}
 
 	/**
-	 * MARK: Route audio channels - LivePremier
-	 */
-	get deviceAudioRouteChannels_livepremier() {
-		
-
-		const audioOutputChoices = this.choices.getAudioOutputChoices()
-		const audioInputChoices = this.choices.getAudioInputChoices()
-		const deviceAudioRouteChannels = this.deviceAudioRouteChannels_common(audioOutputChoices, audioInputChoices)
-
-		deviceAudioRouteChannels.callback = (action) => {
-			if (action.options.in.length > 0) {
-				const outstart = audioOutputChoices.findIndex((item) => {
-					return item.id === action.options.out
-				})
-				if (outstart > -1) {
-					const max = Math.min(audioOutputChoices.length - outstart, action.options.in.length)
-					for (let s = 0; s < max; s += 1) {
-						const path = [
-							'device',
-							'audio',
-							'control',
-							'txList',
-							'items',
-							audioOutputChoices[outstart + s].id.toString().split(':')[0],
-							'channelList',
-							'items',
-							audioOutputChoices[outstart + s].id.toString().split(':')[1],
-							'control',
-							'pp',
-							'source',
-						]
-						this.connection.sendWSmessage(path, action.options.in[s])
-					}
-				}
-			} else {
-				const path = [
-					'device',
-					'audio',
-					'control',
-					'txList',
-					'items',
-					action.options.out.split(':')[0],
-					'channelList',
-					'items',
-					action.options.out.split(':')[1],
-					'control',
-					'pp',
-					'source',
-				]
-				this.connection.sendWSmessage(path, audioInputChoices[0]?.id)
-			}
-		}
-
-		return deviceAudioRouteChannels
-	}
-
-	/**
-	 * MARK: Route audio channels - Midra
-	 */
-	get deviceAudioRouteChannels_midra() {
-		
-
-		const audioOutputChoices =  this.choices.getAudioCustomBlockChoices()
-		const audioInputChoices = this.choices.getAudioInputChoices()
-		const deviceAudioRouteChannels = this.deviceAudioRouteChannels_common(audioOutputChoices, audioInputChoices)
-
-		deviceAudioRouteChannels.callback = (action) => {
-			let inputlist = ['NONE']
-			if (action.options.in?.length > 0) {
-				inputlist = action.options.in
-			}
-			const outstart = audioOutputChoices.findIndex((item) => {
-				return item.id === action.options.out
-			})
-			if (outstart > -1) {
-				const max = Math.min(audioOutputChoices.length - outstart, inputlist.length)
-				const routings: Record<string, string[]> = {}
-				for (let s = 0; s < max; s += 1) {
-					const sink = audioOutputChoices[outstart + s].id
-					const source = inputlist[s]
-					const block = sink.toString().split(':')[0]
-					const channel = sink.toString().split(':')[1]
-					if (!routings[block]) {
-						routings[block] = [...this.state.getUnmapped('DEVICE/device/audio/custom/sourceList/items/' + block + '/control/pp/channelMapping')] as string[]
-					}
-					routings[block][parseInt(channel) - 1] = source.toString()
-
-				}
-				Object.keys(routings).forEach((block: string) => {
-					const path = [
-						'device',
-						'audio',
-						'custom',
-						'sourceList',
-						'items',
-						block,
-						'control',
-						'pp',
-						'channelMapping',
-					]
-					this.connection.sendWSmessage(path, routings[block])
-				})
-			}
-		}
-
-		return deviceAudioRouteChannels
-	}
-
-	/**
 	 * MARK: Setup timer
 	 */
-	get deviceTimerSetup_common() {
+	get deviceTimerSetup() {
 		type DeviceTimerSetup = {timer: string, type: string, currentTimeMode: string, unitMode: string, fg_color: number, bg_color: number}
 		
 		const deviceTimerSetup: AWJaction<DeviceTimerSetup> = {
@@ -3084,99 +2109,6 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 	}
 
 	/**
-	 * MARK: Setup timer - LivePremier
-	 */
-	get deviceTimerSetup_livepremier() {
-		
-		const deviceTimerSetup = this.deviceTimerSetup_common
-		deviceTimerSetup.callback = (action) => {
-			this.connection.sendWSmessage(
-				['device', 'timerList', 'items', action.options.timer, 'control', 'pp', 'type'],
-				action.options.type
-			)
-			if (action.options.type === 'CURRENTTIME') {
-				this.connection.sendWSmessage(
-					['device', 'timerList', 'items', action.options.timer, 'control', 'pp', 'currentTimeMode'],
-					action.options.currentTimeMode
-				)
-			} else {
-				this.connection.sendWSmessage(
-					['device', 'timerList', 'items', action.options.timer, 'control', 'pp', 'unitMode'],
-					action.options.unitMode
-				)
-			}
-			
-			this.connection.sendWSmessage(
-				['device', 'timerList', 'items', action.options.timer, 'control', 'background', 'color', 'pp', 'red'],
-				splitRgb(action.options.bg_color).r
-			)
-			this.connection.sendWSmessage(
-				['device', 'timerList', 'items', action.options.timer, 'control', 'background', 'color', 'pp', 'green'],
-				splitRgb(action.options.bg_color).g
-			)
-			this.connection.sendWSmessage(
-				['device', 'timerList', 'items', action.options.timer, 'control', 'background', 'color', 'pp', 'blue'],
-				splitRgb(action.options.bg_color).b
-			)
-			this.connection.sendWSmessage(
-				['device', 'timerList', 'items', action.options.timer, 'control', 'background', 'color', 'pp', 'alpha'],
-				Math.round((splitRgb(action.options.bg_color).a || 1) * 255)
-			)
-			this.connection.sendWSmessage(
-				['device', 'timerList', 'items', action.options.timer, 'control', 'text', 'color', 'pp', 'red'],
-				splitRgb(action.options.fg_color).r
-			)
-			this.connection.sendWSmessage(
-				['device', 'timerList', 'items', action.options.timer, 'control', 'text', 'color', 'pp', 'green'],
-				splitRgb(action.options.fg_color).g
-			)
-			this.connection.sendWSmessage(
-				['device', 'timerList', 'items', action.options.timer, 'control', 'text', 'color', 'pp', 'blue'],
-				splitRgb(action.options.fg_color).b
-			)
-			this.connection.sendWSmessage(
-				['device', 'timerList', 'items', action.options.timer, 'control', 'text', 'color', 'pp', 'alpha'],
-				Math.round((splitRgb(action.options.fg_color).a || 1) * 255)
-			)
-		}
-
-		return deviceTimerSetup
-	}
-
-	/**
-	 * MARK: Setup timer - Midra
-	 */
-	get deviceTimerSetup_midra() {
-		
-		const deviceTimerSetup = this.deviceTimerSetup_common
-		deviceTimerSetup.callback = (action) => {
-			this.connection.sendWSmessage(
-				['device', 'timerList', 'items', action.options.timer, 'control', 'pp', 'type'],
-				action.options.type
-			)
-			if (action.options.type === 'CURRENTTIME') {
-				this.connection.sendWSmessage(
-					['device', 'timerList', 'items', action.options.timer, 'control', 'pp', 'currentTimeMode'],
-					action.options.currentTimeMode
-				)
-			} else {
-				this.connection.sendWSmessage(
-					['device', 'timerList', 'items', action.options.timer, 'control', 'pp', 'unitMode'],
-					action.options.unitMode
-				)
-			}
-
-		}
-
-		// Color setup is not available at Midra
-		const hidden = () => { return false }
-		deviceTimerSetup.options[4].isVisible = hidden
-		deviceTimerSetup.options[5].isVisible = hidden
-
-		return deviceTimerSetup
-	}
-
-	/**
 	 * MARK: Adjust timer
 	 */
 	get deviceTimerAdjust() {
@@ -3213,11 +2145,11 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			],
 			callback: async (action) => {
 				let timetype = 'countdownDuration'
-				const type = this.state.get(['DEVICE', 'device', 'timerList', 'items', action.options.timer, 'control', 'pp', 'type'])
+				const type = this.state.getUnmapped(['DEVICE', 'device', 'timerList', 'items', action.options.timer, 'control', 'pp', 'type'])
 				if (type === 'CURRENTTIME') {
 					timetype = 'timeOffset'
 				}
-				let time = this.state.get(['DEVICE', 'device', 'timerList', 'items', action.options.timer, 'control', 'pp', timetype])
+				let time = this.state.getUnmapped(['DEVICE', 'device', 'timerList', 'items', action.options.timer, 'control', 'pp', timetype])
 				const inputvalue = await this.instance.parseVariablesInString(action.options.time)
 				if (action.options.action === 'add') {
 					time += this.instance.timeToSeconds(inputvalue)
@@ -3309,8 +2241,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						cmd = 'xStart'
 					}
 				}
-				this.connection.sendWSmessage(['device', 'timerList', 'items', action.options.timer, 'control', 'pp', cmd], false)
-				this.connection.sendWSmessage(['device', 'timerList', 'items', action.options.timer, 'control', 'pp', cmd], true)
+				this.connection.sendWSmessage(['device', 'timerList', 'items', action.options.timer, 'control', 'pp', cmd], false, true)
 			},
 		}
 
@@ -3382,9 +2313,9 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 	}
 
 	/**
-	 * MARK: Choose Testpatterns - LivePremier
+	 * MARK: Choose Testpatterns
 	 */
-	get deviceTestpatterns_livepremier() {
+	get deviceTestpatterns() {
 		
 		const deviceTestpatternsOptions: CompanionInputFieldDropdown[] = [
 			{
@@ -3445,18 +2376,6 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				label: 'Pattern',
 				choices: [
 					{ id: 'NONE', label: 'Off' },
-					{ id: 'GEOMETRIC', label: 'Geometric' },
-					{ id: 'VERTICAL_GREY_SCALE', label: 'Vertical Greyscale' },
-					{ id: 'HORIZONTAL_GREY_SCALE', label: 'Horizontal Greyscale' },
-					{ id: 'HORIZONTAL_GREY_SCALE_2', label: 'Horizontal Greysteps' },
-					{ id: 'VERTICAL_COLOR_BAR', label: 'Vertical Colorbars' },
-					{ id: 'HORIZONTAL_COLOR_BAR', label: 'Horizontal Colorbars' },
-					{ id: 'GRID_CUSTOM', label: 'Grid Custom' },
-					{ id: 'SMPTE', label: 'SMPTE' },
-					{ id: 'VERTICAL_GRADIENT', label: 'Vertical Gradient' },
-					{ id: 'HORIZONTAL_GRADIENT', label: 'Horzontal Gradient' },
-					{ id: 'CROSSHATCH', label: 'Crosshatch' },
-					{ id: 'CHECKERBOARD', label: 'Checkerboard' },
 				],
 				default: 'NONE',
 				isVisible: (options) => {
@@ -3469,23 +2388,6 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				label: 'Pattern',
 				choices: [
 					{ id: 'NO_PATTERN', label: 'Off' },
-					{ id: 'COLOR', label: 'Solid Color' },
-					{ id: 'VERTICAL_GREY_SCALE', label: 'Vertical Greyscale' },
-					{ id: 'HORIZONTAL_GREY_SCALE', label: 'Horizontal Greyscale' },
-					{ id: 'VERTICAL_COLOR_BAR', label: 'Vertical Colorbars' },
-					{ id: 'HORIZONTAL_COLOR_BAR', label: 'Horizontal Colorbars' },
-					{ id: 'GRID_16_16', label: 'Grid 16x16' },
-					{ id: 'GRID_32_32', label: 'Grid 32x32' },
-					{ id: 'GRID_CUSTOM', label: 'Grid Custom' },
-					{ id: 'SMPTE', label: 'SMPTE' },
-					{ id: 'BURST_H', label: 'Horizontal Burst' },
-					{ id: 'BURST_V', label: 'Vertical Burst' },
-					{ id: 'VERTICAL_GRADIENT', label: 'Vertical Gradient' },
-					{ id: 'HORIZONTAL_GRADIENT', label: 'Horzontal Gradient' },
-					{ id: 'CROSSHATCH', label: 'Crosshatch' },
-					{ id: 'CHECKERBOARD', label: 'Checkerboard' },
-					{ id: 'MOVING', label: 'Moving Lines' },
-					{ id: 'ID', label: 'ID' },
 				],
 				default: 'NO_PATTERN',
 				isVisible: (options) => {
@@ -3498,25 +2400,6 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				label: 'Pattern',
 				choices: [
 					{ id: 'NO_PATTERN', label: 'Off' },
-					{ id: 'COLOR', label: 'Solid Color' },
-					{ id: 'VERTICAL_GREY_SCALE', label: 'Vertical Greyscale' },
-					{ id: 'HORIZONTAL_GREY_SCALE', label: 'Horizontal Greyscale' },
-					{ id: 'HORIZONTAL_GREY_SCALE_2', label: 'Horizontal Greysteps' },
-					{ id: 'VERTICAL_COLOR_BAR', label: 'Vertical Colorbars' },
-					{ id: 'HORIZONTAL_COLOR_BAR', label: 'Horizontal Colorbars' },
-					{ id: 'GRID_16_16', label: 'Grid 16x16' },
-					{ id: 'GRID_32_32', label: 'Grid 32x32' },
-					{ id: 'GRID_CUSTOM', label: 'Grid Custom' },
-					{ id: 'SMPTE', label: 'SMPTE' },
-					{ id: 'BURST_H', label: 'Horizontal Burst' },
-					{ id: 'BURST_V', label: 'Vertical Burst' },
-					{ id: 'VERTICAL_GRADIENT', label: 'Vertical Gradient' },
-					{ id: 'HORIZONTAL_GRADIENT', label: 'Horzontal Gradient' },
-					{ id: 'CROSSHATCH', label: 'Crosshatch' },
-					{ id: 'CHECKERBOARD', label: 'Checkerboard' },
-					{ id: 'MOVING', label: 'Moving Lines' },
-					{ id: 'ID', label: 'ID' },
-					{ id: 'SOFTEDGE', label: 'Softedge' },
 				],
 				default: 'NO_PATTERN',
 				isVisible: (options) => {
@@ -3529,108 +2412,6 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 
 	}
 
-	/**
-	 * MARK: Choose Testpatterns - Midra
-	 */
-	get deviceTestpatterns_midra() {
-		
-		const deviceTestpatternsOptions: CompanionInputFieldDropdown[] = [
-			{
-				id: 'group',
-				type: 'dropdown',
-				label: 'Group',
-				choices: [
-					{ id: 'all', label: 'All' },
-					{ id: 'screenList', label: 'Screen Canvas' },
-					{ id: 'outputList', label: 'Output' },
-				],
-				default: 'outputList',
-			},
-			{
-				id: 'screenList',
-				type: 'dropdown',
-				label: 'Screen',
-				choices: this.choices.getScreenChoices(),
-				default: this.choices.getScreenChoices()[0]?.id,
-				isVisible: (options) => {
-					return options.group === 'screenList'
-				},
-			},
-			{
-				id: 'outputList',
-				type: 'dropdown',
-				label: 'Output',
-				choices: this.choices.getOutputChoices(),
-				default: this.choices.getOutputChoices()[0]?.id,
-				isVisible: (options) => {
-					return options.group === 'outputList'
-				},
-			},
-			{
-				id: 'patall',
-				type: 'dropdown',
-				label: 'Pattern',
-				choices: [{ id: '0', label: 'Off' }],
-				default: '0',
-				isVisible: (options) => {
-					return options.group === 'all'
-				},
-			},
-			{
-				id: 'screenListPat',
-				type: 'dropdown',
-				label: 'Pattern',
-				choices: [
-					{ id: 'NONE', label: 'Off' },
-					{ id: 'GEOMETRIC', label: 'Geometric' },
-					{ id: 'VERTICAL_GREY_SCALE', label: 'Vertical Greyscale' },
-					{ id: 'HORIZONTAL_GREY_SCALE', label: 'Horizontal Greyscale' },
-					{ id: 'VERTICAL_COLOR_BAR', label: 'Vertical Colorbars' },
-					{ id: 'HORIZONTAL_COLOR_BAR', label: 'Horizontal Colorbars' },
-					{ id: 'GRID_CUSTOM', label: 'Grid Custom' },
-					{ id: 'SMPTE', label: 'SMPTE' },
-					{ id: 'VERTICAL_GRADIENT', label: 'Vertical Gradient' },
-					{ id: 'HORIZONTAL_GRADIENT', label: 'Horzontal Gradient' },
-					{ id: 'CROSSHATCH', label: 'Crosshatch' },
-					{ id: 'CHECKERBOARD', label: 'Checkerboard' },
-					{ id: 'SOFTEDGE', label: 'Covering' },
-				],
-				default: 'NONE',
-				isVisible: (options) => {
-					return options.group === 'screenList'
-				},
-			},
-			{
-				id: 'outputListPat',
-				type: 'dropdown',
-				label: 'Pattern',
-				choices: [
-					{ id: 'NO_PATTERN', label: 'Off' },
-					{ id: 'COLOR', label: 'Solid Color' },
-					{ id: 'VERTICAL_GREY_SCALE', label: 'Vertical Greyscale' },
-					{ id: 'HORIZONTAL_GREY_SCALE', label: 'Horizontal Greyscale' },
-					{ id: 'VERTICAL_COLOR_BAR', label: 'Vertical Colorbars' },
-					{ id: 'HORIZONTAL_COLOR_BAR', label: 'Horizontal Colorbars' },
-					{ id: 'GRID_16_16', label: 'Grid 16x16' },
-					{ id: 'GRID_32_32', label: 'Grid 32x32' },
-					{ id: 'GRID_CUSTOM', label: 'Grid Custom' },
-					{ id: 'SMPTE', label: 'SMPTE' },
-					{ id: 'BURST_H', label: 'Horizontal Burst' },
-					{ id: 'BURST_V', label: 'Vertical Burst' },
-					{ id: 'VERTICAL_GRADIENT', label: 'Vertical Gradient' },
-					{ id: 'HORIZONTAL_GRADIENT', label: 'Horzontal Gradient' },
-					{ id: 'CHECKERBOARD', label: 'Checkerboard' },
-					{ id: 'SOFTEDGE', label: 'Covering' },
-				],
-				default: 'NO_PATTERN',
-				isVisible: (options) => {
-					return options.group === 'outputList'
-				},
-			},
-		]
-
-		return this.deviceTestpatterns_common(deviceTestpatternsOptions)
-	}	
 
 	/**
 	 * MARK: Send custom AWJ replace command
@@ -3729,7 +2510,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			},
 			learn: (action) => {
 				const newoptions = {}
-				const lastMsg = this.state.get('LOCAL/lastMsg')
+				const lastMsg = this.state.getUnmapped('LOCAL/lastMsg')
 				const path = lastMsg.path
 				const value = lastMsg.value
 				if (JSON.stringify(value).length > 132) {
@@ -3842,7 +2623,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 	/**
 	 * MARK: Device Power
 	 */
-	devicePower_common(devicePowerChoices: DropdownChoice[]) {
+	get devicePower() {
 		type DevicePower = {action : string}
 		
 
@@ -3853,86 +2634,35 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					id: 'action',
 					type: 'dropdown',
 					label: 'Power',
-					choices: devicePowerChoices,
-					default: devicePowerChoices[0].id,
+					choices: [
+						{ id: 'on', label: 'Switch on (Wake on LAN)' },
+						{ id: 'off', label: 'Switch to Power off' },
+						{ id: 'reboot', label: 'Reboot' },
+					],
+					default: 'on',
 				},
 			],
-			callback: (action) => {}
-		}
+			callback: (action) => {
+				const path = 'device/system/shutdown/cmd/pp/xRequest'
 
-		return devicePower
-	}
-
-	/**
-	 * MARK: Device Power - LivePremier
-	 */
-	get devicePower_livepremier() {
-		
-		const devicePowerChoices = [
-			{ id: 'on', label: 'Switch on (Wake on LAN)' },
-			{ id: 'off', label: 'Switch to Power off' },
-			{ id: 'reboot', label: 'Reboot' },
-		]
-
-		const devicePower = this.devicePower_common(devicePowerChoices)
-
-		devicePower.callback = (action) => {
-			const path = 'device/system/shutdown/cmd/pp/xRequest'
-
-			if (action.options.action === 'on') {
-				const mac = this.instance.config.macaddress.split(/[,:-_.\s]/).join('')
-				this.connection.wake(mac)
-				this.connection.resetReconnectInterval()
-			}
-			if (action.options.action === 'off') {
-				// this.device.sendWSmessage(path + 'pp/wakeOnLan', true)
-				// this.device.sendWSmessage(path + 'pp/xRequest', false)
-				// this.device.sendWSmessage(path + 'pp/xRequest', true)
-				this.connection.sendWSmessage(path, 'SHUTDOWN')
-			}
-			if (action.options.action === 'reboot') {
-				this.connection.sendWSmessage(path, 'REBOOT')
+				if (action.options.action === 'on') {
+					const mac = this.instance.config.macaddress.split(/[,:-_.\s]/).join('')
+					this.connection.wake(mac)
+					this.connection.resetReconnectInterval()
+				}
+				if (action.options.action === 'off') {
+					// this.device.sendWSmessage(path + 'pp/wakeOnLan', true)
+					// this.device.sendWSmessage(path + 'pp/xRequest', false)
+					// this.device.sendWSmessage(path + 'pp/xRequest', true)
+					this.connection.sendWSmessage(path, 'SHUTDOWN')
+				}
+				if (action.options.action === 'reboot') {
+					this.connection.sendWSmessage(path, 'REBOOT')
+				}
 			}
 		}
 
 		return devicePower
-	}
-
-	/**
-	 * MARK: Device Power - Midra
-	 */
-	get devicePower_midra() {
-		//const {state, connection, device, config, screens} = inst(instance)
-		const devicePowerChoices = [
-			{ id: 'wake', label: 'Wake up from Standby' },
-			{ id: 'standby', label: 'Switch to Standby' },
-			{ id: 'off', label: 'Switch to Power off' },
-			{ id: 'reboot', label: 'Reboot' },
-		]
-
-		const devicePower = this.devicePower_common(devicePowerChoices)
-
-		devicePower.callback = (action) => {
-			const path = 'device/system/shutdown/standby/control/pp/xRequest'
-
-			if (action.options.action === 'wake') {
-				this.connection.restPOST(this.instance.config.deviceaddr + '/api/tpp/v1/system/wakeup', '')
-				this.connection.resetReconnectInterval()
-			}
-			if (action.options.action === 'standby') {
-				this.connection.sendWSmessage(path, 'STANDBY')
-				this.instance.updateStatus(InstanceStatus.Ok, 'Standby')
-			}
-			if (action.options.action === 'off') {
-				this.connection.sendWSmessage(path, 'SWITCH_OFF')
-			}
-			if (action.options.action === 'reboot') {
-				this.connection.sendWSmessage('device/system/shutdown/pp/xReboot', false)
-				this.connection.sendWSmessage('device/system/shutdown/pp/xReboot', true)
-			}
-		}
-
-		return { devicePower }
 	}
 
 }

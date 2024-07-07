@@ -125,7 +125,7 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 - Set Layer Freeze
 
 	Available at: Alta 4K, Midra 4K  
-	There is no differentiation between program and preview.  
+	Beware, there is no differentiation between program and preview.  
 
 - Set Screen Freeze
 
@@ -133,7 +133,7 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 
 - Set Position and Size
   
-	Available at: LivePremier  
+	Available at: LivePremier, Alta 4K, Midra 4K (only for live layers on Alta/Midra)  
 	Positioning and sizing on steroids. You can either select a specific layer to work on use the selected layers or do a combination of selection and specification. E.g. you can use all selected layers but only for one specified screen or you can use a specified layer for the selected screens.  
 	Layers of locked screens / presets will not be touched.  
 	For each layer to touch, you can choose which parameters to act on: vertical and horizontal position, width and height. If you e.g. include x Position but not Y Position, the layer will only be touched in horizontal position and the vertical position will stay the same.

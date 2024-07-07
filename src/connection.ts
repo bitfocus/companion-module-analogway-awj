@@ -104,40 +104,12 @@ class AWJconnection {
 			const deviceObj = authResponse.device || authResponse.devices?.leader || undefined
 			if (isAuth !== undefined && deviceObj !== undefined) {
 				// it seems we are speaking to an AWJ device
-				const device     = deviceObj.reference?.enum
-				const swVerMajor = deviceObj.version?.major
-				// const swVerMinor = deviceObj.version?.minor
-				// const swVerPatch = deviceObj.version?.patch
-
-				// create a device according to the data of the auth page
-				// const setDevice = () => {	
-				// 	if (device.substring(0, 3) === 'NLC') {
-				// 		if (swVerMajor && swVerMajor == 4) {
-				// 			return this.instance.setDevice(`livepremier${swVerMajor}`)
-				// 		} else {
-				// 			return this.instance.setDevice(`livepremier`)
-				// 		}
-				// 	} else if (device.match(/^EIKOS/)) {
-				// 		return this.instance.setDevice('midra')
-				// 	} else if (device.match(/^PULSE/)) {
-				// 		return this.instance.setDevice('midra')
-				// 	} else if (device.match(/^QMX/)) {
-				// 		return this.instance.setDevice('midra')
-				// 	} else if (device.match(/^QVU/)) {
-				// 		return this.instance.setDevice('midra')
-				// 	} else if (device.match(/^ZEN/)) {
-				// 		return this.instance.setDevice('midra')
-				// 	} else if (device.match(/^DBG/)) {
-				// 		return this.instance.setDevice('midra')
-				// 	} else {
-				// 		return undefined
-				// 	}
-				// }
 
 				const handleApiStateResponse = (res: {[name: string]: any}): void => {
 					if (res.device) {
 						this.instance.state.setUnmapped('DEVICE', res)
 						//console.log('rest get API device state result')
+						this.instance.state.setUnmapped('LINK', authResponse.device || authResponse.devices)
 
 						const system = res.device.system // this.instance.state.getUnmapped('DEVICE/device/system')
 						const device = system.pp?.dev ?? system.deviceList?.items?.['1']?.pp?.dev ?? null
@@ -313,14 +285,14 @@ class AWJconnection {
 					})
 
 					this.websocket.on('message', (data, isBinary) => {
-						//console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
+						// console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
 						if (
 							isBinary != true &&
 							data.toString().match(/"op":"replace","path":"\/system\/status\/current(Device)?Time","value":/) === null &&
 							data.toString().match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
 							data.toString().match(/"device","system",("deviceList","items","[1-4]",)?"temperature",/) === null
 						) {
-							// console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
+							console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
 							this.instance.state.apply(JSON.parse(data.toString()))
 						}
 					})
@@ -513,36 +485,30 @@ class AWJconnection {
 	sendRawWSmessage(message: string): void {
 		if (this.websocket?.readyState === 1) {
 			this.websocket?.send(message)
-			console.log('sendig WS message', this.websocket.url ,message)
+			this.instance.log('debug', 'sendig WS message ' + this.websocket.url + ' ' + message)
 		}
 	}
 
 	/**
 	 * Sends an AW message to the device via websocket
 	 * @param path a path in the device object, can be a string with slashes as delimiters or an array of strings. The path will be mapped according to mappings.
-	 * @param value the value to send
+	 * @param values the values to send
 	 */
 	sendWSmessage(
 		path: string | string[],
-		value: string | string[] | number | boolean
+		...values: (string | string[] | number | boolean)[]
 	): void {
-		// const mapped = mapOut(this.state.mappings, path, value)
-		// const obj = {
-		// 	channel: 'DEVICE',
-		// 	data: {
-		// 		path: mapped.path.split('/'),
-		// 		value: mapped.value
-		// 	}
-		// }
-
-		const obj = {
-			channel: 'DEVICE',
-			data: {
-				path,
-				value
+		
+		for (const value of values) {
+			const obj = {
+				channel: 'DEVICE',
+				data: {
+					path,
+					value
+				}
 			}
+			this.sendRawWSmessage(JSON.stringify(obj))
 		}
-		this.sendRawWSmessage(JSON.stringify(obj))
 	}
 
 	/**
@@ -553,18 +519,7 @@ class AWJconnection {
 	 * @param value
 	 */
 	sendWSpatch(channel: string, op: string, path: string | string[], value: string | number | boolean | object): void {
-		// const mapped = mapOut(this.state.mappings, path, value)
-		// const obj = {
-		// 	channel,
-		// 	data: {
-		// 		channel: 'PATCH',
-		// 		patch: {
-		// 			op: op,
-		// 			path: '/'+mapped.path,
-		// 			value: mapped.value
-		// 		}
-		// 	}
-		// }
+	
 		const obj = {
 			channel,
 			data: {
@@ -588,38 +543,7 @@ class AWJconnection {
 	 */
 	sendWSdata(channel: string, name: string, path: string | string[], args: unknown[]): void {
 		let obj = {}
-		// if (args.length === 0) {
-		// 	const mapped = mapOut(this.state.mappings, path, [])
-		// 	obj = {
-		// 		channel,
-		// 		data: {
-		// 			name,
-		// 			path: '/' + mapped.path,
-		// 			args: []
-		// 		}
-		// 	}
-		// } else {
-		// 	const mapped = mapOut(this.state.mappings, path, args[0])
-		// 	if (args.length === 1) {
-		// 		obj = {
-		// 			channel,
-		// 			data: {
-		// 				name,
-		// 				path: '/' + mapped.path,
-		// 				args: [mapped.value]
-		// 			}
-		// 		}
-		// 	} else {
-		// 		obj = {
-		// 			channel,
-		// 			data: {
-		// 				name,
-		// 				path: '/' + mapped.path,
-		// 				args: [mapped.value, ...args.splice(1)]
-		// 			}
-		// 		}
-		// 	}
-		// }
+		
 		if (args.length === 0) {
 			obj = {
 				channel,

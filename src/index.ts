@@ -13,12 +13,29 @@ import { initVariables } from './variables.js'
 import { UpgradeScripts } from './upgrades.js'
 import { StateMachine } from './state.js'
 import Constants from './awjdevice/constants.js'
+import ConstantsLivepremier from './livepremier/constants.js'
+import ConstantsLivepremier4 from './livepremier4/constants.js'
+import ConstantsMidra from './midra/constants.js'
 import Choices from './awjdevice/choices.js'
+import ChoicesLivepremier from './livepremier/choices.js'
+import ChoicesLivepremier4 from './livepremier4/choices.js'
+import ChoicesMidra from './midra/choices.js'
 import Actions from './awjdevice/actions.js'
+import ActionsLivepremier from './livepremier/actions.js'
+import ActionsLivepremier4 from './livepremier4/actions.js'
+import ActionsMidra from './midra/actions.js'
 import Feedbacks from './awjdevice/feedback.js'
+import FeedbacksLivepremier from './livepremier/feedback.js'
+import FeedbacksLivepremier4 from './livepremier4/feedback.js'
+import FeedbacksMidra from './midra/feedback.js'
 import Presets from './awjdevice/presets.js'
+import PresetsLivepremier from './livepremier/presets.js'
+import PresetsLivepremier4 from './livepremier4/presets.js'
+import PresetsMidra from './midra/presets.js'
 import Subscriptions from './awjdevice/subscriptions.js'
-
+import SubscriptionsLivepremier from './livepremier/subscriptions.js'
+import SubscriptionsLivepremier4 from './livepremier4/subscriptions.js'
+import SubscriptionsMidra from './midra/subscriptions.js'
 export const regexAWJpath = '^DeviceObject(?:\\/(@items|@props|\\$?[A-Za-z0-9_-]+))+$'
 
 /**
@@ -143,20 +160,30 @@ export class AWJinstance extends InstanceBase<Config> {
 			this.state.platform = platform
 			switch (platform) {
 				case 'livepremier':
-					this.constants = Constants // instanciate first because other classes may need the constants
-					this.choices = new Choices(this) // instanciate second because actions/feedbacks need choices
-					this.actions = new Actions(this)
-					this.feedbacks = new Feedbacks(this)
-					this.presets = new Presets(this)
-					this.subscriptions = new Subscriptions(this)
+					this.constants = ConstantsLivepremier // instanciate first because other classes may need the constants
+					this.choices = new ChoicesLivepremier(this) // instanciate second because actions/feedbacks need choices
+					this.actions = new ActionsLivepremier(this)
+					this.feedbacks = new FeedbacksLivepremier(this)
+					this.presets = new PresetsLivepremier(this)
+					this.subscriptions = new SubscriptionsLivepremier(this)
 					break
 
 				case 'livepremier4':
-
+					this.constants = ConstantsLivepremier4 // instanciate first because other classes may need the constants
+					this.choices = new ChoicesLivepremier4(this) // instanciate second because actions/feedbacks need choices
+					this.actions = new ActionsLivepremier4(this)
+					this.feedbacks = new FeedbacksLivepremier4(this)
+					this.presets = new PresetsLivepremier4(this)
+					this.subscriptions = new SubscriptionsLivepremier4(this)
 					break
 
 				case 'midra':
-
+					this.constants = ConstantsMidra // instanciate first because other classes may need the constants
+					this.choices = new ChoicesMidra(this) // instanciate second because actions/feedbacks need choices
+					this.actions = new ActionsMidra(this)
+					this.feedbacks = new FeedbacksMidra(this)
+					this.presets = new PresetsMidra(this)
+					this.subscriptions = new SubscriptionsMidra(this)
 					break
 			
 				default:
@@ -168,6 +195,7 @@ export class AWJinstance extends InstanceBase<Config> {
 					this.subscriptions = new Subscriptions(this)
 					break
 			}
+			this.log('debug', 'switched to platform ' + platform)
 		}
 	}
 
@@ -225,6 +253,8 @@ export class AWJinstance extends InstanceBase<Config> {
 	 * @description sets actions, variables, presets and feedbacks available for this instance
 	 */
 	public async updateInstance(): Promise<void> {
+
+		this.log('debug', 'updating instance')
 
 		this.setFeedbackDefinitions(this.feedbacks.allFeedbacks)
 		this.setActionDefinitions(this.actions.allActions)

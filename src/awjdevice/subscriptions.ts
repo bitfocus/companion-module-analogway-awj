@@ -8,55 +8,55 @@ import Constants from './constants.js'
  * A subscription is data of the device associated with a json path in the device model which we are interested in and need to react on changes.
  */
 export default class Subscriptions {
-	private instance: AWJinstance
-	private subscriptions: Record<string, Subscription>
-	private constants: typeof Constants
+	instance: AWJinstance
+	subscriptions: Record<string, Subscription>
+	constants: typeof Constants
 
 	/**
 	 * This member denotes the names of the subscriptions which are to be checked.
 	 * May be overridden in child classes.
 	 */
-	private subscriptionsToUse: string[] = [
-		// Common
+	readonly subscriptionsToUse: string[] = [
+		// ******** Common ********
 		'syncselection',
-		'liveselection',
-		'layerselection',
-		'widgetSelection',
-		'screenLock',
-		'sourceVisibility',
-		'selectedPreset',
-		'inputFreeze',
-		'timerState',
-		'gpioOut',
-		'gpioIn',
-		'screenTransitionTime',
-		'screenMemoryLabel',
-		'masterMemory',
-		'masterMemoryLabel',
-		'multiviewerMemoryLabel',
-		'layerMemoryLabel',
-		'stillLabel',
-		'stillValid',
-		'screenLabel',
-		'auxscreenLabel',
-		'screenEnabled',
-		'liveInputsChange',
-		'masterMemoriesChange',
-		'screenMemoriesChange',
-		'layerMemoriesChange',
-		'multiviewerMemoriesChange',
-		'layerCountChange',
-		'memoryColorChange',
-		// LivePremier
-		'presetToggle',
-		'screenPreset',
-		'screenMemoryChange',
-		'screenMemoryModifiedChange',
-		'screenTransitionTime',
-		'screenMemoryLabel',
-		'inputLabel',
-		'shutdown',
-		// Midra
+		// 'liveselection',
+		// 'layerselection',
+		// 'widgetSelection',
+		// 'screenLock',
+		// 'sourceVisibility',
+		// 'selectedPreset',
+		// 'inputFreeze',
+		// 'timerState',
+		// 'gpioOut',
+		// 'gpioIn',
+		// 'screenTransitionTime',
+		// 'screenMemoryLabel',
+		// 'masterMemory',
+		// 'masterMemoryLabel',
+		// 'multiviewerMemoryLabel',
+		// 'layerMemoryLabel',
+		// 'stillLabel',
+		// 'stillValid',
+		// 'screenLabel',
+		// 'auxscreenLabel',
+		// 'screenEnabled',
+		// 'liveInputsChange',
+		// 'masterMemoriesChange',
+		// 'screenMemoriesChange',
+		// 'layerMemoriesChange',
+		// 'multiviewerMemoriesChange',
+		// 'layerCountChange',
+		// 'memoryColorChange',
+		// ******** LivePremier ********
+		// 'presetToggle',
+		// 'screenPreset',
+		// 'screenMemoryChange',
+		// 'screenMemoryModifiedChange',
+		// 'screenTransitionTime',
+		// 'screenMemoryLabel',
+		// 'inputLabel',
+		// 'shutdown',
+		// ******** Midra ********
 		// 'presetToggle',
 		// 'screenPreset',
 		// 'backgroundSet',
@@ -197,117 +197,35 @@ export default class Subscriptions {
 		}
 	}
 
-	get gpioOut():Subscription {
-		return {
-			pat: 'device/gpio/gpoList/items/(\\d)/status/pp/state',
-			fbk: 'deviceGpioOut',
-		}
-	}
-
-	get gpioIn():Subscription {
-		return {
-			pat: 'device/gpio/gpiList/items/(\\d)/status/pp/state',
-			fbk: 'deviceGpioIn',
-		}
-	}
-
-	get screenTransitionTime():Subscription {
-		return {
-			pat: 'DEVICE/device/screenGroupList/items/((?:S|A)\\d{1,3})/control/pp/take(?:Up|Down)?Time',
-			ini: ():string[] => {
-				let presets: string[] = []
-				if (this.instance.state.platform.startsWith('livepremier')) presets = ['takeUpTime', 'takeDownTime']
-				if (this.instance.state.platform === 'midra') presets = ['takeTime']
-				const screens: string[] = [
-					...Array.from({ length: this.constants.maxScreens }, (_, i) => 'S' + (i + 1).toString()),
-					...Array.from({ length: this.constants.maxAuxScreens }, (_, i) => 'A' + (i + 1).toString()),
-					]
-				const paths =  screens.reduce((cb: string[], screen) => cb.concat(presets.map((preset) => {
-					return 'DEVICE/device/screenGroupList/items/'+ screen +'/control/pp/'+ preset
-				})), [])
-				return paths
-			},
-			fun: (path, _value) => {
-				if (!path) return false
-				const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
-				const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
-				if (pres === 'takeUpTime') {
-					const presname = 'B' === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
-					this.instance.setVariableValues({
-						['screen' + screen + 'time' + presname]: this.instance.deciSceondsToString(this.instance.state.get(path))
-					})
-				}
-				if (pres === 'takeDownTime') {
-					const presname = 'A' === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
-					this.instance.setVariableValues({
-						['screen' + screen + 'time' + presname]: this.instance.deciSceondsToString(this.instance.state.get(path))
-					})
-				}
-				if (pres === 'takeTime') {
-					this.instance.setVariableValues({
-						['screen' + screen + 'timePVW']: this.instance.deciSceondsToString(this.instance.state.get(path))
-					})
-					this.instance.setVariableValues({
-						['screen' + screen + 'timePGM']: this.instance.deciSceondsToString(this.instance.state.get(path))
-					})
-				}
-				
-				
-				return false
-			},
-		}
-	}
-
 	get screenMemoryLabel():Subscription {
 		return {
-			pat: 'DEVICE/device/presetBank/bankList/items/(\\d+)/control/pp/label',
-			ini: Array.from({ length: 999 }, (_, i) => (i + 1).toString()),
+			pat: 'DEVICE/device/presetBank/bankList/items/(\\d{1,4})/control/pp/label',
+			ini: Array.from({ length: this.constants.maxScreenMemories }, (_, i) => (i + 1).toString()),
 			fun: (path, _value) => {
 				if (!path) return false
 				const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
 				const label = memory.toString() !== '0' ? this.instance.state.get(path) : ''
-				this.instance.setVariableValues({['screenMemory' + memory + 'label']:  label})
-				const self = this
-				const pathTo = {
-					get id() {
-						if (self.instance.state.platform === 'midra') {
-							return ['status','pp','memoryId']
-						} else {
-							return ['presetId','status','pp','id']
-						}
-					},
-					livepremier: { id: ['presetId','status','pp','id']},
-					midra: {id: ['status','pp','memoryId']}
-				}
-				let screens: string[] = []
-				if (this.instance.state.platform.startsWith('livepremier')) screens = this.instance.choices.getChosenScreenAuxes('all')
-				if (this.instance.state.platform === 'midra') screens = this.instance.choices.getChosenScreens('all')
+				const screens = this.instance.choices.getChosenScreenAuxes('all')
 
+				this.instance.setVariableValues({['screenMemory' + memory + 'label']:  label})
+				
 				for (const screen of screens) {
-					const pgmmem = this.instance.state.get([
+					const pgmmem = this.instance.state.getUnmapped([
 						'DEVICE',
 						'device',
-						'screenList',
-						'items',
-						screen,
-						'presetList',
-						'items',
-						this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pgm/preset'),
-						...pathTo.id
+						'screenList', 'items', screen,
+						'presetList', 'items', this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pgm/preset'),
+						'presetId','status','pp','id'
 					])
 					if (memory == pgmmem) {
 						this.instance.setVariableValues({['screen' + screen + 'memoryLabelPGM']:  label})
 					}
-					const pvwmem = this.instance.state.get([
+					const pvwmem = this.instance.state.getUnmapped([
 						'DEVICE',
 						'device',
-						'screenList',
-						'items',
-						screen,
-						'presetList',
-						'items',
-						this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pvw/preset'),
-						...pathTo.id
+						'screenList', 'items', screen,
+						'presetList', 'items', this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pvw/preset'),
+						'presetId','status','pp','id'
 					])
 					if (memory == pvwmem) {
 						this.instance.setVariableValues({['screen' + screen + 'memoryLabelPVW']:  label})
@@ -321,6 +239,7 @@ export default class Subscriptions {
 	get masterMemory():Subscription {
 		return {
 			pat: 'DEVICE/device/masterPresetBank/status/lastUsed/presetModeList/items/(PROGRAM|PREVIEW)/pp/memoryId',
+			ini: ['PROGRAM', 'PREVIEW'],
 			fbk: 'deviceMasterMemory',
 		}
 	}
@@ -332,7 +251,7 @@ export default class Subscriptions {
 			fun: (path, _value) => {
 				if (!path) return false
 				const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-				this.instance.setVariableValues({['masterMemory' + memory + 'label']:  this.instance.state.get(path)})
+				this.instance.setVariableValues({['masterMemory' + memory + 'label']:  this.instance.state.getUnmapped(path)})
 				return true
 			},
 		}
@@ -345,7 +264,7 @@ export default class Subscriptions {
 			fun: (path, _value) => {
 				if (!path) return false
 				const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-				this.instance.setVariableValues({['multiviewerMemory' + memory + 'label']:  this.instance.state.get(path)})
+				this.instance.setVariableValues({['multiviewerMemory' + memory + 'label']:  this.instance.state.getUnmapped(path)})
 				return true
 			},
 		}
@@ -358,7 +277,7 @@ export default class Subscriptions {
 			fun: (path, _value) => {
 				if (!path) return false
 				const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-				this.instance.setVariableValues({['layerMemory' + memory + 'label']:  this.instance.state.get(path)})
+				this.instance.setVariableValues({['layerMemory' + memory + 'label']:  this.instance.state.getUnmapped(path)})
 				return true
 			},
 		}
@@ -367,11 +286,11 @@ export default class Subscriptions {
 	get stillLabel():Subscription {
 		return {
 			pat: 'DEVICE/device/stillList/items/(\\d+)/control/pp/label',
-			ini: Array.from({ length: 47 }, (_, i) => (i + 1).toString()),
+			ini: Array.from({ length: this.constants.maxStills }, (_, i) => (i + 1).toString()),
 			fun: (path, _value) => {
 				if (!path) return false
 				const input = Array.isArray(path) ? path[4] : path.split('/')[4]
-				this.instance.setVariableValues({['STILL_' + input + 'label']:  this.instance.state.get(path)})
+				this.instance.setVariableValues({['STILL_' + input + 'label']:  this.instance.state.getUnmapped(path)})
 				return true
 			},
 		}
@@ -416,7 +335,7 @@ export default class Subscriptions {
 
 	get screenEnabled():Subscription {
 		return {
-			pat: 'device/screenList/items/((?:S|A)\\d{1,3})/status/pp/mode',
+			pat: 'device/(?:auxiliaryS|s)creenList/items/([AS]?\\d{1,3})/status/pp/mode',
 			fun: (_path?: string | string[], _value?: string | string[] | number | boolean): boolean => {
 				return true
 			},
@@ -496,264 +415,6 @@ export default class Subscriptions {
 	// 	}
 	// }
 
-	get presetToggle():Subscription {
-		return {
-			pat: 'DEVICE/device/screenGroupList/items/S1/control/pp/copyMode',
-			fbk: 'presetToggle'
-		}
-	}
-
-	get screenPreset():Subscription {
-		return {
-			pat: 'DEVICE/device/screenGroupList/items/(\\w+?)/status/pp/transition',
-			fbk: 'deviceTake',
-			ini: [
-				...Array.from({ length: this.constants.maxScreens }, (_, i) => 'S' + (i + 1).toString()),
-				...Array.from({ length: this.constants.maxAuxScreens }, (_, i) => 'A' + (i + 1).toString()),
-			],
-			fun: (path, _value) => {
-				const setMemoryVariables = (screen: string, preset: string, variableSuffix: string): void => {
-					const mem = this.instance.state.get([
-						'DEVICE',
-						'device',
-						'screenList',
-						'items',
-						screen,
-						'presetList',
-						'items',
-						preset,
-						'presetId',
-						'status',
-						'pp',
-						'id',
-					]);
-					const unmodified = this.instance.state.get([
-						'DEVICE',
-						'device',
-						'screenList',
-						'items',
-						screen,
-						'presetList',
-						'items',
-						preset,
-						'presetId',
-						'status',
-						'pp',
-						'isNotModified',
-					]);
-					this.instance.setVariableValues({ ['screen' + screen + 'memory' + variableSuffix]: mem ? 'M' + mem : '' });
-					this.instance.setVariableValues({ ['screen' + screen + 'memoryModified' + variableSuffix]: mem && !unmodified ? '*' : '' });
-					this.instance.setVariableValues({
-						['screen' + screen + 'memoryLabel' + variableSuffix]: mem
-							? this.instance.state.getUnmapped(['DEVICE', 'device', 'presetBank', 'bankList', 'items', mem, 'control', 'pp', 'label'])
-							: ''
-					});
-				};
-				let patharr: string[];
-				if (typeof path === 'string') {
-					patharr = path.split('/');
-				} else if (Array.isArray(path)) {
-					patharr = path;
-				} else {
-					return false;
-				}
-				const val = this.instance.state.get(patharr);
-				const screen = patharr[4];
-				let program = '', preview = '';
-				if (val === 'AT_UP') {
-					program = 'B';
-					preview = 'A';
-					this.instance.state.set(`LOCAL/screens/${screen}/pgm/preset`, program);
-					this.instance.state.set(`LOCAL/screens/${screen}/pvw/preset`, preview);
-					this.instance.setVariableValues({
-						['screen' + screen + 'timePGM']: this.instance.deciSceondsToString(
-							this.instance.state.get(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
-						)
-					});
-					this.instance.setVariableValues({
-						['screen' + screen + 'timePVW']: this.instance.deciSceondsToString(
-							this.instance.state.get([
-								'DEVICE',
-								'device',
-								'screenGroupList',
-								'items',
-								screen,
-								'control',
-								'pp',
-								'takeDownTime',
-							])
-						)
-					});
-					setMemoryVariables(screen, program, 'PGM');
-					setMemoryVariables(screen, preview, 'PVW');
-				}
-				if (val === 'AT_DOWN') {
-					program = 'A';
-					preview = 'B';
-					this.instance.state.set(`LOCAL/screens/${screen}/pgm/preset`, program);
-					this.instance.state.set(`LOCAL/screens/${screen}/pvw/preset`, preview);
-					this.instance.setVariableValues({
-						['screen' + screen + 'timePGM']: this.instance.deciSceondsToString(
-							this.instance.state.get([
-								'DEVICE',
-								'device',
-								'screenGroupList',
-								'items',
-								screen,
-								'control',
-								'pp',
-								'takeDownTime',
-							])
-						)
-					});
-					this.instance.setVariableValues({
-						['screen' + screen + 'timePVW']: this.instance.deciSceondsToString(
-							this.instance.state.get(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
-						)
-					});
-					setMemoryVariables(screen, program, 'PGM');
-					setMemoryVariables(screen, preview, 'PVW');
-				}
-				this.instance.checkFeedbacks('deviceSourceTally', 'deviceScreenMemory', 'deviceTake');
-				return false;
-			},
-		}
-	}
-
-	get screenMemoryChange():Subscription {
-		return {
-			pat: 'DEVICE/device/screenList/items/(S|A)\\d{1,3}/presetList/items/(A|B)/presetId/status/pp/id',
-			fbk: 'deviceScreenMemory',
-			fun: (path, _value) => {
-				if (!path) return false;
-				const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
-				const pres = Array.isArray(path) ? path[7] : path.split('/')[7];
-				const presname = pres === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
-				const memorystr = this.instance.state.get(path).toString() !== '0' ? this.instance.state.get(path) : '';
-				this.instance.setVariableValues({ ['screen' + screen + 'memory' + presname]: memorystr });
-				this.instance.setVariableValues({
-					['screen' + screen + 'memoryLabel' + presname]: this.instance.state.get(path).toString() !== '0'
-						? this.instance.state.getUnmapped([
-							'DEVICE',
-							'device',
-							'presetBank',
-							'bankList',
-							'items',
-							this.instance.state.get(path).toString(),
-							'control',
-							'pp',
-							'label',
-						])
-						: ''
-				});
-				return false;
-			},
-		}
-	}
-
-	get screenMemoryModifiedChange():Subscription {
-		return {
-			pat: 'DEVICE/device/screenList/items/((?:S|A)\\d{1,3})/presetList/items/(A|B)/presetId/status/pp/isNotModified',
-			fbk: 'deviceScreenMemory',
-			fun: (path, _value) => {
-				if (!path) return false;
-				const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
-				const pres = Array.isArray(path) ? path[7] : path.split('/')[7];
-				const presname = pres === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
-				this.instance.setVariableValues({
-					['screen' + screen + 'memoryModified' + presname]: this.instance.state.get(
-						'DEVICE/device/screenList/items/' + screen + '/presetList/items/' + pres + '/presetId/status/pp/id'
-					) && !this.instance.state.get(path)
-						? '*'
-						: ''
-				});
-				return false;
-			},
-		}
-	}
-
-	// get screenTransitionTime():Subscription {
-	// 	return {
-	// 		pat: 'DEVICE/device/screenGroupList/items/((?:S|A)\\d{1,3})/control/pp/take(?:Up|Down)?Time',
-	// 		ini: ():string[] => {
-	// 			const presets = ['takeUpTime', 'takeDownTime']
-	// 			const screens: string[] = [
-	// 				...Array.from({ length: this.constants.maxScreens }, (_, i) => 'S' + (i + 1).toString()),
-	// 				...Array.from({ length: this.constants.maxAuxScreens }, (_, i) => 'A' + (i + 1).toString()),
-	// 				]
-	// 			const paths =  screens.reduce((cb: string[], screen) => cb.concat(presets.map((preset) => {
-	// 				return 'DEVICE/device/screenGroupList/items/'+ screen +'/control/pp/'+ preset
-	// 			})), [])
-	// 			return paths
-	// 		},
-	// 		fun: (path, _value) => {
-	// 			if (!path) return false
-	// 			const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
-	// 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
-	// 			if (pres === 'takeUpTime') {
-	// 				const presname = 'B' === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
-	// 				this.instance.setVariableValues({
-	// 					['screen' + screen + 'time' + presname]: this.instance.deciSceondsToString(this.instance.state.get(path))
-	// 				})
-	// 			} else
-	// 			if (pres === 'takeDownTime') {
-	// 				const presname = 'A' === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
-	// 				this.instance.setVariableValues({
-	// 					['screen' + screen + 'time' + presname]: this.instance.deciSceondsToString(this.instance.state.get(path))
-	// 				})
-	// 			}
-				
-	// 			return false
-	// 		},
-	// 	}
-	// }
-
-	// get screenMemoryLabel():Subscription {
-	// 	return {
-	// 		pat: 'DEVICE/device/presetBank/bankList/items/(\\d+)/control/pp/label',
-	// 		ini: Array.from({ length: 999 }, (_, i) => (i + 1).toString()),
-	// 		fun: (path, _value) => {
-	// 			if (!path) return false
-	// 			const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-	// 			const label = memory.toString() !== '0' ? this.instance.state.get(path) : ''
-	// 			const screens = this.instance.choices.getChosenScreenAuxes('all')
-				
-	// 			this.instance.setVariableValues({['screenMemory' + memory + 'label']:  label})
-
-	// 			for (const screen of screens) {
-	// 				const pgmmem = this.instance.state.get([
-	// 					'DEVICE',
-	// 					'device',
-	// 					'screenList',
-	// 					'items',
-	// 					screen,
-	// 					'presetList',
-	// 					'items',
-	// 					this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pgm/preset'),
-	// 					'presetId','status','pp','id'
-	// 				])
-	// 				if (memory == pgmmem) {
-	// 					this.instance.setVariableValues({['screen' + screen + 'memoryLabelPGM']:  label})
-	// 				}
-	// 				const pvwmem = this.instance.state.get([
-	// 					'DEVICE',
-	// 					'device',
-	// 					'screenList',
-	// 					'items',
-	// 					screen,
-	// 					'presetList',
-	// 					'items',
-	// 					this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pvw/preset'),
-	// 					'presetId','status','pp','id'
-	// 				])
-	// 				if (memory == pvwmem) {
-	// 					this.instance.setVariableValues({['screen' + screen + 'memoryLabelPVW']:  label})
-	// 				}
-	// 			}
-	// 			return true
-	// 		},
-	// 	}
-	// }
 
 	get inputLabel():Subscription {
 		return {
@@ -781,212 +442,12 @@ export default class Subscriptions {
 		}
 	}
 
-	//};
-	//export const midraSubscriptions: Record<string, Subscription> = {
-
-	// get presetToggle():Subscription {
-	// 	return {
-	// 		pat: 'DEVICE/device/screenGroupList/items/S1/control/pp/enablePresetToggle',
-	// 		fbk: 'presetToggle'
-	// 	}
-	// }
-
-	// get screenPreset():Subscription {
-	// 	return {
-	// 		pat: 'DEVICE/device/transition/screenList/items/(\\w+?)/status/pp/transition',
-	// 		fbk: 'deviceTake',
-	// 		ini: [
-	// 			...Array.from({ length: 8 }, (_, i) => 'S' + (i + 1).toString()),
-	// 			...Array.from({ length: 8 }, (_, i) => 'A' + (i + 1).toString()),
-	// 		],
-	// 		fun: (path, _value) => {
-	// 			const setMemoryVariables = (screen: string, preset: string, variableSuffix: string): void => {
-	// 				const mem = this.instance.state.get([
-	// 					'DEVICE',
-	// 					'device',
-	// 					'screenList',
-	// 					'items',
-	// 					screen,
-	// 					'presetList',
-	// 					'items',
-	// 					preset,
-	// 					'status',
-	// 					'pp',
-	// 					'memoryId',
-	// 				]);
-	// 				const modified = this.instance.state.get([
-	// 					'DEVICE',
-	// 					'device',
-	// 					'screenList',
-	// 					'items',
-	// 					screen,
-	// 					'presetList',
-	// 					'items',
-	// 					preset,
-	// 					'status',
-	// 					'pp',
-	// 					'isModified',
-	// 				]);
-	// 				this.instance.setVariableValues({ ['screen' + screen + 'memory' + variableSuffix]: mem ? 'M' + mem : '' });
-	// 				this.instance.setVariableValues({ ['screen' + screen + 'memoryModified' + variableSuffix]: mem && modified ? '*' : '' });
-	// 				this.instance.setVariableValues({
-	// 					['screen' + screen + 'memoryLabel' + variableSuffix]: mem
-	// 						? this.instance.state.get([
-	// 							'DEVICE',
-	// 							'device',
-	// 							'preset',
-	// 							'bank',
-	// 							'slotList',
-	// 							'items',
-	// 							mem.toString(),
-	// 							'control',
-	// 							'pp',
-	// 							'label',
-	// 						])
-	// 						: ''
-	// 				});
-	// 			};
-	// 			let patharr: string[];
-	// 			if (typeof path === 'string') {
-	// 				patharr = path.split('/');
-	// 			} else if (Array.isArray(path)) {
-	// 				patharr = path;
-	// 			} else {
-	// 				return false;
-	// 			}
-	// 			const val = this.instance.state.get(patharr);
-	// 			const screen = patharr[5];
-	// 			let program = '', preview = '';
-	// 			if (val === 'AT_UP') {
-	// 				program = 'B';
-	// 				preview = 'A';
-	// 				this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pgm/preset`, program);
-	// 				this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pvw/preset`, preview);
-
-	// 				setMemoryVariables(screen, program, 'PGM');
-	// 				setMemoryVariables(screen, preview, 'PVW');
-	// 			}
-	// 			if (val === 'AT_DOWN') {
-	// 				program = 'A';
-	// 				preview = 'B';
-	// 				this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pgm/preset`, program);
-	// 				this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pvw/preset`, preview);
-
-	// 				setMemoryVariables(screen, program, 'PGM');
-	// 				setMemoryVariables(screen, preview, 'PVW');
-	// 			}
-	// 			this.instance.checkFeedbacks('deviceSourceTally', 'deviceScreenMemory', 'deviceAuxMemory', 'deviceTake');
-	// 			return false;
-	// 		},
-	// 	}
-	// }
-
 	get backgroundSet():Subscription {
 		return {
 			pat: 'DEVICE/device/screenList/items/((?:S|A)\\d{1,3})/presetList/items/(A|B)/background/source/pp',
 			fbk: 'deviceSourceTally',
 		}
 	}
-
-	// get screenMemoryChange():Subscription {
-	// 	return {
-	// 		pat: 'DEVICE/device/screenList/items/((?:S|A)\\d{1,3})/presetList/items/(A|B)/status/pp/memoryId',
-	// 		fbk: ['deviceScreenMemory', 'deviceAuxMemory'],
-	// 		fun: (path, _value) => {
-	// 			if (!path) return false;
-	// 			const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
-	// 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7];
-	// 			const presname = pres === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
-	// 			const memorystr = this.instance.state.get(path).toString() !== '0' ? this.instance.state.get(path) : '';
-	// 			this.instance.setVariableValues({ ['screen' + screen + 'memory' + presname]: memorystr });
-	// 			this.instance.setVariableValues({
-	// 				['screen' + screen + 'memoryLabel' + presname]: this.instance.state.get(path).toString() !== '0'
-	// 					? this.instance.state.getUnmapped([
-	// 						'DEVICE',
-	// 						'device',
-	// 						'preset',
-	// 						'bank',
-	// 						'slotList',
-	// 						'items',
-	// 						this.instance.state.get(path).toString(),
-	// 						'control',
-	// 						'pp',
-	// 						'label',
-	// 					])
-	// 					: ''
-	// 			});
-	// 			return false;
-	// 		},
-	// 	}
-	// }
-
-	// get screenMemoryLabel():Subscription {
-	// 	return {
-	// 		pat: 'DEVICE/device/presetBank/bankList/items/(\\d+)/control/pp/label',
-	// 		ini: Array.from({ length: 999 }, (_, i) => (i + 1).toString()),
-	// 		fun: (path, _value) => {
-	// 			if (!path) return false
-	// 			const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-	// 			const label = memory.toString() !== '0' ? this.instance.state.get(path) : ''
-	// 			const screens = this.instance.choices.getChosenScreens('all')
-				
-	// 			this.instance.setVariableValues({['screenMemory' + memory + 'label']:  label})
-
-	// 			for (const screen of screens) {
-	// 				const pgmmem = this.instance.state.get([
-	// 					'DEVICE',
-	// 					'device',
-	// 					'screenList',
-	// 					'items',
-	// 					screen,
-	// 					'presetList',
-	// 					'items',
-	// 					this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pgm/preset'),
-	// 					'status','pp','memoryId'
-	// 				])
-	// 				if (memory == pgmmem) {
-	// 					this.instance.setVariableValues({['screen' + screen + 'memoryLabelPGM']:  label})
-	// 				}
-	// 				const pvwmem = this.instance.state.get([
-	// 					'DEVICE',
-	// 					'device',
-	// 					'screenList',
-	// 					'items',
-	// 					screen,
-	// 					'presetList',
-	// 					'items',
-	// 					this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pvw/preset'),
-	// 					'status','pp','memoryId'
-	// 				])
-	// 				if (memory == pvwmem) {
-	// 					this.instance.setVariableValues({['screen' + screen + 'memoryLabelPVW']:  label})
-	// 				}
-	// 			}
-	// 			return true
-	// 		},
-	// 	}
-	// }
-
-	// get screenMemoryModifiedChange():Subscription {
-	// 	return {
-	// 		pat: 'DEVICE/device/screenList/items/((?:S|A)\\d{1,3})/presetList/items/(A|B)/status/pp/isModified',
-	// 		fbk: ['deviceScreenMemory', 'deviceAuxMemory'],
-	// 		fun: (path, _value) => {
-	// 			if (!path) return false;
-	// 			const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
-	// 			const pres = Array.isArray(path) ? path[7] : path.split('/')[7];
-	// 			const presname = pres === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
-	// 			this.instance.setVariableValues({
-	// 				['screen' + screen + 'memoryModified' + presname]: this.instance.state.get(
-	// 					'DEVICE/device/screenList/items/' + screen + '/presetList/items/' + pres + '/status/pp/memoryId'
-	// 				) && this.instance.state.get(path)
-	// 					? '*'
-	// 					: ''
-	// 			});
-	// 			return false;
-	// 		},
-	// 	}
-	// }
 
 	get auxMemoryLabel():Subscription {
 		return {
@@ -1055,150 +516,6 @@ export default class Subscriptions {
 		}
 	}
 
-	// get inputLabel():Subscription {
-	// 	return {
-	// 		pat: 'DEVICE/device/inputList/items/(\\w+)/plugList/items/\\d+/control/pp/label',
-	// 		fun: (path, _value) => {
-	// 			if (!path) return false;
-	// 			const input = Array.isArray(path) ? path[4] : path.split('/')[4];
-	// 			const plug = Array.isArray(path) ? path[7] : path.split('/')[7];
-	// 			if (this.instance.state.get([
-	// 				'DEVICE', 'device', 'inputList', 'items', input, 'status', 'pp', 'plug'
-	// 			]) == plug) {
-	// 				this.instance.setVariableValues({
-	// 					[input.replace(/^\w+_/, 'INPUT_') + 'label']: this.instance.state.get(path)
-	// 				});
-	// 				return true;
-	// 			} else {
-	// 				return false;
-	// 			}
-	// 		}
-	// 	}
-	// }
-
-	get auxMemoriesChange():Subscription {
-		return {
-			pat: 'DEVICE/device/preset/auxBank/slotList/items/(\\d{1,4})/status/pp/isValid',
-			fun: (): boolean => {
-				return true;
-			},
-		}
-	}
-
-	get liveLayerFreeze():Subscription {
-		return {
-			pat: 'device/screenList/items/S?\\d{1,2}/liveLayerList/items/(\\d{1,2})/control/pp/freeze',
-			fbk: 'deviceLayerFreeze',
-			ini: (): string[] => {
-				const paths: string[] = [];
-				for (let screen = 1; screen <= 4; screen += 1) {
-					for (let layer = 1; layer <= 8; layer += 1) {
-						paths.push(`DEVICE/device/screenList/items/S${screen}/liveLayerList/items/${layer}/control/pp/freeze`);
-					}
-				}
-				return paths;
-			},
-			fun: (path, value) => {
-				if (!path) return false;
-				const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
-				const layer = Array.isArray(path) ? path[7] : path.split('/')[7];
-				if (value === true) {
-					this.instance.setVariableValues({ [`frozen_${screen}_L${layer}`]: '*' });
-				} else if (value === false) {
-					this.instance.setVariableValues({ [`frozen_${screen}_L${layer}`]: ' ' });
-				} else if (value === undefined) {
-					value = this.instance.state.get(path);
-					this.instance.setVariableValues({ [`frozen_${screen}_L${layer}`]: value === true ? '*' : ' ' });
-				} else {
-					this.instance.setVariableValues({ [`frozen_${screen}_L${layer}`]: '-' });
-				}
-				return false;
-			}
-		}
-	}
-
-	get backgroundLayerFreeze():Subscription {
-		return {
-			pat: 'DEVICE/device/screenList/items/(S?\\d{1,2})/background/control/pp/freeze',
-			fbk: 'deviceLayerFreeze',
-			ini: Array.from({ length: 8 }, (_, i) => 'S' + (i + 1).toString()),
-			fun: (path, value) => {
-				if (!path) return false;
-				const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
-				if (value === true) {
-					this.instance.setVariableValues({ [`frozen_${screen}_NATIVE`]: '*' });
-				} else if (value === false) {
-					this.instance.setVariableValues({ [`frozen_${screen}_NATIVE`]: ' ' });
-				} else if (value === undefined) {
-					value = this.instance.state.get(path);
-					this.instance.setVariableValues({ [`frozen_${screen}_NATIVE`]: value === true ? '*' : ' ' });
-				} else {
-					this.instance.setVariableValues({ [`frozen_${screen}_NATIVE`]: '-' });
-				}
-				return false;
-			}
-		}
-	}
-
-	get screenFreeze():Subscription {
-		return {
-			pat: 'DEVICE/device/screenList/items/([SA]\\d{1,2})/control/pp/freeze',
-			fbk: 'deviceScreenFreeze',
-			ini: [
-				...Array.from({ length: 8 }, (_, i) => 'S' + (i + 1).toString()),
-				...Array.from({ length: 8 }, (_, i) => 'A' + (i + 1).toString()),
-			],
-			fun: (path, value) => {
-				if (!path) return false;
-				const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
-				if (value === true) {
-					this.instance.setVariableValues({ [`frozen_${screen}`]: '*' });
-				} else if (value === false) {
-					this.instance.setVariableValues({ [`frozen_${screen}`]: ' ' });
-				} else if (value === undefined) {
-					value = this.instance.state.get(path);
-					this.instance.setVariableValues({ [`frozen_${screen}`]: value === true ? '*' : ' ' });
-				} else {
-					this.instance.setVariableValues({ [`frozen_${screen}`]: '-' });
-				}
-				return false;
-			}
-		}
-	}
-
-	get streamStatus():Subscription {
-		return {
-			pat: 'DEVICE/device/streaming/status/pp/mode',
-			fbk: 'deviceStreaming'
-		}
-	}
-
-	get standby():Subscription {
-		return {
-			pat: 'DEVICE/device/system/shutdown/standby/control/pp/xRequest',
-			fun: (_path, value) => {
-				if (value === 'STANDBY') {
-					this.instance.log('info', 'Device going to standby.');
-					this.instance.updateStatus(InstanceStatus.Ok, 'Standby');
-				}
-				return false;
-			},
-		}
-	}
-
-	// get shutdown():Subscription {
-	// 	return {
-	// 		pat: 'DEVICE/device/system/shutdown/standby/control/pp/xRequest',
-	// 		fun: (_path?: string | string[], value?: string | string[] | number | boolean): boolean => {
-	// 			if (value === 'SWITCH_OFF') {
-	// 				this.instance.log('info', 'Device has been shut down.');
-	// 				this.instance.updateStatus(InstanceStatus.Ok, 'Shut down');
-	// 			}
-	// 			return false;
-	// 		},
-	// 	}
-	// }
-
 	/**
 	 * Returns a string with the feedback ID if a feedback exists and runs an action if there is a 'fun' property
 	 * @param pat The path in the state object to check if a feedback or action exists for, if undefined checks all possible subscriptions
@@ -1234,7 +551,7 @@ export default class Subscriptions {
 		})
 		let ret: string[] = []
 		subscriptionlist.forEach((subscription) => {
-			// console.log('found subscription', subscription)
+			console.log('found subscription', subscription)
 			const subscriptionobj = subscriptions[subscription]
 			if (subscriptionobj.fun && typeof subscriptionobj.fun === 'function') {
 				// console.log('found subscription fun')
@@ -1311,7 +628,10 @@ export default class Subscriptions {
 
 		} else {
 			// check all subscriptions
-			update = this.subscriptionList.some((sub) => checkSub(sub))
+			this.subscriptionList.forEach((sub) => {
+				const upd = checkSub(sub)
+				if (upd) update = true
+			})
 		}
 		
 		if (update) {

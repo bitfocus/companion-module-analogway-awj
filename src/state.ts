@@ -3,13 +3,14 @@ import { Subscription } from '../types/Subscription.js'
 import { mapIn, mapOut, MapItem } from './mappings.js'
 import { Config } from './config.js'
 
-type Channel = 'REMOTE' | 'DEVICE' | 'LOCAL'
+type Channel = 'REMOTE' | 'DEVICE' | 'LOCAL' | 'LINK'
 
 class StateMachine {
 	instance: AWJinstance
 	state = {
 		REMOTE: {},
 		DEVICE: {},
+		LINK: {},
 		LOCAL: {
 			socketId: '',
 			platform: '',
@@ -73,9 +74,10 @@ class StateMachine {
 	}
 
 	public get(path?: string | string[] | undefined, root?: any): any {
-		const mapped = mapOut(this.state.LOCAL.mappings, path, null)
-		const val = this.getUnmapped(mapped.path, root) // TODO: root mapping
-		return mapIn(this.state.LOCAL.mappings, mapped.path, val).value
+		return this.getUnmapped(path, root)
+		// const mapped = mapOut(this.state.LOCAL.mappings, path, null)
+		// const val = this.getUnmapped(mapped.path, root) // TODO: root mapping
+		// return mapIn(this.state.LOCAL.mappings, mapped.path, val).value
 	}
 
 	/**
@@ -270,8 +272,9 @@ class StateMachine {
 	 * @param root is the root object from where the path applies, if not given defaults to the state object
 	 */
 	public set(path: string | string[], value: unknown, root: any = this.state): void {
-		const mapped = mapIn(this.state.LOCAL.mappings, path, value)
-		this.setUnmapped(mapped.path, mapped.value, root) // TODO: root mapping
+		this.setUnmapped(path, value, root)
+		// const mapped = mapIn(this.state.LOCAL.mappings, path, value)
+		// this.setUnmapped(mapped.path, mapped.value, root) // TODO: root mapping
 	}
 
 	/**

@@ -9,13 +9,15 @@ export const midraSubscriptions: Record<string, Subscription> = {
 		fbk: 'presetToggle'
 	},
 	screenPreset: {
-		pat: 'DEVICE/device/transition/screenList/items/(\\w+?)/status/pp/transition',
+		pat: 'DEVICE/device/transition/(auxiliaryS|s)creenList/items/\\d+/status/pp/transition',
 		fbk: 'deviceTake',
-		ini: [
-			...Array.from({ length: 8 }, (_, i) => 'S' + (i + 1).toString()),
-			...Array.from({ length: 8 }, (_, i) => 'A' + (i + 1).toString()),
-		],
-		fun: (instance, path, _value) => {
+		ini: (this) => {
+			return [
+			...Array.from({ length: this.constants.maxScreens }, (_, i) => 'S' + (i + 1).toString()),
+			...Array.from({ length: this.constants.maxAuxScreens }, (_, i) => 'A' + (i + 1).toString()),
+		]
+		},
+		fun: (path, _value) => {
 			const setMemoryVariables = (screen: string, preset: string, variableSuffix: string): void => {
 				const mem = instance.device.get([
 					'DEVICE',

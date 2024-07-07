@@ -1,26 +1,6 @@
 import { Config } from '../config.js'
 import {AWJinstance} from '../index.js'
-import Choices, {
-	// choicesBackgroundSources,
-	// choicesBackgroundSourcesPlusNone,
-	// choicesForegroundImagesSource,
-	// getAuxArray,
-	// getAuxMemoryArray,
-	// getLayerChoices,
-	// getLayerMemoryArray,
-	// getLayersAsArray,
-	// getLiveInputArray,
-	// getMasterMemoryArray,
-	// getMultiviewerArray,
-	// getMultiviewerMemoryArray,
-	// getScreenMemoryArray,
-	// getScreensArray,
-	// getScreensAuxArray,
-	// getSourceChoices,
-	// getTimerChoices,
-	// getWidgetChoices,
-	// getWidgetSourceChoices,
-} from './choices.js'
+import Choices from './choices.js'
 import {
 	combineRgb,
 	CompanionButtonPresetDefinition,
@@ -35,15 +15,15 @@ type Dropdown<t> = { id: t, label: string }
 
 export default class Presets {
 	/** reference to the instance */
-	private instance: AWJinstance
+	instance: AWJinstance
 	/** The state object to take the data from */
-	private state: StateMachine
+	state: StateMachine
 	/** reference to the constants of the device */
-	private constants: typeof Constants
+	constants: typeof Constants
 	/** lists with choices */
-	private choices: Choices
+	protected choices: Choices
 	/** configuration for the instance */
-	private config: Config
+	config: Config
 
 	readonly presetsToUse: string[] = [
 		'masterMemories',
@@ -187,11 +167,7 @@ export default class Presets {
 		const presets: CompanionPresetDefinitions = {}
 		const ilabel = this.instance.label
 
-		for (const screen of
-			this.state.platform.startsWith('livepremier')
-				? [{ id: 'sel', label: 'Selected', index: '0' }, ...this.choices.getScreensArray(), ...this.choices.getAuxArray()]
-				: [{ id: 'sel', label: 'Selected', index: '0' }, ...this.choices.getScreensArray()]
-		) {
+		for (const screen of [{ id: 'sel', label: 'Selected', index: '0' }, ...this.choices.getScreensArray(), ...this.choices.getAuxArray()]) {
 			for (const memory of this.choices.getScreenMemoryArray()) {
 				// const label = this.state.get(['DEVICE', 'device', 'presetBank', 'bankList', 'items', memory, 'control', 'pp', 'label'])
 				const bgcolor = parseInt(this.state.get(['REMOTE', 'banks', 'screen', 'items', memory.id, 'color'])?.slice(1), 16)
@@ -284,102 +260,8 @@ export default class Presets {
 	}
 
 		// MARK: Aux Memories
-	get auxMemories() {
-		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
-
-		if (this.state.platform === 'midra') {
-			for (const screen of [{ id: 'sel', label: 'Selected', index: '0' }, ...this.choices.getAuxArray()]) {
-				for (const memory of this.choices.getAuxMemoryArray()) {
-					// const label = this.state.get(['DEVICE', 'device', 'presetBank', 'bankList', 'items', memory, 'control', 'pp', 'label'])
-					const bgcolor = parseInt(this.state.get(['REMOTE', 'banks', 'screen', 'items', memory.id, 'color'])?.slice(1), 16)
-
-					presets[`LoadAuxMemory_${memory.id}_${screen.id}`] = {
-						type: 'button',
-						name: `Load Aux Memory ${memory.id} into auxscreen ${screen.id}${screen.label ? ' ('+screen.label+')' : ''}`,
-						category: `Aux Memories into ${screen.id != 'sel' ? screen.id : 'Selection'}`,
-						style: {
-							text: `AM${memory.id}${screen.id != 'sel' ? ' '+screen.id : ''}\\n$(${ilabel}:auxMemory${memory.id}label)`,
-							size: 'auto',
-							color: this.inverseColorBW(bgcolor),
-							bgcolor,
-						},
-						steps: [
-							{
-								down: [
-									{
-										actionId: 'deviceAuxMemory',
-										options: {
-											screens: ['sel'],
-											preset: screen.id === 'sel' ? 'sel' : 'pvw',
-											memory: memory.id,
-											selectScreens: false,
-										},
-									},
-								],
-								up: [],
-							},
-						],
-						feedbacks: [
-							{
-								feedbackId: 'deviceAuxMemory',
-								options: {
-									screens: screen.id != 'sel' ? [screen.id] : ['all'],
-									preset: 'pvw',
-									memory: memory.id,
-									unmodified: 0,
-								},
-								style: {
-									color: this.inverseColorBW(this.config.color_green),
-									bgcolor: this.config.color_green,
-								},
-							},
-							{
-								feedbackId: 'deviceAuxMemory',
-								options: {
-									screens: screen.id != 'sel' ? [screen.id] : ['all'],
-									preset: 'pgm',
-									memory: memory.id,
-									unmodified: 0,
-								},
-								style: {
-									color: this.inverseColorBW(this.config.color_red),
-									bgcolor: this.config.color_red,
-								},
-							},
-							{
-								feedbackId: 'deviceAuxMemory',
-								options: {
-									screens: screen.id != 'sel' ? [screen.id] : ['all'],
-									preset: 'pvw',
-									memory: memory.id,
-									unmodified: 1,
-								},
-								style: {
-									color: this.inverseColorBW(this.config.color_greendark),
-									bgcolor: this.config.color_greendark,
-								},
-							},
-							{
-								feedbackId: 'deviceAuxMemory',
-								options: {
-									screens: screen.id != 'sel' ? [screen.id] : ['all'],
-									preset: 'pgm',
-									memory: memory.id,
-									unmodified: 1,
-								},
-								style: {
-									color: this.inverseColorBW(this.config.color_reddark),
-									bgcolor: this.config.color_reddark,
-								},
-							},
-						],
-					}
-				}
-			}
-		}
-
-		return presets
+	get auxMemories(): CompanionPresetDefinitions {
+		return {} as CompanionPresetDefinitions
 	}
 
 	// MARK: Layer Memories
@@ -388,15 +270,14 @@ export default class Presets {
 		const ilabel = this.instance.label
 
 		for (const memory of this.choices.getLayerMemoryArray()) {
-			// const label = this.state.get(['DEVICE', 'device', 'layerBank', 'bankList', 'items', memory, 'control', 'pp', 'label'])
-			const bgcolor = parseInt(this.state.get(['REMOTE', 'banks', 'layer', 'items', memory, 'color'])?.slice(1), 16)
+			const bgcolor = parseInt(this.state.get(['REMOTE', 'banks', 'layer', 'items', memory.id, 'color'])?.slice(1), 16)
 
-			presets[`Load Layer Memory${memory}`] = {
+			presets[`Load Layer Memory${memory.id}`] = {
 			type: 'button',
-				name: `Load Layer Memory${memory}`,
+				name: `Load Layer Memory ${memory.id} ${memory.label}`,
 				category: 'Layer Memories',
 				style: {
-					text: `LM${memory}\\n$(${ilabel}:layerMemory${memory}label)`,
+					text: `LM${memory.id}\\n$(${ilabel}:layerMemory${memory}label)`,
 					size: 'auto',
 					color: this.inverseColorBW(bgcolor),
 					bgcolor,
@@ -411,7 +292,7 @@ export default class Presets {
 							screen: 'S1',
 							preset: 'pvw',
 							layer: '1',
-							memory,
+							memory: memory.id,
 						},
 					},
 				],
@@ -1269,97 +1150,6 @@ export default class Presets {
 	// MARK: Choose Input ...
 	get chooseInput() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
-		const self = this
-
-		function makeInputSelectionPreset(input: Dropdown<string>, layertypes: string[], layerdescription: string) {
-			let sourceLabelVariable = ''
-			// sourceLayer, sourceNative, sourceBack, sourceFront
-			if (input.id.match(/^IN|LIVE|STILL|SCREEN/)) {
-				sourceLabelVariable = `\\n$(${ilabel}:${input.id.replace('LIVE_', 'INPUT_')}label)`
-			}
-			const preparedPreset: CompanionButtonPresetDefinition = {
-				type: 'button',
-				name: 'Choose Input ' + input.label + ' for selected '+ layerdescription +' Layer(s)',
-				category: 'Layer Source',
-				style: {
-					text: input.label.replace(/^(\D+\d+)\s.+$/, '$1') + sourceLabelVariable,
-					size: 'auto',
-					color: self.config.color_bright,
-					bgcolor: self.config.color_dark,
-				},
-				steps: [
-					{
-						down: [
-							{
-								actionId: 'deviceSelectSource',
-								options: {
-									method: 'sel',
-								},
-							},
-						],
-						up: [],
-					},
-				],
-				feedbacks: [
-					{
-						feedbackId: 'deviceSourceTally',
-						options: {
-							screens: ['all'],
-							preset: 'pvw',
-							source: input.id,
-						},
-						style: {
-							color: self.inverseColorBW(self.config.color_green),
-							bgcolor: self.config.color_green,
-						},
-					},
-					{
-						feedbackId: 'deviceSourceTally',
-						options: {
-							screens: ['all'],
-							preset: 'pgm',
-							source: input.id,
-						},
-						style: {
-							color: self.inverseColorBW(self.config.color_red),
-							bgcolor: self.config.color_red,
-						},
-					},
-				],
-			}
-			Array.of('sourceLayer', 'sourceNative', 'sourceBack', 'sourceFront').forEach(layer => {
-				preparedPreset.steps[0].down[0].options[layer] = 'keep'	
-			})
-			layertypes.forEach(layertype => {	
-				preparedPreset.steps[0].down[0].options[layertype] = input.id
-			})
-			//if (this.state.platform === 'midra' && layertype === 'sourceLayer' && input.id !== 'COLOR') preparedPreset.actions[0].options['sourceBack'] = input.id
-			presets[preparedPreset.name] = preparedPreset
-		}
-		
-		makeInputSelectionPreset({ id: 'NONE', label: 'None' }, ['sourceLayer', 'sourceNative', 'sourceFront', 'sourceBack'], '')
-
-		if (this.state.platform === 'midra') {
-			makeInputSelectionPreset({ id: 'COLOR', label: 'Color' }, ['sourceLayer'], 'Live')
-			this.choices.getSourceChoices().filter(choice => choice.id !== 'NONE' && choice.id !== 'COLOR').forEach((choice: Dropdown<string>) => {
-				makeInputSelectionPreset(choice, ['sourceLayer', 'sourceBack'], 'Live/Background')
-			})
-			this.choices.choicesBackgroundSourcesPlusNone.filter(choice => choice.id !== 'NONE').forEach((choice: Dropdown<string>) => {
-				makeInputSelectionPreset(choice, ['sourceNative'], 'Background')
-			})
-			this.choices.choicesForegroundImagesSource.filter(choice => choice.id !== 'NONE').forEach((choice: Dropdown<string>) => {
-				makeInputSelectionPreset(choice, ['sourceFront'], 'Foreground')
-			})
-		}
-		if (this.state.platform.startsWith('livepremier')) {
-			this.choices.getSourceChoices().filter(choice => choice.id !== 'NONE' && choice.id !== 'COLOR').forEach((choice: Dropdown<string>) => {
-				makeInputSelectionPreset(choice, ['sourceLayer', 'sourceBack'], '')
-			})
-			this.choices.choicesBackgroundSources.forEach((choice: Dropdown<string>) => {
-				makeInputSelectionPreset(choice, ['sourceNative'], 'Background')
-			})
-		}
 
 		return presets
 	}
@@ -1417,56 +1207,53 @@ export default class Presets {
 	get toggleFreezeLayer() {
 		const presets: CompanionPresetDefinitions = {}
 
-		if (this.state.platform === 'midra') {
-			const screens = this.choices.getScreensArray()
-			for (const screen of screens) {
-				for (const layer of ['NATIVE', ...this.choices.getLayersAsArray(screen.id, false)]) {
-					const shortname = layer === 'NATIVE' ? 'BKG' : `L${layer}`
-					presets[`toggleFreeze${screen.id}${shortname}`] = {
-					type: 'button',
-						name: `Toggle Freeze ${screen.id} ${shortname}`,
-						category: 'Layer Freeze',
-						style: {
-							text: `Freeze\\n${screen.id} ${shortname}`,
-							size: 'auto',
-							color: this.config.color_bright,
-							bgcolor: this.config.color_dark,
-						},
-						steps: [
-							{
-							down: [
-											{
-												actionId: 'deviceLayerFreeze',
-												options: {
-													screen: [screen.id],
-													...Object.fromEntries( 
-														screens.map(scr => [`layer${scr.id}`, scr.id === screen.id ? [layer] : ['1']])
-													),
-													mode: 2,
-												},
+		const screens = this.choices.getScreensArray()
+		for (const screen of screens) {
+			for (const layer of this.choices.getLayersAsArray(screen.id, true).filter(lay => lay.id !== 'TOP')) {
+				presets[`toggleFreeze${screen.id}${layer.longname}`] = {
+				type: 'button',
+					name: `Toggle Freeze ${screen.id} ${layer.longname}`,
+					category: 'Layer Freeze',
+					style: {
+						text: `Freeze\\n${screen.id} ${layer.longname}`,
+						size: 'auto',
+						color: this.config.color_bright,
+						bgcolor: this.config.color_dark,
+					},
+					steps: [
+						{
+						down: [
+										{
+											actionId: 'deviceLayerFreeze',
+											options: {
+												screen: [screen.id],
+												...Object.fromEntries( 
+													screens.map(scr => [`layer${scr.id}`, scr.id === screen.id ? [layer.id] : ['1']])
+												),
+												mode: 2,
 											},
-										],
-										up: [],
+										},
+									],
+									up: [],
+						},
+					],
+					feedbacks: [
+						{
+							feedbackId: 'deviceLayerFreeze',
+							options: {
+								screen: screen.id,
+								...Object.fromEntries( 
+									screens.map(scr => [`layer${scr.id}`, scr.id === screen.id ? layer.id : '1'])
+								),
 							},
-						],
-						feedbacks: [
-							{
-								feedbackId: 'deviceLayerFreeze',
-								options: {
-									screen: screen.id,
-									...Object.fromEntries( 
-										screens.map(scr => [`layer${scr.id}`, scr.id === screen.id ? layer : '1'])
-									),
-								},
-								style: {
-									color: 0xffffff,
-									bgcolor: combineRgb(0, 0, 100),
-									png64:
-										'iVBORw0KGgoAAAANSUhEUgAAADcAAAA3AQMAAACSFUAFAAABS2lUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS42LWMxMzggNzkuMTU5ODI0LCAyMDE2LzA5LzE0LTAxOjA5OjAxICAgICAgICAiPgogPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIi8+CiA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgo8P3hwYWNrZXQgZW5kPSJyIj8+IEmuOgAAAARnQU1BAACxjwv8YQUAAAABc1JHQgCuzhzpAAAABlBMVEUAAABfXKLsUQDeAAAAAXRSTlMAQObYZgAAAM9JREFUGNONkTEOwjAMRX9UpDC1nIBwEKRyJCMGmNogDsCRyMY1wg26ESTUYLc1sEGWp1h2/vcPABDG84MrWoxXOgxcUycol7tbEFb748Aim4HmKZyXSCZsUFpQwQ1OeIqorsxzQHFnXgCTmT3PtczErD1ZEXCBXJR6RzXXzSNR3wA2NrvkPCpf52gDZnDZw3Oj7Ue/xfObM9gMSL/LgfttbHPH8+bRb+U9tIla0XVx1FP9yY/6U7/qX/fR/XRf3f+Th+Yz5aX5vfPUfP/6jxdhImTMvNrBOgAAAABJRU5ErkJggg==',
-								},
+							style: {
+								color: 0xffffff,
+								bgcolor: combineRgb(0, 0, 100),
+								png64:
+									'iVBORw0KGgoAAAANSUhEUgAAADcAAAA3AQMAAACSFUAFAAABS2lUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS42LWMxMzggNzkuMTU5ODI0LCAyMDE2LzA5LzE0LTAxOjA5OjAxICAgICAgICAiPgogPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIi8+CiA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgo8P3hwYWNrZXQgZW5kPSJyIj8+IEmuOgAAAARnQU1BAACxjwv8YQUAAAABc1JHQgCuzhzpAAAABlBMVEUAAABfXKLsUQDeAAAAAXRSTlMAQObYZgAAAM9JREFUGNONkTEOwjAMRX9UpDC1nIBwEKRyJCMGmNogDsCRyMY1wg26ESTUYLc1sEGWp1h2/vcPABDG84MrWoxXOgxcUycol7tbEFb748Aim4HmKZyXSCZsUFpQwQ1OeIqorsxzQHFnXgCTmT3PtczErD1ZEXCBXJR6RzXXzSNR3wA2NrvkPCpf52gDZnDZw3Oj7Ue/xfObM9gMSL/LgfttbHPH8+bRb+U9tIla0XVx1FP9yY/6U7/qX/fR/XRf3f+Th+Yz5aX5vfPUfP/6jxdhImTMvNrBOgAAAABJRU5ErkJggg==',
 							},
-						],
-					}
+						},
+					],
 				}
 			}
 		}
@@ -1478,48 +1265,46 @@ export default class Presets {
 	get toggleFreezeScreen() {
 		const presets: CompanionPresetDefinitions = {}
 
-		if (this.state.platform === 'midra') {
-			const screens = this.choices.getScreensAuxArray()
-			for (const screen of screens) {
-				presets[`toggleFreeze${screen.id}`] = {
-				type: 'button',
-					name: `Toggle Freeze ${screen.id}`,
-					category: 'Screen Freeze',
-					style: {
-						text: `Freeze\\n${screen.id}`,
-						size: 'auto',
-						color: this.config.color_bright,
-						bgcolor: this.config.color_dark,
-					},
-					steps: [
-						{
-						down: [
-										{
-											actionId: 'deviceScreenFreeze',
-											options: {
-												screen: [screen.id],
-												mode: 2,
-											},
+		const screens = this.choices.getScreensAuxArray()
+		for (const screen of screens) {
+			presets[`toggleFreeze${screen.id}`] = {
+			type: 'button',
+				name: `Toggle Freeze ${screen.id}`,
+				category: 'Screen Freeze',
+				style: {
+					text: `Freeze\\n${screen.id}`,
+					size: 'auto',
+					color: this.config.color_bright,
+					bgcolor: this.config.color_dark,
+				},
+				steps: [
+					{
+					down: [
+									{
+										actionId: 'deviceScreenFreeze',
+										options: {
+											screen: [screen.id],
+											mode: 2,
 										},
-									],
-									up: [],
+									},
+								],
+								up: [],
+					},
+				],
+				feedbacks: [
+					{
+						feedbackId: 'deviceScreenFreeze',
+						options: {
+							screen: screen.id,
 						},
-					],
-					feedbacks: [
-						{
-							feedbackId: 'deviceScreenFreeze',
-							options: {
-								screen: screen.id,
-							},
-							style: {
-								color: 0xffffff,
-								bgcolor: combineRgb(0, 0, 100),
-								png64:
-									'iVBORw0KGgoAAAANSUhEUgAAADcAAAA3AQMAAACSFUAFAAABS2lUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS42LWMxMzggNzkuMTU5ODI0LCAyMDE2LzA5LzE0LTAxOjA5OjAxICAgICAgICAiPgogPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIi8+CiA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgo8P3hwYWNrZXQgZW5kPSJyIj8+IEmuOgAAAARnQU1BAACxjwv8YQUAAAABc1JHQgCuzhzpAAAABlBMVEUAAABfXKLsUQDeAAAAAXRSTlMAQObYZgAAAM9JREFUGNONkTEOwjAMRX9UpDC1nIBwEKRyJCMGmNogDsCRyMY1wg26ESTUYLc1sEGWp1h2/vcPABDG84MrWoxXOgxcUycol7tbEFb748Aim4HmKZyXSCZsUFpQwQ1OeIqorsxzQHFnXgCTmT3PtczErD1ZEXCBXJR6RzXXzSNR3wA2NrvkPCpf52gDZnDZw3Oj7Ue/xfObM9gMSL/LgfttbHPH8+bRb+U9tIla0XVx1FP9yY/6U7/qX/fR/XRf3f+Th+Yz5aX5vfPUfP/6jxdhImTMvNrBOgAAAABJRU5ErkJggg==',
-							},
+						style: {
+							color: 0xffffff,
+							bgcolor: combineRgb(0, 0, 100),
+							png64:
+								'iVBORw0KGgoAAAANSUhEUgAAADcAAAA3AQMAAACSFUAFAAABS2lUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS42LWMxMzggNzkuMTU5ODI0LCAyMDE2LzA5LzE0LTAxOjA5OjAxICAgICAgICAiPgogPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIi8+CiA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgo8P3hwYWNrZXQgZW5kPSJyIj8+IEmuOgAAAARnQU1BAACxjwv8YQUAAAABc1JHQgCuzhzpAAAABlBMVEUAAABfXKLsUQDeAAAAAXRSTlMAQObYZgAAAM9JREFUGNONkTEOwjAMRX9UpDC1nIBwEKRyJCMGmNogDsCRyMY1wg26ESTUYLc1sEGWp1h2/vcPABDG84MrWoxXOgxcUycol7tbEFb748Aim4HmKZyXSCZsUFpQwQ1OeIqorsxzQHFnXgCTmT3PtczErD1ZEXCBXJR6RzXXzSNR3wA2NrvkPCpf52gDZnDZw3Oj7Ue/xfObM9gMSL/LgfttbHPH8+bRb+U9tIla0XVx1FP9yY/6U7/qX/fR/XRf3f+Th+Yz5aX5vfPUfP/6jxdhImTMvNrBOgAAAABJRU5ErkJggg==',
 						},
-					],
-				}
+					},
+				],
 			}
 		}
 
@@ -1898,3 +1683,4 @@ export default class Presets {
 	}
 
 }
+

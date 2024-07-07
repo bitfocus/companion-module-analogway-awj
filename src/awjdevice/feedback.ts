@@ -11,6 +11,7 @@ import {
 	CompanionFeedbackDefinitions, 
 	CompanionOptionValues
 } from '@companion-module/base'
+import Constants from './constants.js'
 
 
 /** Helper type for replacing the very generic options with the real structure of options */
@@ -32,17 +33,18 @@ type ReplaceOptionsInFunctions<T, NewOptionsType> = T extends (...args: any[]) =
 type AWJfeedback<K> = ReplaceOptionsInFunctions<CompanionFeedbackDefinition, K>
 
 export default class Feedbacks {
-	private instance: AWJinstance
-	private state: StateMachine
-	private choices: Choices
-	private config: Config
+	protected instance: AWJinstance
+	protected state: StateMachine
+	protected choices: Choices
+	protected config: Config
+	protected constants: typeof Constants
 
 	readonly feedbacksToUse = [		
 		'syncselection',
 		'presetToggle',
 		'deviceMasterMemory',
 		'deviceScreenMemory',
-		'deviceAuxMemory',
+		// 'deviceAuxMemory',
 		'deviceSourceTally',
 		'deviceTake',
 		'liveScreenSelection',
@@ -51,20 +53,21 @@ export default class Feedbacks {
 		'remoteLayerSelection',
 		'remoteWidgetSelection',
 		'deviceInputFreeze',
-		'deviceLayerFreeze',
-		'deviceScreenFreeze',
+		// 'deviceLayerFreeze',
+		// 'deviceScreenFreeze',
 		'timerState',
 		'deviceGpioOut',
 		'deviceGpioIn',
-		'deviceStreaming',
+		// 'deviceStreaming',
 		'deviceCustom',
 	]
 
 	constructor (instance: AWJinstance) {
 		this.instance = instance
-		this.state = instance.state
+		this.state = this.instance.state
 		this.choices = this.instance.choices
-		this.config = instance.config
+		this.config = this.instance.config
+		this.constants = this.instance.constants
 	}
 
 	getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinitions {
@@ -132,13 +135,7 @@ export default class Feedbacks {
 			},
 			options: [],
 			callback: (_feedback) => {
-				let property = 'copyMode'
-				let invert = true
-				if (this.state.platform === 'midra') {
-					property = 'enablePresetToggle'
-					invert = false
-				}
-				return this.state.get('DEVICE/device/screenGroupList/items/S1/control/pp/'+ property) === !invert
+				return this.state.getUnmapped(this.constants.presetTogglePath) === this.constants.presetToggleValueValid
 			},
 		}
 
@@ -175,11 +172,11 @@ export default class Feedbacks {
 			callback: (feedback) => {
 				if (
 					(feedback.options.preset === 'all' || feedback.options.preset === 'pgm') &&
-					this.state.get('DEVICE/device/masterPresetBank/status/lastUsed/presetModeList/items/PROGRAM/pp/memoryId') == feedback.options.memory
+					this.state.getUnmapped('DEVICE', ...this.constants.lastUsedMasterPresetPath, 'presetModeList', 'items', 'PROGRAM', 'pp', 'memoryId') == feedback.options.memory
 				) return true
 				if (
 					(feedback.options.preset === 'all' || feedback.options.preset === 'pvw') &&
-					this.state.get('DEVICE/device/masterPresetBank/status/lastUsed/presetModeList/items/PREVIEW/pp/memoryId') == feedback.options.memory
+					this.state.getUnmapped('DEVICE', ...this.constants.lastUsedMasterPresetPath, 'presetModeList', 'items', 'PREVIEW', 'pp', 'memoryId') == feedback.options.memory
 				) return true
 				return false
 			},
@@ -200,6 +197,14 @@ export default class Feedbacks {
 				bgcolor: this.config.color_highlight,
 			},
 			options: [
+				{
+					id: 'screens',
+					type: 'dropdown',
+					label: 'Screens / Auxscreens',
+					choices: [{ id: 'all', label: 'Any' }],
+					multiple: true,
+					default: ['all'],
+				} as any, // TODO: fix type of dropdown with multiple: true property
 				{
 					id: 'preset',
 					type: 'dropdown',
@@ -227,42 +232,41 @@ export default class Feedbacks {
 				},
 			],
 			callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screens: string[], preset: string, memory: string, unmodified: number } }) => {
-				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
-				const screens = this.state.platform === 'midra' ? this.choices.getChosenScreens(feedback.options.screens) : this.choices.getChosenScreenAuxes(feedback.options.screens)
+				const screens = this.choices.getChosenScreensSupportedByScreenMemories(feedback.options.screens)
 				const presets = feedback.options.preset === 'all' ? ['pgm', 'pvw'] : [feedback.options.preset]
-				const map = {
-					livepremier: { id: ['presetId','status','pp','id'], modified: ['presetId','status','pp','isNotModified'], modyes: true },
-					livepremier4: { id: ['presetId','status','pp','id'], modified: ['presetId','status','pp','isNotModified'], modyes: true },
-					midra: {id: ['status','pp','memoryId'], modified: ['status','pp','isModified'], modyes: false}
-				}
+				
 				for (const screen of screens) {
+					const screeninfo = this.choices.getScreenInfo(screen)
 					for (const preset of presets) {
 						if (
-							this.state.get([
+							this.state.getUnmapped([
 								'DEVICE',
-								'device',
-								'screenList',
+								...(screeninfo.isAux ? this.constants.auxPath : this.constants.screenPath),
 								'items',
-								screen,
+								screeninfo.platformId,
 								'presetList',
 								'items',
 								this.choices.getPreset(screen, preset),
-								...map[this.state.platform].id,
+								...this.constants.activeScreenMemoryIdPath,
 							]) == feedback.options.memory
 						) {
 							if (feedback.options.unmodified === 2) return true
-							const modified = this.state.get([
+							const modified = this.state.getUnmapped([
 								'DEVICE',
-								'device',
-								'screenList',
+								...(screeninfo.isAux ? this.constants.auxPath : this.constants.screenPath),
 								'items',
-								screen,
+								screeninfo.platformId,
 								'presetList',
 								'items',
 								this.choices.getPreset(screen, preset),
-								...map[this.state.platform].modified,
+								...this.constants.activeScreenMemoryIsModifiedPath,
 							])
-							if ( ((!map[this.state.platform].modyes && modified) || (map[this.state.platform].modyes && !modified)) == feedback.options.unmodified) {
+							if (
+								(
+									(!this.constants.activeScreenMemoryValueValid && modified) || 
+									(this.constants.activeScreenMemoryValueValid && !modified)
+								) == feedback.options.unmodified
+							) {
 								return true
 							}
 						}
@@ -271,28 +275,6 @@ export default class Feedbacks {
 				return false
 			},
 		}
-		if (this.state.platform.startsWith('livepremier')) deviceScreenMemory.options.unshift(
-			{
-					id: 'screens',
-					type: 'dropdown',
-					label: 'Screens / Auxscreens',
-					choices: [{ id: 'all', label: 'Any' }, ...this.choices.getScreenAuxChoices()],
-					multiple: true,
-					default: ['all'],
-				} as any, // TODO: fix type of dropdown with multiple: true property
-		)
-		if (this.state.platform === 'midra') deviceScreenMemory.options.unshift(
-			{
-					id: 'screens',
-					type: 'dropdown',
-					label: 'Screens',
-					choices: [{ id: 'all', label: 'Any' }, ...this.choices.getScreenChoices()],
-					multiple: true,
-					tags: true,
-					regex: '/^S([1-9]|[1-3][0-9]|4[0-8])$/',
-					default: ['all'],
-				} as any, // TODO: fix type of dropdown with multiple: true property
-		)
 
 		return deviceScreenMemory
 	}
@@ -346,41 +328,30 @@ export default class Feedbacks {
 				},
 			],
 			callback: (feedback) => {
-				if (this.state.platform !== 'midra') return false // we are not connected or connected to a livepremier
 				const screens = this.choices.getChosenAuxes(feedback.options.screens)
 				const presets = feedback.options.preset === 'all' ? ['pgm', 'pvw'] : [feedback.options.preset]
-				const map = {
-					livepremier: { id: ['presetId','status','pp','id'], modified: ['presetId','status','pp','isNotModified'], modyes: true },
-					midra: {id: ['status','pp','memoryId'], modified: ['status','pp','isModified'], modyes: false}
-				}
+				
 				for (const screen of screens) {
+					const screeninfo = this.choices.getScreenInfo(screen)
 					for (const preset of presets) {
 						if (
-							this.state.get([
+							this.state.getUnmapped([
 								'DEVICE',
 								'device',
-								'screenList',
-								'items',
-								screen,
-								'presetList',
-								'items',
-								this.choices.getPreset(screen, preset),
-								...map[this.state.platform].id,
+								'auxiliaryScreenList', 'items', screeninfo.numstr,
+								'presetList', 'items', this.choices.getPreset(screen, preset),
+								'status','pp','memoryId',
 							]) == feedback.options.memory
 						) {
 							if (feedback.options.unmodified === 2) return true
 							const modified = this.state.get([
 								'DEVICE',
 								'device',
-								'screenList',
-								'items',
-								screen,
-								'presetList',
-								'items',
-								this.choices.getPreset(screen, preset),
-								...map[this.state.platform].modified,
+								'auxiliaryScreenList', 'items', screeninfo.numstr,
+								'presetList', 'items', this.choices.getPreset(screen, preset),
+								'status','pp','isModified',
 							])
-							if ( ((!map[this.state.platform].modyes && modified) || (map[this.state.platform].modyes && !modified)) == feedback.options.unmodified) {
+							if ( ((true && modified) || (false && !modified)) == feedback.options.unmodified) {
 								return true
 							}
 						}
@@ -430,72 +401,65 @@ export default class Feedbacks {
 					default: 'NONE',
 				},
 			],
+			subscribe: (feedback: CompanionFeedbackBooleanEvent & { options: { screens: string[], preset: string, source: string } }) => {
+				const sortedScreens = [...feedback.options.screens].sort()
+				const varName = `tally_${sortedScreens.join('-')}_${feedback.options.preset}_${feedback.options.source}`
+				this.instance.addVariable({
+					id: feedback.id,
+					variableId: varName,
+					name: `Tally for ${feedback.options.source} at screens ${sortedScreens.join(', ')}, preset ${feedback.options.preset}`,
+				})
+			},
+			unsubscribe: (feedback: CompanionFeedbackBooleanEvent & { options: { screens: string[], preset: string, source: string } }) => {
+				const sortedScreens = [...feedback.options.screens].sort()
+				const varName = `tally_${sortedScreens.join('-')}_${feedback.options.preset}_${feedback.options.source}`
+				this.instance.removeVariable(feedback.id, varName)
+			},
 			callback: (feedback) => {  
-				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
 				const checkTally = (): boolean => {
 					// go thru the screens
 					for (const screen of this.choices.getChosenScreenAuxes(feedback.options.screens)) {
+						const screeninfo = this.choices.getScreenInfo(screen)
 						const preset = this.choices.getPreset(screen, feedback.options.preset)
 						for (const layer of this.choices.getLayerChoices(screen)) {
 							const screenpath = [
 								'DEVICE',
-								'device',
-								'screenList',
+								...(screeninfo.isAux ? this.constants.auxPath : this.constants.screenPath),
 								'items',
 								screen
 							]
 							const presetpath = [...screenpath, 'presetList', 'items', preset]
 							const layerpath = [...presetpath, 'layerList', 'items', layer.id]
-		
-							// check if source is used in background set on a screen
-							if (layer.id === 'NATIVE' && this.state.platform === 'midra') {
-								const set = this.state.get([...presetpath, 'background', 'source', 'pp', 'set'])
-								if (set === 'NONE') continue
-								const setinput = this.state.get([...screenpath, 'backgroundSetList', 'items', set, 'control', 'pp', 'singleContent'])
-								if (setinput === feedback.options.source) return true
-								else continue
-							}
-		
-							// check is source is used in background layer on a aux
-							if (layer.id === 'BKG' && this.state.platform === 'midra') {
-								const bkginput = this.state.get([...presetpath, 'background', 'source', 'pp', 'content'])
-								if (bkginput === feedback.options.source) return true
-								else continue
-							}
-		
-							// check if source is used in top layer
-							if (layer.id === 'TOP' && this.state.platform === 'midra') {
-								const frginput = this.state.get([...presetpath, 'top', 'source', 'pp', 'frame'])
-								if (frginput === feedback.options.source) return true
-								else continue
-							}
 							
-							if ((feedback.options.source === 'NONE' || feedback.options.source?.toString().startsWith('BACKGROUND') && this.state.get([...presetpath, 'source', 'pp', 'inputNum']) === feedback.options.source)) {
+							if (
+								(feedback.options.source === 'NONE' || feedback.options.source?.toString().startsWith('BACKGROUND')
+								&& this.state.get([...presetpath, 'source', 'pp', 'inputNum']) === feedback.options.source)
+							) {
 								return true
 							}
-							if (this.state.get([...layerpath, 'source', 'pp', 'inputNum']) === feedback.options.source) {
+							if (this.state.getUnmapped([...layerpath, 'source', 'pp', 'inputNum']) === feedback.options.source) {
 								const invisible = (
-									this.state.get([...layerpath, 'position', 'pp', 'sizeH']) === 0 ||
-									this.state.get([...layerpath, 'position', 'pp', 'sizeV']) === 0 ||
-									this.state.get([...layerpath, 'opacity', 'pp', 'opacity']) === 0 ||
-									this.state.get([...layerpath, 'cropping', 'classic', 'pp', 'top']) +
-										this.state.get([...layerpath,'cropping', 'classic', 'pp', 'bottom']) >
+									this.state.getUnmapped([...layerpath, 'position', 'pp', 'sizeH']) === 0 ||
+									this.state.getUnmapped([...layerpath, 'position', 'pp', 'sizeV']) === 0 ||
+									this.state.getUnmapped([...layerpath, 'opacity', 'pp', 'opacity']) === 0 ||
+									this.state.getUnmapped([...layerpath, 'cropping', 'classic', 'pp', 'top']) +
+										this.state.getUnmapped([...layerpath,'cropping', 'classic', 'pp', 'bottom']) >
 										65528 ||
-									this.state.get([...layerpath, 'cropping', 'classic', 'pp', 'left']) +
-										this.state.get([...layerpath, 'cropping', 'classic', 'pp', 'right']) >
+									this.state.getUnmapped([...layerpath, 'cropping', 'classic', 'pp', 'left']) +
+										this.state.getUnmapped([...layerpath, 'cropping', 'classic', 'pp', 'right']) >
 										65528 ||
-									this.state.get([...layerpath, 'cropping', 'mask', 'pp', 'top']) +
-										this.state.get([...layerpath, 'cropping', 'mask', 'pp', 'bottom']) >
+									this.state.getUnmapped([...layerpath, 'cropping', 'mask', 'pp', 'top']) +
+										this.state.getUnmapped([...layerpath, 'cropping', 'mask', 'pp', 'bottom']) >
 										65528 ||
-									this.state.get([...layerpath, 'cropping', 'mask', 'pp', 'left']) +
-										this.state.get([...layerpath, 'cropping', 'mask', 'pp', 'right']) >
+									this.state.getUnmapped([...layerpath, 'cropping', 'mask', 'pp', 'left']) +
+										this.state.getUnmapped([...layerpath, 'cropping', 'mask', 'pp', 'right']) >
 										65528 ||
-									this.state.get([...layerpath, 'position', 'pp', 'posH']) + this.state.get([...layerpath, 'position', 'pp', 'sizeH']) / 2 <= 0 ||
-									this.state.get([...layerpath, 'position', 'pp', 'posV']) + this.state.get([...layerpath, 'position', 'pp', 'sizeV']) / 2 <= 0 ||
-									this.state.get([...layerpath, 'position', 'pp', 'posH']) - this.state.get([...layerpath, 'position', 'pp', 'sizeH']) / 2 >=
-										this.state.get(['DEVICE', 'device', 'screenList', 'items', screen, 'status', 'size', 'pp', 'sizeH']) ||
-									this.state.get([...layerpath, 'position', 'pp', 'posV']) - this.state.get([...layerpath, 'position', 'pp', 'sizeV']) / 2 >=
-										this.state.get(['DEVICE', 'device', 'screenList', 'items', screen, 'status', 'size', 'pp', 'sizeV'])
+									this.state.getUnmapped([...layerpath, 'position', 'pp', 'posH']) + this.state.getUnmapped([...layerpath, 'position', 'pp', 'sizeH']) / 2 <= 0 ||
+									this.state.getUnmapped([...layerpath, 'position', 'pp', 'posV']) + this.state.getUnmapped([...layerpath, 'position', 'pp', 'sizeV']) / 2 <= 0 ||
+									this.state.getUnmapped([...layerpath, 'position', 'pp', 'posH']) - this.state.getUnmapped([...layerpath, 'position', 'pp', 'sizeH']) / 2 >=
+										this.state.getUnmapped([...screenpath, 'status', 'size', 'pp', 'sizeH']) ||
+									this.state.getUnmapped([...layerpath, 'position', 'pp', 'posV']) - this.state.getUnmapped([...layerpath, 'position', 'pp', 'sizeV']) / 2 >=
+										this.state.getUnmapped([...screenpath, 'status', 'size', 'pp', 'sizeV'])
 								)
 								if (!invisible) {
 									return true
@@ -520,20 +484,6 @@ export default class Feedbacks {
 				}
 				return tally
 			},
-			subscribe: (feedback: CompanionFeedbackBooleanEvent & { options: { screens: string[], preset: string, source: string } }) => {
-				const sortedScreens = [...feedback.options.screens].sort()
-				const varName = `tally_${sortedScreens.join('-')}_${feedback.options.preset}_${feedback.options.source}`
-				this.instance.addVariable({
-					id: feedback.id,
-					variableId: varName,
-					name: `Tally for ${feedback.options.source} at screens ${sortedScreens.join(', ')}, preset ${feedback.options.preset}`,
-				})
-			},
-			unsubscribe: (feedback: CompanionFeedbackBooleanEvent & { options: { screens: string[], preset: string, source: string } }) => {
-				const sortedScreens = [...feedback.options.screens].sort()
-				const varName = `tally_${sortedScreens.join('-')}_${feedback.options.preset}_${feedback.options.source}`
-				this.instance.removeVariable(feedback.id, varName)
-			}
 		}
 
 		return deviceSourceTally
@@ -563,16 +513,6 @@ export default class Feedbacks {
 				} as any, // TODO: fix type of dropdown with multiple: true property
 			],
 			callback: (feedback) => {
-				if (this.state.platform.startsWith('livepremier') && this.choices.getChosenScreenAuxes(feedback.options.screens)
-					.find((screen: string) => {
-						return this.state.get(`DEVICE/device/screenGroupList/items/${screen}/status/pp/transition`)?.match(/FROM/)
-					})) return true
-		
-				else if (this.state.platform === 'midra' && this.choices.getChosenScreenAuxes(feedback.options.screens)
-					.find((screen: string) => {
-						return this.state.get(`DEVICE/device/transition/screenList/items/${screen}/status/pp/transition`)?.match(/FROM/)
-					})) return true
-				
 				return false
 			},
 		}
@@ -601,7 +541,6 @@ export default class Feedbacks {
 				},
 			],
 			callback: (feedback) => {
-				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
 				return this.choices.getSelectedScreens()?.includes(feedback.options.screen)
 			},
 		}
@@ -641,7 +580,6 @@ export default class Feedbacks {
 				},
 			],
 			callback: (feedback: CompanionFeedbackBooleanEvent & { options: { screen: string, preset: string } }) => {
-				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
 				return this.choices.isLocked(feedback.options.screen, feedback.options.preset)
 			},
 		}
@@ -673,7 +611,6 @@ export default class Feedbacks {
 				},
 			],
 			callback: (feedback) => {
-				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
 				let preset: string,
 					vartext = 'PGM'
 				if (this.state.syncSelection) {
@@ -731,7 +668,6 @@ export default class Feedbacks {
 				},
 			],
 			callback: (feedback) => {
-				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
 				let pst = true
 				if (feedback.options.preset != 'all') {
 					let preset: string
@@ -747,13 +683,13 @@ export default class Feedbacks {
 				if (feedback.options.layer === 'all') {
 					return (
 						JSON.stringify(this.choices.getSelectedLayers()).includes(
-							`{"screenAuxKey":"${feedback.options.screen}","layerKey":"`
+							`{"screenAuxKey":"${this.choices.getScreenInfo(feedback.options.screen).platformLongId}","layerKey":"`
 						) && pst
 					)
 				} else {
 					return (
 						JSON.stringify(this.choices.getSelectedLayers()).includes(
-							`{"screenAuxKey":"${feedback.options.screen}","layerKey":"${feedback.options.layer}"}`
+							`{"screenAuxKey":"${this.choices.getScreenInfo(feedback.options.screen).platformLongId}","layerKey":"${feedback.options.layer}"}`
 						) && pst
 					)
 				}
@@ -784,14 +720,13 @@ export default class Feedbacks {
 				},
 			],
 			callback: (feedback) => {
-				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
 				const mvw = feedback.options.widget?.toString().split(':')[0] ?? '1'
 				const widget = feedback.options.widget?.toString().split(':')[1] ?? '0'
 				let widgetSelection: {widgetKey: string, multiviewerKey: string}[] = []
 				if (this.state.syncSelection) {
-					widgetSelection = [...this.state.get('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
+					widgetSelection = [...this.state.getUnmapped('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
 				} else {
-					widgetSelection = this.state.get('LOCAL/widgetSelection/widgetIds')
+					widgetSelection = this.state.getUnmapped('LOCAL/widgetSelection/widgetIds')
 				}
 				return JSON.stringify(widgetSelection).includes(`{"widgetKey":"${widget}","multiviewerKey":"${mvw}"}`)
 			},
@@ -823,9 +758,8 @@ export default class Feedbacks {
 				},
 			],
 			callback: (feedback) => {
-				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
 				const input = feedback.options.input?.toString().replace('LIVE', 'IN') || ''
-				const freeze = this.state.get('DEVICE/device/inputList/items/' + input + '/control/pp/freeze')
+				const freeze = this.state.getUnmapped('DEVICE/device/inputList/items/' + input + '/control/pp/freeze')
 				if (freeze) {
 					this.instance.setVariableValues({ ['frozen_' + input]: '*'})
 				} else {
@@ -880,7 +814,7 @@ export default class Feedbacks {
 							}
 						}
 						if (screen.id === 'any') {
-							opt.choices.push(...this.choices.getLayerChoices(8, false))
+							opt.choices.push(...this.choices.getLayerChoices(this.constants.maxLayers, false))
 						} else {
 							opt.label += ' ' + screen.id
 							opt.choices.push(...this.choices.getLayerChoices(screen.id, false))
@@ -890,30 +824,27 @@ export default class Feedbacks {
 				),
 			],
 			callback: (feedback) => {
-				if (this.state.platform !== 'midra') return false // we are not connected
-				//const screen = feedback.options.screen.substring(1)
 				let retval = false
 				let screens: Choicemeta[]
 				if (feedback.options.screen === 'any') {
 					screens = this.choices.getScreensArray()
 				} else {
-					screens = [{id: feedback.options.screen, label: feedback.options.screen}]
+					screens = [{index: feedback.options.screen.replace(/\D/g, ''), id: feedback.options.screen, label: feedback.options.screen}]
 				}
 				const layeropt = feedback.options[`layer${feedback.options.screen}`] as string
 				for (const screen of screens) {
 					let layers: string[]
 					if (layeropt === 'any') {
-						layers = this.choices.getLayersAsArray(screen.id, false)
+						layers = this.choices.getLayersAsArray(screen.id, false).map(layer => layer.id)
 					} else {
 						layers = [layeropt]
 					}
 					for (const layer of layers) {
-						const screenNum = screen.id.substring(1)
 						let path: string[]
 						if (layer === 'NATIVE') {
-							path = ['DEVICE', 'device', 'screenList', 'items', screenNum, 'background', 'control', 'pp', 'freeze']
+							path = ['DEVICE', 'device', 'screenList', 'items', `${screen.index}`, 'background', 'control', 'pp', 'freeze']
 						} else {
-							path = ['DEVICE', 'device', 'screenList', 'items', screenNum, 'liveLayerList', 'items', layer, 'control', 'pp', 'freeze']
+							path = ['DEVICE', 'device', 'screenList', 'items', `${screen.index}`, 'liveLayerList', 'items', layer, 'control', 'pp', 'freeze']
 						}
 						if (this.state.getUnmapped(path)) retval = true
 					}
@@ -950,17 +881,16 @@ export default class Feedbacks {
 				}
 			],
 			callback: (feedback) => {
-				if (this.state.platform !== 'midra') return false // we are not connected
 				//const screen = feedback.options.screen.substring(1)
 				let retval = false
-				let screens: Choicemeta[]
+				let screens: string[]  
 				if (feedback.options.screen === 'any') {
-					screens = this.choices.getScreensAuxArray()
+					screens = this.choices.getScreensAuxArray().map(scr => scr.index || scr.id.replace(/\D/g, ''))
 				} else {
-					screens = [{id: feedback.options.screen, label: feedback.options.screen}]
+					screens = [feedback.options.screen.replace(/\D/g, '')]
 				}
 				for (const screen of screens) {
-					const path = ['DEVICE', 'device', 'screenList', 'items', screen.id, 'control', 'pp', 'freeze']
+					const path = ['DEVICE', 'device', 'screenList', 'items', screen, 'control', 'pp', 'freeze']
 					if (this.state.get(path)) retval = true
 				}
 				return retval
@@ -1003,9 +933,8 @@ export default class Feedbacks {
 				},
 			],
 			callback: (feedback) => {
-				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
 				return (
-					this.state.get('DEVICE/device/timerList/items/' + feedback.options.timer + '/status/pp/state') ===
+					this.state.getUnmapped('DEVICE/device/timerList/items/' + feedback.options.timer + '/status/pp/state') ===
 					feedback.options.state
 				)
 			},
@@ -1032,9 +961,10 @@ export default class Feedbacks {
 					type: 'number',
 					label: 'GPO',
 					min: 1,
-					max: 8,
+					max: this.choices.getLinkedDevicesChoices().length * 8,
 					range: true,
 					default: 1,
+					tooltip: 'GPO number 1-8 for device #1, 9-16 for #2, 17-24 for #3, 25-32 for #4'
 				},
 				{
 					id: 'state',
@@ -1048,21 +978,7 @@ export default class Feedbacks {
 				},
 			],
 			callback: (feedback) => {
-				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
-				const val = feedback.options.state === 1 ? true : false
-				return (
-					this.state.get([
-						'DEVICE',
-						'device',
-						'gpio',
-						'gpoList',
-						'items',
-						feedback.options.gpo?.toString() || '1',
-						'status',
-						'pp',
-						'state',
-					]) === val
-				)
+				return false
 			},
 		}
 
@@ -1087,7 +1003,7 @@ export default class Feedbacks {
 					type: 'number',
 					label: 'GPI',
 					min: 1,
-					max: 2,
+					max: 8,
 					range: true,
 					default: 1,
 				},
@@ -1103,67 +1019,11 @@ export default class Feedbacks {
 				},
 			],
 			callback: (feedback) => {
-				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
-				const val = feedback.options.state === 1 ? true : false
-				return (
-					this.state.get([
-						'DEVICE',
-						'device',
-						'gpio',
-						'gpiList',
-						'items',
-						feedback.options.gpi?.toString() || '1',
-						'status',
-						'pp',
-						'state',
-					]) === val
-				)
+				return false
 			},
 		}
 
 		return deviceGpioIn
-	}
-
-	// MARK: deviceStreaming
-	// Midra only
-	get deviceStreaming() {
-		
-		const deviceStreaming: AWJfeedback<{state: string}> = {
-			type: 'boolean',
-			name: 'Stream Runnning State',
-			description: 'Shows status of streaming',
-			defaultStyle: {
-				color: this.config.color_dark,
-				bgcolor: this.config.color_highlight,
-			},
-			options: [
-				{
-					id: 'state',
-					type: 'dropdown',
-					label: 'State',
-					choices: [
-						{ id: 'NONE', label: 'Stream is off' },
-						{ id: 'LIVE', label: 'Stream is on' },
-					],
-					default: 'LIVE',
-				},
-			],
-			callback: (feedback) => {
-				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
-				return (
-					this.state.getUnmapped([
-						'DEVICE',
-						'device',
-						'streaming',
-						'status',
-						'pp',
-						'mode',
-					]) === feedback.options.state
-				)
-			},
-		}
-
-		return deviceStreaming
 	}
 
 	// MARK: deviceCustom
@@ -1309,13 +1169,12 @@ export default class Feedbacks {
 				}
 			},
 			callback: (feedback: CompanionFeedbackBooleanEvent & { options: FeedbackDeviceCustomOptions }) => {
-				if (!this.state.platform.startsWith('livepremier') && this.state.platform !== 'midra') return false // we are not connected
 				let ret = false
 				const path = this.instance.AWJtoJsonPath(feedback.options.path)
 				if (path.length < 2) {
 					return false
 				}
-				const value = this.state.get(['DEVICE', ...path])
+				const value = this.state.getUnmapped(['DEVICE', ...path])
 				let varId = feedback.options.variable.replace(/[^A-Za-z0-9_-]/g, '')
 				if (varId === '') varId = feedback.options.path.replace(/\//g, '_').replace(/[^A-Za-z0-9_-]/g, '')
 
@@ -1412,7 +1271,7 @@ export default class Feedbacks {
 					) {
 						parts[6] = '(\\w+?)'
 						sub[`${feedback.id}-take`] = {
-							pat: 'DEVICE/device/(screenGroup|transition/screen)List/items/(\\w+?)/status/pp/transition',
+							pat: 'DEVICE/device/(screenGroup|screenAuxGroup|transition/screen)List/items/(\\w+?)/status/pp/transition',
 							fbk: `id:${feedback.id}`,
 						}
 					}
@@ -1422,7 +1281,7 @@ export default class Feedbacks {
 						fbk: `id:${feedback.id}`
 					}
 					// console.log('add sub', sub)
-					this.instance.device.addSubscriptions(sub)
+					this.instance.subscriptions.addSubscriptions(sub)
 					// console.log('subscriptions', Object.keys(this.state.subscriptions).map(key => `${key} : ${this.state.subscriptions[key].pat}`))
 
 				} else {
@@ -1441,8 +1300,8 @@ export default class Feedbacks {
 				})
 			},
 			unsubscribe: (feedback) => {
-				this.instance.device.removeSubscription(feedback.id)
-				this.instance.device.removeSubscription(feedback.id + '-take')
+				this.instance.subscriptions.removeSubscription(feedback.id)
+				this.instance.subscriptions.removeSubscription(feedback.id + '-take')
 				this.instance.removeVariable(feedback.id)
 			}
 		}
