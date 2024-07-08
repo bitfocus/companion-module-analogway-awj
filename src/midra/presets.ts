@@ -1,10 +1,7 @@
 import {AWJinstance} from '../index.js'
 import {
-	combineRgb,
 	CompanionButtonPresetDefinition,
-	CompanionButtonStyleProps,
 	CompanionPresetDefinitions,
-	splitRgb
 } from '@companion-module/base'
 import Presets from '../awjdevice/presets.js'
 

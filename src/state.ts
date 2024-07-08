@@ -1,6 +1,6 @@
 import { AWJinstance } from './index.js'
 import { Subscription } from '../types/Subscription.js'
-import { mapIn, mapOut, MapItem } from './mappings.js'
+import { mapIn, MapItem } from './mappings.js'
 import { Config } from './config.js'
 
 type Channel = 'REMOTE' | 'DEVICE' | 'LOCAL' | 'LINK'

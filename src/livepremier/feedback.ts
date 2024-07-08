@@ -1,15 +1,7 @@
 import Feedbacks from '../awjdevice/feedback.js'
-import { Config } from '../config.js'
-import {AWJinstance, regexAWJpath} from '../index.js'
-import { StateMachine } from '../state.js'
-import Choices, {Choicemeta} from './choices.js'
+import {AWJinstance} from '../index.js'
 import {
-	combineRgb, 
-	CompanionBooleanFeedbackDefinition, 
-	CompanionFeedbackBooleanEvent, 
 	CompanionFeedbackDefinition, 
-	CompanionFeedbackDefinitions, 
-	CompanionOptionValues
 } from '@companion-module/base'
 
 

@@ -1,7 +1,6 @@
 import { Config } from '../config.js'
 import {AWJinstance, regexAWJpath} from '../index.js'
 import { StateMachine } from '../state.js'
-import { AWJdevice } from './awjdevice.js'
 import Choices, {Choicemeta} from './choices.js'
 import {
 	combineRgb, 
@@ -9,7 +8,6 @@ import {
 	CompanionFeedbackBooleanEvent, 
 	CompanionFeedbackDefinition, 
 	CompanionFeedbackDefinitions, 
-	CompanionOptionValues
 } from '@companion-module/base'
 import Constants from './constants.js'
 
@@ -68,13 +66,6 @@ export default class Feedbacks {
 		this.choices = this.instance.choices
 		this.config = this.instance.config
 		this.constants = this.instance.constants
-	}
-
-	getFeedbacks(instance: AWJinstance): CompanionFeedbackDefinitions {
-		const feedbacks = {}
-		const config = instance.config
-		const state: StateMachine = instance.device
-		return {}
 	}
 
 	/**
@@ -512,7 +503,7 @@ export default class Feedbacks {
 					default: 'all',
 				} as any, // TODO: fix type of dropdown with multiple: true property
 			],
-			callback: (feedback) => {
+			callback: () => {
 				return false
 			},
 		}
@@ -977,7 +968,7 @@ export default class Feedbacks {
 					default: 1,
 				},
 			],
-			callback: (feedback) => {
+			callback: () => {
 				return false
 			},
 		}
@@ -1018,7 +1009,7 @@ export default class Feedbacks {
 					default: 1,
 				},
 			],
-			callback: (feedback) => {
+			callback: () => {
 				return false
 			},
 		}

@@ -66,31 +66,31 @@ export class AWJinstance extends InstanceBase<Config> {
 	/**
 	 * Create an instance of an AWJ module.
 	 */
-	public state: StateMachine
+	public state!: StateMachine
 
 	/** holds all constants for this particular type of device */
-    constants: typeof Constants
+    constants!: typeof Constants
 
     /** reference to the connection with the device */
-    public connection: AWJconnection
+    public connection!: AWJconnection
 
     /** generates lists and choices from current state */
-    public choices: Choices
+    public choices!: Choices
 
     /** holds action definitions */
-    private actions: Actions
+    private actions!: Actions
 
     /** holds feedback definitions */
-    private feedbacks: Feedbacks
+    private feedbacks!: Feedbacks
 
     /** holds preset definitions */
-    private presets: Presets
+    private presets!: Presets
 
     /** holds subscription definitions and checks incoming data against them */
-    public subscriptions: Subscriptions
+    public subscriptions!: Subscriptions
 
 	/** @deprecated device class */
-	public device: AWJdevice
+	public device!: AWJdevice
 	
 	/** variables storage */
 	private variables!: (CompanionVariableDefinition & { id?: string })[]

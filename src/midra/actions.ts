@@ -3,12 +3,9 @@ import {AWJinstance} from '../index.js'
 import {
 	CompanionActionEvent,
 	CompanionInputFieldDropdown,
-	DropdownChoice,
-	DropdownChoiceId,
 	SomeCompanionActionInputField,
 } from '@companion-module/base'
-import { compileExpression } from '@nx-js/compiler-util'
-import { InstanceStatus, splitRgb } from '@companion-module/base'
+import { InstanceStatus } from '@companion-module/base'
 import Actions from '../awjdevice/actions.js'
 
 /**
@@ -37,10 +34,6 @@ type ActionEvent<T> = Omit<CompanionActionEvent, 'options'> & {
 }
 
 type AWJoptionValues<T> = T
-type AWJoptionValuesExtended<T> = T
-
-type Dropdown<t> = {id: t, label: string}
-
 
 export default class ActionsMidra extends Actions {
 
@@ -1236,8 +1229,7 @@ export default class ActionsMidra extends Actions {
 	get devicePower() {
 		type DevicePower = {action : string}
 		
-
-		const devicePower: AWJaction<{ action : string }> = {
+		const devicePower: AWJaction<DevicePower> = {
 			name: 'Device Power',
 			options: [
 				{

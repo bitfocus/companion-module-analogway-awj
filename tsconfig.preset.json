@@ -13,6 +13,7 @@
 		"noUnusedLocals": false,
 		"noUnusedParameters": true,
 		"noImplicitAny": false,
+		"strictPropertyInitialization": false,
 	},
 	"compileOnSave": false
 }

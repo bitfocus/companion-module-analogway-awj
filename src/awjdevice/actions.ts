@@ -2,7 +2,6 @@ import {AWJinstance} from '../index.js'
 
 import Choices, { Choicemeta } from './choices.js'
 import {
-	CompanionActionDefinition,
 	CompanionActionDefinitions,
 	CompanionActionEvent,
 	CompanionInputFieldDropdown,
@@ -13,8 +12,7 @@ import {
 import { Config } from '../config.js'
 import { compileExpression } from '@nx-js/compiler-util'
 import { AWJconnection } from '../connection.js'
-import { InstanceStatus, splitRgb } from '@companion-module/base'
-import { AWJdevice } from './awjdevice.js'
+import { splitRgb } from '@companion-module/base'
 import { StateMachine } from '../state.js'
 import Constants from './constants.js'
 
@@ -44,21 +42,18 @@ type ActionEvent<T> = Omit<CompanionActionEvent, 'options'> & {
 }
 
 type AWJoptionValues<T> = T
-type AWJoptionValuesExtended<T> = T
-
-type Dropdown<t> = {id: t, label: string}
 
 // const XUPDATE = '{"channel":"DEVICE","data":{"path":"device/screenGroupList/control/pp/xUpdate","value":true}}'
 // const XUPDATEmidra = '{"channel":"DEVICE","data":{"path":"device/preset/control/pp/xUpdate","value":true}}'
 
 export default class Actions {
 	instance: AWJinstance
-	state: StateMachine
-	connection: AWJconnection
-	config: Config
-	choices: Choices
-	constants: typeof Constants
-	screens: Choicemeta[]
+	state!: StateMachine
+	connection!: AWJconnection
+	config!: Config
+	choices!: Choices
+	constants!: typeof Constants
+	screens!: Choicemeta[]
 
 	readonly actionsToUse = [
 		'deviceScreenMemory',
@@ -115,26 +110,6 @@ export default class Actions {
 		this.screens = this.choices.getScreensAuxArray()
 	}
 
-
-	// MARK: getActions
-	/**
-	 * Return the object with all companion actions for the instance
-	 * @deprecated
-	 * @param instance reference to the instance itself
-	 * @returns action object
-	 */
-	getActions(instance: AWJinstance): any {
-		//const instance = AWJd.instance
-		const state: AWJdevice = instance.device
-		const connection: AWJconnection = instance.connection
-		const device: AWJdevice = instance.device
-		const config: Config = instance.config
-		const actions: {[id: string]: AWJaction<any> | undefined} = {}
-		const screens = this.choices.getScreensAuxArray()
-
-		return {}
-	}
-
 	/**
 	 * Object with all exported action definitions
 	 */
@@ -181,7 +156,7 @@ export default class Actions {
 					default: true,
 				},
 			],
-			callback: (action) => {
+			callback: () => {
 			},
 		}
 
@@ -222,7 +197,7 @@ export default class Actions {
 					default: true,
 				},
 			],
-			callback: (action) => {},
+			callback: () => {},
 		}
 	return deviceAuxMemory
 	}
@@ -523,7 +498,7 @@ export default class Actions {
 					}
 				},
 			],
-			callback: (action) => {},
+			callback: () => {},
 		}
 
 		return deviceSelectSource
@@ -1311,7 +1286,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					default: 'selectExclusive',
 				},
 			],
-			callback: (action) => {},
+			callback: () => {},
 		}
 
 		return remoteMultiviewerSelectWidget
@@ -1341,7 +1316,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					default: this.choices.getWidgetSourceChoices()[0]?.id,
 				},
 			],
-			callback: (action) => {},
+			callback: () => {},
 		}
 
 		return deviceMultiviewerSource
@@ -2102,7 +2077,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					default: `rgba(${splitRgb(this.config.color_dark).r},${splitRgb(this.config.color_dark).g},${splitRgb(this.config.color_dark).b},0.7)`,
 				},
 			],
-			callback: (action) => {},
+			callback: () => {},
 		}
 
 		return deviceTimerSetup
@@ -2627,7 +2602,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 		type DevicePower = {action : string}
 		
 
-		const devicePower: AWJaction<{ action : string }> = {
+		const devicePower: AWJaction<DevicePower> = {
 			name: 'Device Power',
 			options: [
 				{

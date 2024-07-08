@@ -1,7 +1,6 @@
 import {AWJinstance} from '../index.js'
 import { Subscription } from '../../types/Subscription.js'
 import { InstanceStatus } from '@companion-module/base'
-import Constants from './constants.js'
 import Subscriptions from '../awjdevice/subscriptions.js'
 
 /**

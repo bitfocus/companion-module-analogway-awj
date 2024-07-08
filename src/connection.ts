@@ -1,6 +1,5 @@
 import { AWJinstance } from './index.js'
 import * as dgram from 'dgram'
-import * as net from 'net'
 import ky from 'ky'
 import URI from 'urijs'
 import WebSocket from 'ws'
@@ -14,11 +13,8 @@ const fetchDefaultParameters = {
 
 class AWJconnection {
 	instance: AWJinstance
-	private tcpsocket: net.Socket | undefined
 	private websocket: WebSocket | undefined | null
 	private wsTimeout: NodeJS.Timeout | undefined
-	private port: number | undefined
-	private host: string | undefined
 	private addr: string | undefined
 	private authcookie = ''
 	private readonly reconnectmin = 100
@@ -193,12 +189,12 @@ class AWJconnection {
 
 							try {
 								this.instance.setDevice(newPlatform)
-							} catch (error) {
+							} catch (error: any) {
 								this.instance.log('error', `setting device platform to ${newPlatform} failed:\n${error}`) 
 							}
 							try {
 								this.instance.subscriptions.initSubscriptions()
-							} catch (error) {
+							} catch (error: any) {
 								this.instance.log('error', `setting up subscriptions for device failed:\n${error.stack}`) 
 							}
 

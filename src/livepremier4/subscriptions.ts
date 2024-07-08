@@ -1,7 +1,5 @@
 import {AWJinstance} from '../index.js'
 import { Subscription } from '../../types/Subscription.js'
-import { InstanceStatus } from '@companion-module/base'
-import Constants from './constants.js'
 import Subscriptions from '../awjdevice/subscriptions.js'
 
 /**
@@ -101,7 +99,6 @@ export default class SubscriptionsLivepremier4 extends Subscriptions {
 		return {
 			pat: 'DEVICE/device/screenAuxGroupList/items/((?:S|A)\\d{1,3})/control/pp/take(?:Up|Down)?Time',
 			ini: ():string[] => {
-				const presets = ['takeUpTime', 'takeDownTime']
 				const screens: string[] = [
 					...Array.from({ length: this.constants.maxScreens }, (_, i) => `S${i+1}`),
 					...Array.from({ length: this.constants.maxAuxScreens }, (_, i) => `A${i+1}`),

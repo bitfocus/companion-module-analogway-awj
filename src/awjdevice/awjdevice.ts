@@ -23,25 +23,25 @@ class AWJdevice extends StateMachine{
     instance: AWJinstance
 
     /** holds all constants for this particular type of device */
-    constants: typeof Constants
+    constants!: typeof Constants
 
     /** reference to the connection with the device */
-    connection: AWJconnection
+    connection!: AWJconnection
 
     /** generates lists and choices from current state */
-    choices: Choices
+    choices!: Choices
 
     /** holds action definitions */
-    private actions: Actions
+    private actions!: Actions
 
     /** holds feedback definitions */
-    private feedbacks: Feedbacks
+    private feedbacks!: Feedbacks
 
     /** holds preset definitions */
-    private presets: Presets
+    private presets!: Presets
 
     /** holds subscription definitions and checks incoming data against them */
-    subscriptions: Subscriptions
+    subscriptions!: Subscriptions
 
     constructor(instance: AWJinstance, initialState?: {[name: string]: any}) {
         super(instance, initialState)

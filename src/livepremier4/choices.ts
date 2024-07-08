@@ -1,7 +1,5 @@
 import { AWJinstance } from '..'
-import { State } from '../../types/State'
 import Choices from '../awjdevice/choices.js'
-import Constants from './constants.js'
 
 type Dropdown<t> = {id: t, label: string}
 

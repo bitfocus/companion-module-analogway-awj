@@ -126,7 +126,7 @@ export default class Choices {
 	}
 
 	/** returns array of the currently available and active screens only (no auxes)*/
-	public  getScreensArray(getAlsoDisabled = false): Choicemeta[] {
+	public  getScreensArray(_getAlsoDisabled = false): Choicemeta[] {
 		return [{ id: 'S1', label: '(emulated)', index: '1' }]
 	}
 
@@ -141,7 +141,7 @@ export default class Choices {
 	}
 
 	/** returns array of the currently available and active auxscreens only (no regular screens)*/
-	public getAuxArray(getAlsoDisabled = false ): Choicemeta[] {
+	public getAuxArray(_getAlsoDisabled = false ): Choicemeta[] {
 		return [{ id: 'A1', label: '(emulated)', index: '1' }]
 	}
 
@@ -176,7 +176,7 @@ export default class Choices {
 		return []
 	}
 
-	public getLiveInputArray(prefix?: string): Choicemeta[] {
+	public getLiveInputArray(_prefix?: string): Choicemeta[] {
 		return []
 	}
 
@@ -433,9 +433,8 @@ export default class Choices {
 	 * @param bkg wether to include only live layers (false) or also background and eventually foreground layer (true or omitted) 
 	 * @param top wether to include foreground layer if available, follows bkg if omitted 
 	*/
-	public getLayersAsArray(param: string | number, bkg?: boolean, top?: boolean): Choicemeta[] {
+	public getLayersAsArray(param: string | number, bkg?: boolean, _top?: boolean): Choicemeta[] {
 		const ret: Choicemeta[] = []
-		let layercount = 0
 		if (typeof param === 'number') {
 			if (bkg === undefined || bkg === true) ret.push({ id: 'NATIVE', label: 'Background', longname: 'BKG' })
 			for (let i = 1; i <= param; i += 1) {

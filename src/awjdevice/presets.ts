@@ -3,7 +3,6 @@ import {AWJinstance} from '../index.js'
 import Choices from './choices.js'
 import {
 	combineRgb,
-	CompanionButtonPresetDefinition,
 	CompanionButtonStyleProps,
 	CompanionPresetDefinitions,
 	splitRgb
@@ -11,7 +10,6 @@ import {
 import Constants from './constants.js'
 import { StateMachine } from '../state.js'
 
-type Dropdown<t> = { id: t, label: string }
 
 export default class Presets {
 	/** reference to the instance */
@@ -70,21 +68,6 @@ export default class Presets {
 		return (0.2126 * splitRgb(color).r + 0.7152 * splitRgb(color).g + 0.0722* splitRgb(color).b) > 127
 		? 0x000000
 		: 0xffffff
-	}
-
-	/**
-	 * @deprecated
-	 * @returns 
-	 */
-	getPresets(): CompanionPresetDefinitions {
-		const state = this.state
-		const ilabel = this.instance.label
-		const config= this.instance.config
-		const allscreens = this.choices.getChosenScreenAuxes('all')
-		//const presets: ({ style: { show_topbar?: boolean } } & CompanionPreset)[] = []
-		const presets: CompanionPresetDefinitions = {}
-
-		return presets
 	}
 
 	/**
@@ -309,7 +292,6 @@ export default class Presets {
 		// MARK: Take All Screens
 	get takeAllScreens() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
 		presets['Take All Screens'] = {
 			type: 'button',
@@ -354,7 +336,6 @@ export default class Presets {
 	// MARK: Take Selected Screens
 	get takeSelectedScreens() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
 		presets['Take Selected Screens'] = {
 			type: 'button',
@@ -398,7 +379,6 @@ export default class Presets {
 	// MARK: Take Screen ...
 	get takeScreen() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
 		for (const screen of this.choices.getChosenScreenAuxes('all')) {
 			presets['Take Screen ' + screen] = {
@@ -444,7 +424,6 @@ export default class Presets {
 	// MARK: Cut All Screens
 	get cutAllScreens() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
 		presets['Cut All Screens'] = {
 			type: 'button',
@@ -477,7 +456,6 @@ export default class Presets {
 	// MARK: Cut Selected Screens
 	get cutSelectedScreens() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
 		presets['Cut Selected Screens'] = {
 			type: 'button',
@@ -511,7 +489,6 @@ export default class Presets {
 	// MARK: Cut Screen ...
 	get cutScreen() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
 		for (const screen of this.choices.getChosenScreenAuxes('all')) {
 			presets['Cut Screen ' + screen] = {
@@ -592,7 +569,6 @@ export default class Presets {
 	// MARK: Select Preset
 	get selectPreset() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
 		presets['Toggle Preset'] = {
 			type: 'button',
@@ -638,7 +614,6 @@ export default class Presets {
 	// MARK: Preset Toggle
 	get presetToggle() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
 		presets['Preset Toggle'] = {
 			type: 'button',
@@ -682,7 +657,6 @@ export default class Presets {
 	// MARK: Copy preview from program
 	get copyPreviewFromProgram() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
 		presets['Copy program of selected screens to preview'] = {
 			type: 'button',
@@ -847,7 +821,6 @@ export default class Presets {
 	// MARK: Toggle Lock PGM All Screens
 	get toggleLockPgmAllScreens() {
 		const presets: CompanionPresetDefinitions = {}
-		const ilabel = this.instance.label
 
 		presets['Toggle Lock PGM All Screens'] = {
 			type: 'button',
