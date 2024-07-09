@@ -805,6 +805,42 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			return 0
 		}
 
+		const getLayerDimensions = (screenId: string, preset: string, layerId: string) => {
+			const screninfo = this.choices.getScreenInfo(screenId)
+			const presetKey = this.choices.getPreset(screninfo.id, preset)
+			const pathToLayer = [
+				...(screninfo.isAux ? this.constants.auxPath : this.constants.screenPath),
+				'items', screninfo.platformId,
+				'presetList','items',presetKey,
+				...this.choices.getLayerPath(layerId)
+			]
+
+			if (this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath]) === undefined) return undefined // this layer does not allow for sizing
+
+			const layer = {
+				w: 0,
+				h: 0,
+				x: 0,
+				y: 0,
+				wOriginal: 0,
+				hOriginal: 0,
+				xOriginal: 0,
+				yOriginal: 0,
+				path: pathToLayer
+			}
+
+			layer.w = this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath, 'sizeH']) ?? 1920
+			layer.wOriginal = layer.w
+			layer.h = this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath, 'sizeV']) ?? 1080
+			layer.hOriginal = layer.h
+			layer.x = (this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsPositionPath, 'posH']) ?? 0) - layer.w / 2
+			layer.xOriginal = layer.x
+			layer.y = (this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsPositionPath, 'posV']) ?? 0) - layer.h / 2
+			layer.yOriginal = layer.y
+
+			return layer
+		}
+
 		const devicePositionSize: AWJaction<DevicePositionSize> = {
 			name: 'Set Position and Size',
 			options: [
@@ -951,26 +987,19 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				newoptions.xAnchor = 'lx + 0.5 * lw'
 				newoptions.yAnchor = 'ly + 0.5 * lh'
 				newoptions.parameters = ['x', 'y', 'w', 'h']
-				
-				const pathToLayer = [
-					...(screeninfo.isAux ? this.constants.auxPath : this.constants.screenPath),
-					'items', screeninfo.platformId,
-					'presetList', 'items', this.choices.getPreset(screeninfo.id, newoptions.preset),
-					...this.choices.getLayerPath(layer)]
-				const props = this.state.get(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath])
-				if (props === undefined) {
+
+				const currentDimensions = getLayerDimensions(screeninfo.id, newoptions.preset, layer)
+				if (currentDimensions === undefined) {
 					this.instance.log('warn', `Selected layer ${layer} of screen ${screeninfo.id} does not support positioning, position and size couldn't be learned.`)
 					return undefined
 				}
 				
-				const w = this.state.get(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath, 'sizeH'])
-				const h = this.state.get(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath, 'sizeV'])
-				newoptions.w = w.toString()
-				newoptions.h = h.toString()
-				newoptions.x = this.state.get(['DEVICE', ...pathToLayer, ...this.constants.propsPositionPath, 'posH']).toString()
-				newoptions.y = this.state.get(['DEVICE', ...pathToLayer, ...this.constants.propsPositionPath, 'posV']).toString()
+				newoptions.w = currentDimensions.w.toString()
+				newoptions.h = currentDimensions.h.toString()
+				newoptions.x = currentDimensions.x.toString()
+				newoptions.y = currentDimensions.y.toString()
 				
-				newoptions.ar = h !== 0 ? calculateAr(w,h)?.string ?? '' : ''
+				newoptions.ar = currentDimensions.h !== 0 ? calculateAr(currentDimensions.w, currentDimensions.h)?.string ?? '' : ''
 
 				return newoptions
 			},
@@ -997,25 +1026,13 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				const boundingBoxes = {}
 
 				for (const layerIndex in layers as {screenAuxKey: string, layerKey: string, x: number, y: number, w: number, h: number, [name: string]: number | string}[]) {
-					const layer: any = layers[layerIndex]
+					const layer: Record<string, any> = layers[layerIndex]
 					const presetKey = this.choices.getPreset(layer.screenAuxKey, preset)
 					const screninfo = this.choices.getScreenInfo(layer.screenAuxKey)
-					const pathToLayer = [
-						...(screninfo.isAux ? this.constants.auxPath : this.constants.screenPath),
-						'items', screninfo.platformId,
-						'presetList','items',presetKey,
-						...this.choices.getLayerPath(layer.layerKey)
-					]
-					if (this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath]) === undefined) continue // this layer does not allow for sizing
 
-					layer.w = this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath, 'sizeH']) ?? 1920
-					layer.wOriginal = layer.w
-					layer.h = this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath, 'sizeV']) ?? 1080
-					layer.hOriginal = layer.h
-					layer.x = (this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsPositionPath, 'posH']) ?? 0) - layer.w / 2
-					layer.xOriginal = layer.x
-					layer.y = (this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsPositionPath, 'posV']) ?? 0) - layer.h / 2
-					layer.yOriginal = layer.y
+					const laydim = getLayerDimensions(screninfo.id, presetKey, layer.layerKey)
+					if (laydim === undefined) continue // this layer does not allow for sizing
+					Object.keys(laydim).forEach((key) => {layer[key] = laydim[key]})
 
 					if (boundingBoxes[layer.screenAuxKey] === undefined ) boundingBoxes[layer.screenAuxKey] = {}
 					const box = boundingBoxes[layer.screenAuxKey]
@@ -1031,6 +1048,10 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					const layer: any = layers[layerIndex]
 					const screninfo = this.choices.getScreenInfo(layer.screenAuxKey)
 					const presetKey = this.choices.getPreset(layer.screenAuxKey, preset)
+					const laydim = getLayerDimensions(screninfo.id, presetKey, layer.layerKey)
+					if (laydim === undefined) continue // this layer does not allow for sizing
+					Object.keys(laydim).forEach((key) => {layer[key] = laydim[key]})
+
 					const screenpath = screninfo.isAux ? this.constants.auxPath : this.constants.screenPath
 					const path = [
 						...screenpath,
@@ -1040,15 +1061,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					const screenWidth = this.state.getUnmapped(['DEVICE', ...path, 'sizeH'])
 					const screenHeight = this.state.getUnmapped(['DEVICE', ...path, 'sizeV'])
 					
-					const pathToLayer = [
-						...screenpath,
-						'items', screninfo.platformId,
-						'presetList','items',presetKey,
-						...this.choices.getLayerPath(layer.layerKey)
-					]
-					if (this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath]) === undefined) continue // this layer does not allow for sizing
-
-					layer.input = this.state.getUnmapped(['DEVICE', ...pathToLayer,'source','pp','inputNum']) ?? 'NONE'
+					layer.input = this.state.getUnmapped(['DEVICE', layer.path,'source','pp','inputNum']) ?? 'NONE'
 					//console.log('layer before match', layer)
 					if (layer.input?.match(/^IN/)) {
 						layer.inPlug = this.state.getUnmapped(`DEVICE/device/inputList/items/${layer.input}/control/pp/plug`) || '1'
@@ -1111,6 +1124,47 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					let xChange = false
 					let yChange = false
 
+					// adjust position according anchor
+					let xDif = xPos - xAnchor
+					let yDif = yPos - yAnchor
+
+					layer.x = layer.xOriginal + xDif
+					layer.y = layer.yOriginal + yDif
+					
+					// do resizing
+					// first calculate factors
+					let xScale = 1, yScale = 1
+					if (action.options.parameters.includes('w') && action.options.parameters.includes('h')) {
+						// set new width and height
+						xScale = widthInput / layer.wOriginal
+						yScale = heightInput / layer.hOriginal
+						layer.w = widthInput
+						layer.h = heightInput
+					} else if (action.options.parameters.includes('w')) {
+						// set new width by value, height by ar or leave untouched
+						xScale = widthInput / layer.wOriginal
+						layer.w = widthInput
+						if (ar !== undefined && ar !== 0) {
+							yScale = heightInput / (layer.wOriginal / ar)
+							layer.h = layer.w / ar
+						}
+					} else if (action.options.parameters.includes('h')) {
+						// set new height by value, width by ar or leave untouched
+						yScale = heightInput / layer.hOriginal
+						layer.h = heightInput
+						if (ar !== undefined) {
+							xScale = widthInput / (layer.hOriginal * ar)
+							layer.w = layer.h * ar
+						}
+					}
+					// now apply scale to coordinates but not the destination is the anchor
+					xDif = layer.x - xPos
+					yDif = layer.y - yPos
+
+					layer.x = xPos + (xDif * xScale)
+					layer.y = yPos + (yDif * yScale)
+
+					/*
 					// do resizing
 					if (action.options.parameters.includes('w') && action.options.parameters.includes('h')) {
 						// set new width and height
@@ -1144,32 +1198,32 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					if (action.options.parameters.includes('y')) {
 						layer.y += yPos - yAnchor
 					}
-
+					*/
 
 					// console.log('layer', {...layer, xAnchor, yAnchor, context})
 
 					// send values
 					if (layer.x !== layer.xOriginal || xChange) {
 						this.connection.sendWSmessage(
-							[...pathToLayer,'position','pp', 'posH'],
+							[...layer.path,'position','pp', 'posH'],
 							Math.round(layer.x + layer.w / 2)
 						)
 					}
 					if (layer.y !== layer.yOriginal || yChange) {
 						this.connection.sendWSmessage(
-							[...pathToLayer,'position','pp', 'posV'],
+							[...layer.path,'position','pp', 'posV'],
 							Math.round(layer.y + layer.h / 2)
 						)
 					}
 					if (layer.w !== layer.wOriginal) {
 						this.connection.sendWSmessage(
-							[...pathToLayer,'position','pp', 'sizeH'],
+							[...layer.path,'position','pp', 'sizeH'],
 							Math.round(layer.w)
 						)
 					}
 					if (layer.h !== layer.hOriginal) {
 						this.connection.sendWSmessage(
-							[...pathToLayer,'position','pp', 'sizeV'],
+							[...layer.path,'position','pp', 'sizeV'],
 							Math.round(layer.h)
 						)
 					}
