@@ -42,6 +42,7 @@ export default class ActionsLivepremier extends Actions {
 		'deviceScreenMemory',
 		// 'deviceAuxMemory',
 		'deviceMasterMemory',
+		'deviceLayerMemory',
 		'deviceMultiviewerMemory',
 		'deviceCutScreen',
 		'deviceTbar',

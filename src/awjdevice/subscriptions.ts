@@ -273,7 +273,7 @@ export default class Subscriptions {
 	get layerMemoryLabel():Subscription {
 		return {
 			pat: 'DEVICE/device/layerBank/bankList/items/(\\d+)/control/pp/label',
-			ini: Array.from({ length: 49 }, (_, i) => (i + 1).toString()),
+			ini: Array.from({ length: 50 }, (_, i) => (i + 1).toString()),
 			fun: (path, _value) => {
 				if (!path) return false
 				const memory = Array.isArray(path) ? path[5] : path.split('/')[5]

@@ -322,9 +322,9 @@ export default class Choices {
 
 	public getLayerMemoryArray(): Choicemeta[] {
 		return (
-			this.state.getUnmapped('DEVICE/device/layerBank/bankList/itemKeys')?.filter((mem: string) => {
-				return this.state.get(['DEVICE', 'device', 'layerBank', 'bankList', 'items', mem, 'status', 'pp', 'isValid'])
-			}) ?? []
+			(this.state.getUnmapped('DEVICE/device/layerBank/bankList/itemKeys')?.filter((mem: string) => {
+				return this.state.getUnmapped(['DEVICE', 'device', 'layerBank', 'bankList', 'items', mem, 'status', 'pp', 'isValid'])
+			}) ?? [])
 			.map(
 				(id: string) => { 
 					return {
@@ -337,14 +337,10 @@ export default class Choices {
 	}
 
 	public getLayerMemoryChoices(): Dropdown<string>[] {
-		const ret: Dropdown<string>[] = []
-		for (const memory of this.getLayerMemoryArray()) {
-			ret.push({
-				id: memory.id,
-				label: `M${memory.id}${memory.label === '' ? '' : ' - ' + memory.label}`,
-			})
-		}
-		return ret
+		return this.getLayerMemoryArray().map((memory) => {return {
+			id: memory.id,
+			label: `LM${memory.id}${memory.label === '' ? '' : ' - ' + memory.label}`,
+		}})
 	}
 
 	public getMultiviewerMemoryArray(): Choicemeta[] {

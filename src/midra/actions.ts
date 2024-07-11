@@ -42,6 +42,7 @@ export default class ActionsMidra extends Actions {
 		'deviceScreenMemory',
 		'deviceAuxMemory',
 		'deviceMasterMemory',
+		// 'deviceLayerMemory',
 		'deviceMultiviewerMemory',
 		'deviceCutScreen',
 		'deviceTbar',

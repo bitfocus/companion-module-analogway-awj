@@ -60,6 +60,7 @@ export default class Actions {
 		'deviceAuxMemory',
 		'deviceMasterMemory',
 		'deviceMultiviewerMemory',
+		'deviceLayerMemory',
 		'deviceCutScreen',
 		'deviceTbar',
 		'deviceTakeTime',
@@ -177,8 +178,8 @@ export default class Actions {
 					type: 'dropdown',
 					label: 'Method',
 					choices: [
-						{ id: 'spec', label: 'Use Specified Layer' },
-						{ id: 'sel', label: 'Use Selected Layer' },
+						{ id: 'spec', label: 'Use Specified Layers' },
+						{ id: 'sel', label: 'Use Selected Layers' },
 					],
 					default: 'spec',
 				},
@@ -221,6 +222,7 @@ export default class Actions {
 				},
 			],
 			callback: (action) => {
+				console.log('LM options', action.options)
 				let layers: { screenAuxKey: string; layerKey: string }[] = []
 				let preset: string
 				if (action.options.method === 'sel') {
@@ -245,7 +247,7 @@ export default class Actions {
 							'slotList',
 							'items',
 							action.options.memory,
-							'screenList',
+							layer.screenAuxKey.charAt(0) === 'A' ? this.constants.auxPath[1] : this.constants.screenPath[1],
 							'items',
 							layer.screenAuxKey,
 							'presetList',
