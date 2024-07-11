@@ -5,6 +5,7 @@ import {
 	combineRgb,
 	CompanionButtonStyleProps,
 	CompanionPresetDefinitions,
+	CompanionTextSize,
 	splitRgb
 } from '@companion-module/base'
 import Constants from './constants.js'
@@ -48,6 +49,7 @@ export default class Presets {
 		'toggleFreezeInput',
 		'toggleFreezeLayer',
 		'toggleFreezeScreen',
+		'posSize',
 		'multiviewerMemories',
 		'selectWidget',
 		'toggleWidgetSelection',
@@ -1280,6 +1282,313 @@ export default class Presets {
 				],
 			}
 		}
+
+		return presets
+	}
+
+	// MARK: Position/Size
+	get posSize() {
+		//type DevicePositionSize = {screen: string, preset: string, layersel: string, parameters: string[], x: string, xAnchor: string, y: string, yAnchor: string, w: string, h: string, ar: string} & Record<string, string>
+
+		// these values change for each preset, comon values are 'sel' for screen, preset and layers
+		const defaultTextSize = '12'
+		const values = [
+			{
+				name: 'Fullscreen',
+				text: '',
+				size: defaultTextSize,
+				png64: '',
+				parameters: ['x','y','w','h'],
+				x: '0', 
+				xAnchor: '0',
+				y: '0',
+				yAnchor: '0',
+				w: 'sw',
+				h: 'sh',
+				ar: ''
+			},{
+				name: 'Screen center hor/ver',
+				text: '',
+				size: defaultTextSize,
+				png64: '',
+				parameters: ['x','y'],
+				x: '0.5 * sw', 
+				xAnchor: 'lx + 0.5 * lw',
+				y: '0.5 * sh',
+				yAnchor: 'ly + 0.5 * lh',
+				w: 'lw',
+				h: 'lh',
+				ar: 'keep'
+			},{
+				name: 'Screen center hor',
+				text: '',
+				size: defaultTextSize,
+				png64: '',
+				parameters: ['x'],
+				x: '0.5 * sw', 
+				xAnchor: 'lx + 0.5 * lw',
+				y: '0.5 * sh',
+				yAnchor: 'ly + 0.5 * lh',
+				w: 'lw',
+				h: 'lh',
+				ar: 'keep'
+			},{
+				name: 'Screen center ver',
+				text: '',
+				size: defaultTextSize,
+				png64: '',
+				parameters: ['y'],
+				x: '0.5 * sw', 
+				xAnchor: 'lx + 0.5 * lw',
+				y: '0.5 * sh',
+				yAnchor: 'ly + 0.5 * lh',
+				w: 'lw',
+				h: 'lh',
+				ar: 'keep'
+			},{
+				name: 'Screen left',
+				text: '',
+				size: defaultTextSize,
+				png64: '',
+				parameters: ['x'],
+				x: '0', 
+				xAnchor: 'lx',
+				y: '0.5 * sh',
+				yAnchor: 'ly + 0.5 * lh',
+				w: 'lw',
+				h: 'lh',
+				ar: 'keep'
+			},{
+				name: 'Screen right',
+				text: '',
+				size: defaultTextSize,
+				png64: '',
+				parameters: ['x'],
+				x: 'sw', 
+				xAnchor: 'lx + lw',
+				y: '0.5 * sh',
+				yAnchor: 'ly + 0.5 * lh',
+				w: 'lw',
+				h: 'lh',
+				ar: 'keep'
+			},{
+				name: 'Screen top',
+				text: '',
+				size: defaultTextSize,
+				png64: '',
+				parameters: ['y'],
+				x: '0.5 * sw', 
+				xAnchor: 'lx + 0.5 * lw',
+				y: '0',
+				yAnchor: 'ly',
+				w: 'lw',
+				h: 'lh',
+				ar: 'keep'
+			},{
+				name: 'Screen bottom',
+				text: '',
+				size: defaultTextSize,
+				png64: '',
+				parameters: ['y'],
+				x: '0.5 * sw', 
+				xAnchor: 'lx + 0.5 * lw',
+				y: 'sh',
+				yAnchor: 'ly + lh',
+				w: 'lw',
+				h: 'lh',
+				ar: 'keep'
+			},{
+				name: 'set A/R to 16/9, keep height',
+				text: '',
+				size: defaultTextSize,
+				png64: '',
+				parameters: ['h'],
+				x: '0.5 * sw', 
+				xAnchor: 'lx + 0.5 * lw',
+				y: '0.5 * sh',
+				yAnchor: 'ly + 0.5 * lh',
+				w: 'lw',
+				h: 'lh',
+				ar: '16/9'
+			},{
+				name: 'set A/R to 16/9, keep width',
+				text: '',
+				size: defaultTextSize,
+				png64: '',
+				parameters: ['w'],
+				x: '0.5 * sw', 
+				xAnchor: 'lx + 0.5 * lw',
+				y: '0.5 * sh',
+				yAnchor: 'ly + 0.5 * lh',
+				w: 'lw',
+				h: 'lh',
+				ar: '16/9'
+			},{
+				name: 'set A/R to source, keep height',
+				text: '',
+				size: defaultTextSize,
+				png64: '',
+				parameters: ['h'],
+				x: '0.5 * sw', 
+				xAnchor: 'lx + 0.5 * lw',
+				y: '0.5 * sh',
+				yAnchor: 'ly + 0.5 * lh',
+				w: 'lw',
+				h: 'lh',
+				ar: 'ia'
+			},{
+				name: 'set A/R to source, keep width',
+				text: '',
+				size: defaultTextSize,
+				png64: '',
+				parameters: ['w'],
+				x: '0.5 * sw', 
+				xAnchor: 'lx + 0.5 * lw',
+				y: '0.5 * sh',
+				yAnchor: 'ly + 0.5 * lh',
+				w: 'lw',
+				h: 'lh',
+				ar: 'ia'
+			},{
+				name: 'set size to source',
+				text: '',
+				size: defaultTextSize,
+				png64: '',
+				parameters: ['w','h'],
+				x: '0.5 * sw', 
+				xAnchor: 'lx + 0.5 * lw',
+				y: '0.5 * sh',
+				yAnchor: 'ly + 0.5 * lh',
+				w: 'iw',
+				h: 'ih',
+				ar: ''
+			},{
+				name: 'increase size',
+				text: '+',
+				size: defaultTextSize,
+				png64: '',
+				parameters: ['w'],
+				x: '0.5 * sw', 
+				xAnchor: 'bx + 0.5 * bw',
+				y: '0.5 * sh',
+				yAnchor: 'by + 0.5 * bh',
+				w: 'lw * 1.05',
+				h: 'lh * 1.05',
+				ar: 'keep'
+			},{
+				name: 'decrease size',
+				text: '-',
+				size: defaultTextSize,
+				png64: '',
+				parameters: ['w'],
+				x: '0.5 * sw', 
+				xAnchor: 'bx + 0.5 * bw',
+				y: '0.5 * sh',
+				yAnchor: 'by + 0.5 * bh',
+				w: 'lw / 1.05',
+				h: 'lh / 1.05',
+				ar: 'keep'
+			},{
+				name: 'move left',
+				text: 'left',
+				size: defaultTextSize,
+				png64: '',
+				parameters: ['x'],
+				x: 'lx - 10', 
+				xAnchor: 'lx',
+				y: 'ly',
+				yAnchor: 'ly',
+				w: 'lw',
+				h: 'lh',
+				ar: 'keep'
+			},{
+				name: 'move right',
+				text: 'right',
+				size: defaultTextSize,
+				png64: '',
+				parameters: ['x'],
+				x: 'lx + 10', 
+				xAnchor: 'lx',
+				y: '0.5 * sh',
+				yAnchor: 'ly + 0.5 * lh',
+				w: 'lw',
+				h: 'lh',
+				ar: 'keep'
+			},{
+				name: 'move up',
+				text: 'up',
+				size: defaultTextSize,
+				png64: '',
+				parameters: ['y'],
+				x: 'lx', 
+				xAnchor: 'lx',
+				y: 'ly - 10',
+				yAnchor: 'ly',
+				w: 'lw',
+				h: 'lh',
+				ar: 'keep'
+			},{
+				name: 'move down',
+				text: 'down',
+				size: defaultTextSize,
+				png64: '',
+				parameters: ['y'],
+				x: 'lx', 
+				xAnchor: 'lx',
+				y: 'ly + 10',
+				yAnchor: 'ly',
+				w: 'lw',
+				h: 'lh',
+				ar: 'keep'
+			},
+
+
+		]
+
+		const presets: CompanionPresetDefinitions = {}
+		const screensSelections = this.choices.getScreensAuxArray()
+			.reduce((prev, scr) => {return {...prev, [`layer${scr.id}`]: 'sel'}}, {})
+			
+		for (const val of values) {
+			presets[`posSize${val.name.replace(/\W/g, '')}`] = {
+				type: 'button',
+				name: `${val.name}`,
+				category: 'Position / Size',
+				style: {
+					text: val.text,
+					size: val.size as CompanionTextSize,
+					color: this.config.color_bright,
+					bgcolor: this.config.color_dark,
+					png64: val.png64,
+				},
+				steps: [
+					{
+						down: [
+							{
+								actionId: 'devicePositionSize',
+								options: {
+									screen: 'sel',
+									preset: 'sel',
+									layersel: 'sel',
+									...screensSelections,
+									parameters: val.parameters,
+									x: val.x, 
+									xAnchor: val.xAnchor,
+									y: val.y,
+									yAnchor: val.yAnchor,
+									w: val.w,
+									h: val.h,
+									ar: val.ar
+								},
+							},
+						],
+						up: [],
+					},
+				],
+				feedbacks: [],
+			}
+		}
+
 
 		return presets
 	}

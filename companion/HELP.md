@@ -157,9 +157,16 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 	- iw - width of the source currently assigned to the layer, 0 if empty
 	- ih - height of the source currently assigned to the layer, 0 if empty
 	- ia - aspect ratio of the source currently assigned to the layer, none if empty
+	- l1x - position of left edge of the first layer of the selection within screen
+	- l1y - position of the top edge of the first layer of the selection within screen
+	- l1w - first layer of the selection width
+	- l1h - first layer of the selection height
+	- l1a - current aspect ratio of the first layer of the selection
 	- screen - name of the screen, e.g. S2
 	- layer - name of the layer, e.g. 3 for layer three
-	- index - the index of the layer being adjusted. Will be 0 for one layer but if you have a selection of multiple layers it will show you which one is processed right now.
+	- index - the index of the layer being adjusted. Will be 0 for one layer but if you have a selection of multiple
+	 layers it will show you which one is processed right now.
+	- amount - the count of processible layers in the selection, e.g. a background layer could be selected but as it can't be positioned it will not be included
 
 	The general way how this action works is:
 	1. Do movement if needed. The anchor point position is moved to the X and Y coordinates. For the anchor point, you will usually want the center of the layer, this is the same behavior as WebRCS and is given as default entries. The anchor points have to be entered in pixels as well and so the horizontal center is to be calculated by the layer x position + half of the layer width. The expression is `lx + 0.5 * lw`. For the vertical anchor, it is `ly + 0.5 * lh`.
@@ -181,7 +188,7 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 	Even more, you can preceed your input field with "inc" for increase or "dec" for decrease. If you use one of these keywords the value will not be set in absolute fashion but it will be incremented. If you e.g. use inc 10 for X Position and 0.5 for Anchor X, the layer will move 10 pixels to the right with every execution of the action. If you use inc 0.05 * sw for X Position and 0.5 for Anchor X, the layer will move 5% of the screen to the right with every execution of the action.
 
 	The same syntax of the positioning inputs can also be used for width and height inputs. If you use both, width and height, the layer aspect ratio will be changed to whatever the result is. If you use only one, width or height, you get the option how to treat aspect ratio of the layer.  
-	By default only the selected parameter will be changed and the other one will be left untouched, resulting in a change of aspect ratio. Write "keep" or "la" in the input field and the other parameter will be adjusted to keep the current aspect ratio. Write any number or a fraction like 16/9 to set the aspect ratio to that value. If you e.g. just want to fix the a/r without changing the current width, you can use lw for the width and 4/3 for the a/r. Additionally with the Anchor field you can set the direction where the layer should be extended.
+	By default only the selected parameter will be changed and the other one will be left untouched, resulting in a change of aspect ratio. Write "keep" or "la" in the input field and the other parameter will be adjusted to keep the current aspect ratio. Write any number or a fraction like 16/9 to set the aspect ratio to that value. If you e.g. just want to fix the a/r without changing the current width, you can use lw for the width and 4/3 for the a/r. Additionally with the Anchor fields you can set the direction where the layer should be extended.
 
 	Last, but not least the action also offers the learn button. Push it to get the position, size and aspect ratio of the selected or specified button. After learning X Position, Y Position, Width and Height are selected for a complete status of the layer. So aspect ratio is not visible but the field will be updated with a numerical representation of the aspect ratio. If you disable Width or Height you can see the field and use also a/r.  
 	Because you can use math in the input fields this functionality is also quite useful for mathematical one-time adjustments, e.g. learn the status of a layer, add "*1.2" to Width and Height and Test fire the action to increase layer size by 20%.

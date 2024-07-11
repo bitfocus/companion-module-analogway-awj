@@ -162,6 +162,110 @@ export default class Actions {
 
 		return returnAction
 	}
+
+	/**
+	 * MARK: Recall Layer Memory
+	 */
+	get deviceLayerMemory() {
+		type DeviceLayerMemory = { method: string, screen: string[], preset: string, layer: string[], memory: string }
+		
+		const returnAction: AWJaction<DeviceLayerMemory> = {
+			name: 'Recall Layer Memory',
+			options: [
+				{
+					id: 'method',
+					type: 'dropdown',
+					label: 'Method',
+					choices: [
+						{ id: 'spec', label: 'Use Specified Layer' },
+						{ id: 'sel', label: 'Use Selected Layer' },
+					],
+					default: 'spec',
+				},
+				{
+					id: 'screen',
+					type: 'multidropdown',
+					label: 'Screen / Aux',
+					choices: this.choices.getScreenAuxChoices(),
+					default: [this.choices.getScreenAuxChoices()[0]?.id],
+					isVisible: (options) => {
+						return options.method === 'spec'
+					},
+				},
+				{
+					id: 'preset',
+					type: 'dropdown',
+					label: 'Preset',
+					choices: [{ id: 'sel', label: 'Selected' }, ...this.choices.choicesPreset],
+					default: 'pvw',
+					isVisible: (options) => {
+						return options.method === 'spec'
+					},
+				},
+				{
+					id: 'layer',
+					type: 'multidropdown',
+					label: 'Layer',
+					choices: this.choices.getLayerChoices(this.constants.maxLayers, true),
+					default: ['1'],
+					isVisible: (options) => {
+						return options.method === 'spec'
+					},
+				},
+				{
+					id: 'memory',
+					type: 'dropdown',
+					label: 'Layer Memory',
+					choices: this.choices.getLayerMemoryChoices(),
+					default: this.choices.getLayerMemoryChoices()[0]?.id,
+				},
+			],
+			callback: (action) => {
+				let layers: { screenAuxKey: string; layerKey: string }[] = []
+				let preset: string
+				if (action.options.method === 'sel') {
+					layers = this.choices.getSelectedLayers() ?? []
+					preset = this.choices.getPresetSelection('sel', true)
+				} else {
+					for (const screen of action.options.screen) {
+						for (const layer of action.options.layer) {
+							layers.push({ screenAuxKey: screen, layerKey: layer })
+						}
+					}
+					preset = this.choices.getPresetSelection(action.options.preset, true)
+				}
+				for (const layer of layers) {
+					if (this.choices.isLocked(layer.screenAuxKey, preset)) continue
+					this.connection.sendWSmessage(
+						[
+							'device',
+							'layerBank',
+							'control',
+							'load',
+							'slotList',
+							'items',
+							action.options.memory,
+							'screenList',
+							'items',
+							layer.screenAuxKey,
+							'presetList',
+							'items',
+							preset,
+							'layerList',
+							'items',
+							layer.layerKey,
+							'pp',
+							'xRequest',
+						],
+						false, true
+					)
+				}
+				this.instance.sendXupdate()
+			},
+		}
+
+		return returnAction
+	}
 		
 	// MARK: recall Aux memory
 	get deviceAuxMemory() {
@@ -779,7 +883,8 @@ You can use the following keywords to be replaced on execution time:
 lw: layer width, lh: layer height, lx: layer left edge, ly: layer top edge, la: layer aspect ratio,
 bw: box width, bh: box height, bx: box left edge, by: box top edge, ba: box aspect ratio,
 iw: layer source width, ih: layer source height, ia: layer source aspect ratio,
-sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name, screen: screen name`
+l1w, l1h, l1x, l1y, l1a: values of the first layer in the selection (leader),
+sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name, screen: screen name, amount: count of selected layers`
 		
 		const parseExpressionString = (expression: string, context: {[name: string]: number | string | boolean}, initialValue = 0) => {
 			let relate: (n: number) => number
@@ -936,7 +1041,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					tooltip,
 					default: 'lx + 0.5 * lw',
 					useVariables: true,
-					isVisible: (options) => {return options.parameters.includes('x') || options.parameters.includes('w')},
+					isVisible: (options) => {return options.parameters.includes('x') || options.parameters.includes('w') || options.parameters.includes('h')},
 				},
 				{
 					id: 'yAnchor',
@@ -945,7 +1050,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					tooltip,
 					default: 'ly + 0.5 * lh',
 					useVariables: true,
-					isVisible: (options) => {return options.parameters.includes('y') || options.parameters.includes('h')},
+					isVisible: (options) => {return options.parameters.includes('y') || options.parameters.includes('w') || options.parameters.includes('h')},
 				},
 				{
 					id: 'ar',
@@ -1024,6 +1129,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				if (layers.length === 0) return
 
 				const boundingBoxes = {}
+				let leaderDim: any
+				let count = 0
 
 				for (const layerIndex in layers as {screenAuxKey: string, layerKey: string, x: number, y: number, w: number, h: number, [name: string]: number | string}[]) {
 					const layer: Record<string, any> = layers[layerIndex]
@@ -1032,6 +1139,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 
 					const laydim = getLayerDimensions(screninfo.id, presetKey, layer.layerKey)
 					if (laydim === undefined) continue // this layer does not allow for sizing
+					if (leaderDim === undefined) leaderDim = laydim
+					count += 1
 					Object.keys(laydim).forEach((key) => {layer[key] = laydim[key]})
 
 					if (boundingBoxes[layer.screenAuxKey] === undefined ) boundingBoxes[layer.screenAuxKey] = {}
@@ -1092,9 +1201,15 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						iw: layer.inWidth,
 						ih: layer.inHeight,
 						ia: calculateAr(layer.inWidth, layer.inHeight)?.value ?? 0,
+						l1w: leaderDim.w,
+						l1h: leaderDim.h,
+						l1x: leaderDim.x,
+						l1y: leaderDim.y,
+						l1a: calculateAr(leaderDim.w, leaderDim.h)?.value ?? 0,
 						screen: layer.screenAuxKey,
 						layer: layer.layerKey,
-						index: layerIndex
+						index: layerIndex,
+						amount: count
 					}
 
 					const xAnchorPromise = this.instance.parseVariablesInString(action.options.xAnchor)
@@ -1105,11 +1220,11 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					const hPromise       = this.instance.parseVariablesInString(action.options.h)
 					const arPromise      = this.instance.parseVariablesInString(action.options.ar)
 
-					const [xAnchorParsed, xParsed, yAnchorParsed, yParsed, wParsed, hParsed, arP] = await Promise.all([xAnchorPromise, xPromise, yAnchorPromise, yPromise, wPromise, hPromise, arPromise])
+					const [xAnchorParsed, xParsed, yAnchorParsed, yParsed, wParsed, hParsed, arParsed] = await Promise.all([xAnchorPromise, xPromise, yAnchorPromise, yPromise, wPromise, hPromise, arPromise])
 
-					const xAnchor     = parseExpressionString(xAnchorParsed, context, 0)
+					let xAnchor     = parseExpressionString(xAnchorParsed, context, 0)
 					const xPos        = parseExpressionString(xParsed, context, layer.x)
-					const yAnchor     = parseExpressionString(yAnchorParsed, context, 0)
+					let yAnchor     = parseExpressionString(yAnchorParsed, context, 0)
 					const yPos        = parseExpressionString(yParsed, context, layer.y)
 					const widthInput  = parseExpressionString(wParsed, context, layer.w)
 					const heightInput = parseExpressionString(hParsed, context, layer.h)
@@ -1118,7 +1233,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					if (action.options.ar.match(/keep/i)) {
 						ar = calculateAr(layer.w, layer.h)?.value ?? 0
 					} else {
-						ar = parseExpressionString(arP, context, calculateAr(layer.w, layer.h)?.value)
+						ar = parseExpressionString(arParsed, context, calculateAr(layer.w, layer.h)?.value)
 					}
 
 					let xChange = false
@@ -1128,77 +1243,47 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					let xDif = xPos - xAnchor
 					let yDif = yPos - yAnchor
 
-					layer.x = layer.xOriginal + xDif
-					layer.y = layer.yOriginal + yDif
+					if (action.options.parameters.includes('x')) {
+						layer.x = layer.xOriginal + xDif
+						xAnchor = xPos // after movement the destination is new anchor position
+					}
+					if (action.options.parameters.includes('y')) {
+						layer.y = layer.yOriginal + yDif
+						yAnchor = yPos // after movement the destination is new anchor position
+					}
 					
 					// do resizing
 					// first calculate factors
 					let xScale = 1, yScale = 1
 					if (action.options.parameters.includes('w') && action.options.parameters.includes('h')) {
 						// set new width and height
-						xScale = widthInput / layer.wOriginal
-						yScale = heightInput / layer.hOriginal
 						layer.w = widthInput
+						xScale = layer.w / layer.wOriginal
 						layer.h = heightInput
+						yScale = layer.h / layer.hOriginal
 					} else if (action.options.parameters.includes('w')) {
 						// set new width by value, height by ar or leave untouched
 						xScale = widthInput / layer.wOriginal
 						layer.w = widthInput
 						if (ar !== undefined && ar !== 0) {
-							yScale = heightInput / (layer.wOriginal / ar)
 							layer.h = layer.w / ar
+							yScale = layer.h / layer.hOriginal
 						}
 					} else if (action.options.parameters.includes('h')) {
 						// set new height by value, width by ar or leave untouched
 						yScale = heightInput / layer.hOriginal
 						layer.h = heightInput
 						if (ar !== undefined) {
-							xScale = widthInput / (layer.hOriginal * ar)
 							layer.w = layer.h * ar
+							xScale = layer.w / layer.wOriginal
 						}
 					}
-					// now apply scale to coordinates but not the destination is the anchor
-					xDif = layer.x - xPos
-					yDif = layer.y - yPos
+					// now apply scale to coordinates
+					xDif = layer.x - xAnchor
+					yDif = layer.y - yAnchor
 
-					layer.x = xPos + (xDif * xScale)
-					layer.y = yPos + (yDif * yScale)
-
-					/*
-					// do resizing
-					if (action.options.parameters.includes('w') && action.options.parameters.includes('h')) {
-						// set new width and height
-						console.log('set new width and height')
-						layer.w = widthInput
-						layer.h = heightInput
-					} else if (action.options.parameters.includes('w')) {
-						// set new width by value, height by ar or leave untouched
-						layer.w = widthInput
-						if (ar !== undefined && ar !== 0) layer.h = layer.w / ar
-					} else if (action.options.parameters.includes('h')) {
-						// set new height by value, width by ar or leave untouched
-						layer.h = heightInput
-						if (ar !== undefined) layer.w = layer.h * ar
-					}
-
-					// adjust position according anchor
-					if (layer.w !== layer.wOriginal && xAnchor !== (layer.xOriginal + 0.5 * layer.wOriginal)) {
-						layer.x = layer.xOriginal - ((xAnchor - layer.xOriginal) * (layer.w / layer.wOriginal)) + (xAnchor - layer.xOriginal)
-						xChange = true
-					}
-					if (layer.h !== layer.hOriginal && yAnchor !== (layer.yOriginal + 0.5 * layer.hOriginal)) {
-						layer.y = layer.yOriginal - ((yAnchor - layer.yOriginal) * (layer.h / layer.hOriginal)) + (yAnchor - layer.yOriginal)
-						yChange = true
-					}
-
-					// do positioning
-					if (action.options.parameters.includes('x')) {
-						layer.x += xPos - xAnchor
-					} 
-					if (action.options.parameters.includes('y')) {
-						layer.y += yPos - yAnchor
-					}
-					*/
+					layer.x = xAnchor + (xDif * xScale)
+					layer.y = yAnchor + (yDif * yScale)
 
 					// console.log('layer', {...layer, xAnchor, yAnchor, context})
 

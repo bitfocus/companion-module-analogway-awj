@@ -695,22 +695,22 @@ export default class ActionsMidra extends Actions {
 		remoteMultiviewerSelectWidget.callback = (action) => {
 			const mvw = action.options.widget?.split(':')[0] ?? '1'
 			const widget = action.options.widget?.split(':')[1] ?? '0'
-			let widgetSelection: Record<'multiviewerKey' | 'widgetKey', string>[] = []
+			let widgetSelection: Record<'mocOutputLogicKey' | 'widgetKey', string>[] = []
 			if (this.state.syncSelection) {
-				widgetSelection = [...this.state.getUnmapped('REMOTE/live/multiviewer/widgetSelection/widgetKeys').map((key: string) => {return {multiviewerKey: '1', widgetKey: key}})]
+				widgetSelection = [...this.state.getUnmapped('REMOTE/live/multiviewer/widgetSelection/widgetKeys').map((key: string) => {return {widgetKey: key, mocOutputLogicKey: '1'}})]
 			} else {
 				widgetSelection = [...this.state.getUnmapped('LOCAL/widgetSelection/widgetIds')]
 			}
 			const idx = widgetSelection.findIndex((elem) => {
-				return elem.widgetKey == widget && elem.multiviewerKey == mvw
+				return elem.widgetKey == widget && elem.mocOutputLogicKey == mvw
 			})
 
 			if ((action.options.sel === 'deselect' || action.options.sel === 'toggle') && idx >= 0) {
 				widgetSelection.splice(idx, 1)
 			} else if ((action.options.sel === 'select' || action.options.sel === 'toggle') && idx < 0) {
-				widgetSelection.push({ widgetKey: widget, multiviewerKey: mvw })
+				widgetSelection.push({ widgetKey: widget, mocOutputLogicKey: mvw })
 			} else if (action.options.sel === 'selectExclusive') {
-				widgetSelection = [{ widgetKey: widget, multiviewerKey: mvw }]
+				widgetSelection = [{ widgetKey: widget, mocOutputLogicKey: mvw }]
 			}
 
 			if (this.state.syncSelection) {
@@ -731,10 +731,10 @@ export default class ActionsMidra extends Actions {
 		const deviceMultiviewerSource = super.deviceMultiviewerSource
 
 		deviceMultiviewerSource.callback = (action) => {
-			let widgetSelection: Record<'multiviewerKey' | 'widgetKey', string>[] = []
+			let widgetSelection: Record<'mocOutputLogicKey' | 'widgetKey', string>[] = []
 			if (action.options.widget === 'sel') {
 				if (this.state.syncSelection) {
-					widgetSelection = [...this.state.getUnmapped('REMOTE/live/multiviewer/widgetSelection/widgetKeys').map((key: string) => {return {multiviewerKey: '1', widgetKey: key}})]
+					widgetSelection = [...this.state.getUnmapped('REMOTE/live/multiviewer/widgetSelection/widgetKeys').map((key: string) => {return {widgetKey: key, mocOutputLogicKey: '1'}})]
 				} else {
 					widgetSelection = [...this.state.getUnmapped('LOCAL/widgetSelection/widgetIds')]
 				}
@@ -742,7 +742,7 @@ export default class ActionsMidra extends Actions {
 				widgetSelection = [
 					{
 						widgetKey: action.options.widget.split(':')[1] ?? '0',
-						multiviewerKey: action.options.widget.split(':')[0] ?? '1',
+						mocOutputLogicKey: action.options.widget.split(':')[0] ?? '1',
 					},
 				]
 			}

@@ -713,13 +713,13 @@ export default class Feedbacks {
 			callback: (feedback) => {
 				const mvw = feedback.options.widget?.toString().split(':')[0] ?? '1'
 				const widget = feedback.options.widget?.toString().split(':')[1] ?? '0'
-				let widgetSelection: {widgetKey: string, multiviewerKey: string}[] = []
+				let widgetSelection: {widgetKey: string, mocOutputLogicKey: string}[] = []
 				if (this.state.syncSelection) {
 					widgetSelection = [...this.state.getUnmapped('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
 				} else {
 					widgetSelection = this.state.getUnmapped('LOCAL/widgetSelection/widgetIds')
 				}
-				return JSON.stringify(widgetSelection).includes(`{"widgetKey":"${widget}","multiviewerKey":"${mvw}"}`)
+				return JSON.stringify(widgetSelection).includes(`{"widgetKey":"${widget}","mocOutputLogicKey":"${mvw}"}`)
 			},
 		}
 

@@ -34,6 +34,7 @@ export default class PresetsLivepremier4 extends Presets {
 		'toggleFreezeInput',
 		// 'toggleFreezeLayer',
 		// 'toggleFreezeScreen',
+		'posSize',
 		'multiviewerMemories',
 		'selectWidget',
 		'toggleWidgetSelection',

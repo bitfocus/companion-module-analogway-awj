@@ -238,16 +238,16 @@ export default class FeedbacksMidra extends Feedbacks  {
 
 		remoteWidgetSelection.callback = (feedback) => {
 			const widget = feedback.options.widget?.toString().split(':')[1] ?? '0'
-			let widgetSelection: {widgetKey: string, multiviewerKey: string}[] = []
+			let widgetSelection: {widgetKey: string, mocOutputLogicKey: string}[] = []
 			if (this.state.syncSelection) {
 				widgetSelection = [
 					...this.state.getUnmapped('REMOTE/live/multiviewer/widgetSelection/widgetKeys')
-					.map((key: string) => {return {widgetKey: key, multiviewerKey: '1'}})
+					.map((key: string) => {return {widgetKey: key, mocOutputLogicKey: '1'}})
 				]
 			} else {
 				widgetSelection = this.state.getUnmapped('LOCAL/widgetSelection/widgetIds')
 			}
-			return JSON.stringify(widgetSelection).includes(`{"widgetKey":"${widget}","multiviewerKey":"1"}`)
+			return JSON.stringify(widgetSelection).includes(`{"widgetKey":"${widget}","mocOutputLogicKey":"1"}`)
 		}
 
 		return remoteWidgetSelection

@@ -195,5 +195,26 @@ export default class FeedbacksLivepremier extends Feedbacks  {
 
 		return deviceGpioIn
 	}
+
+	// MARK: remoteWidgetSelection
+	get remoteWidgetSelection() {
+		const remoteWidgetSelection = super.remoteWidgetSelection
+
+		remoteWidgetSelection.callback = (feedback) => {
+			const mvw = feedback.options.widget?.toString().split(':')[0] ?? '1'
+				const widget = feedback.options.widget?.toString().split(':')[1] ?? '0'
+				type WidgetSelection = {widgetKey: string, mocOutputLogicKey?: string, multiviewerKey?: string}
+				let widgetSelection: WidgetSelection[] = []
+				if (this.state.syncSelection) {
+					widgetSelection = [...this.state.getUnmapped('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
+						.map((key: WidgetSelection) => {return {widgetKey: key.widgetKey, mocOutputLogicKey: key.multiviewerKey}})
+				} else {
+					widgetSelection = this.state.getUnmapped('LOCAL/widgetSelection/widgetIds')
+				}
+				return JSON.stringify(widgetSelection).includes(`{"widgetKey":"${widget}","mocOutputLogicKey":"${mvw}"}`)
+		}
+
+		return remoteWidgetSelection
+	}
 	
 }
