@@ -1103,8 +1103,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				
 				newoptions.w = currentDimensions.w.toString()
 				newoptions.h = currentDimensions.h.toString()
-				newoptions.x = currentDimensions.x.toString()
-				newoptions.y = currentDimensions.y.toString()
+				newoptions.x = (currentDimensions.x + 0.5 * currentDimensions.w).toString()
+				newoptions.y = (currentDimensions.y + 0.5 * currentDimensions.h).toString()
 				
 				newoptions.ar = currentDimensions.h !== 0 ? calculateAr(currentDimensions.w, currentDimensions.h)?.string ?? '' : ''
 
@@ -1238,9 +1238,6 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						ar = parseExpressionString(arParsed, context, calculateAr(layer.w, layer.h)?.value)
 					}
 
-					let xChange = false
-					let yChange = false
-
 					// adjust position according anchor
 					let xDif = xPos - xAnchor
 					let yDif = yPos - yAnchor
@@ -1290,13 +1287,13 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					// console.log('layer', {...layer, xAnchor, yAnchor, context})
 
 					// send values
-					if (layer.x !== layer.xOriginal || xChange) {
+					if (Math.round(layer.x + layer.w / 2) !== Math.round(layer.xOriginal + layer.wOriginal / 2)) {
 						this.connection.sendWSmessage(
 							[...layer.path,'position','pp', 'posH'],
 							Math.round(layer.x + layer.w / 2)
 						)
 					}
-					if (layer.y !== layer.yOriginal || yChange) {
+					if (Math.round(layer.y + layer.h / 2) !== Math.round(layer.yOriginal + layer.hOriginal / 2)) {
 						this.connection.sendWSmessage(
 							[...layer.path,'position','pp', 'posV'],
 							Math.round(layer.y + layer.h / 2)
