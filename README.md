@@ -40,6 +40,7 @@ Starting with release 2.4.0 this module supports also software version 4.x of th
     - grab parameters with learn button 
 * Feature: add support for colors with alpha at Setup Timer action for LivePremier
 * Feature: show more detailed status during connection and synchronization with download progress
+* Feature: add "any screen" to the screen options of the layer selection feedback
 * Bugfix: input freeze presets were only generated for inputs with a name
 * Bugfix: add default value for feedback showing preset selection
 * Bugfix: add default value for feedback showing screen selection

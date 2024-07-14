@@ -216,12 +216,12 @@ export default class SubscriptionsLivepremier4 extends Subscriptions {
 					this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pvw/preset`, preview);
 					this.instance.setVariableValues({
 						['screen' + screen + 'timePGM']: this.instance.deciSceondsToString(
-							this.instance.state.getUnmapped(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
+							this.instance.state.getUnmapped(['DEVICE', 'device', 'screenAuxGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
 						)
 					});
 					this.instance.setVariableValues({
 						['screen' + screen + 'timePVW']: this.instance.deciSceondsToString(
-							this.instance.state.getUnmapped(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeDownTime'])
+							this.instance.state.getUnmapped(['DEVICE', 'device', 'screenAuxGroupList', 'items', screen, 'control', 'pp', 'takeDownTime'])
 						)
 					});
 					setMemoryVariables(program, 'PGM');
@@ -237,7 +237,7 @@ export default class SubscriptionsLivepremier4 extends Subscriptions {
 							this.instance.state.get([
 								'DEVICE',
 								'device',
-								'screenGroupList', 'items', screen,
+								'screenAuxGroupList', 'items', screen,
 								'control',
 								'pp',
 								'takeDownTime',
@@ -246,7 +246,7 @@ export default class SubscriptionsLivepremier4 extends Subscriptions {
 					});
 					this.instance.setVariableValues({
 						['screen' + screen + 'timePVW']: this.instance.deciSceondsToString(
-							this.instance.state.get(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
+							this.instance.state.get(['DEVICE', 'device', 'screenAuxGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
 						)
 					});
 					setMemoryVariables(program, 'PGM');

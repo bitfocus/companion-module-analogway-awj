@@ -44,6 +44,7 @@ export default class ActionsLivepremier4 extends Actions {
 		'deviceMasterMemory',
 		'deviceLayerMemory',
 		'deviceMultiviewerMemory',
+		'deviceTakeScreen',
 		'deviceCutScreen',
 		'deviceTbar',
 		'deviceTakeTime',
@@ -81,6 +82,23 @@ export default class ActionsLivepremier4 extends Actions {
 		this.init()
 	}
 
+
+	/**
+	 * MARK: Take one or multiple screens
+	 */
+	get deviceTakeScreen() {
+		const deviceTakeScreen = super.deviceTakeScreen
+		deviceTakeScreen.callback = (action) => {
+			let dir = 'xTakeUp'
+			for (const screen of this.choices.getChosenScreenAuxes(action.options.screens)) {
+				if (this.choices.getPreset(screen, 'pgm') === 'B') {
+					dir = 'xTakeDown'
+				}
+				this.connection.sendWSmessage(['device', 'screenAuxGroupList', 'items', screen, 'control', 'pp', dir], true)
+			}
+		}
+		return deviceTakeScreen
+	}
 
 	/**
 	 *  MARK: Recall Screen Memory LivePremier4

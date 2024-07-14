@@ -61,6 +61,7 @@ export default class Actions {
 		'deviceMasterMemory',
 		'deviceMultiviewerMemory',
 		'deviceLayerMemory',
+		'deviceTakeScreen',
 		'deviceCutScreen',
 		'deviceTbar',
 		'deviceTakeTime',
@@ -408,6 +409,31 @@ export default class Actions {
 	}
 
 	/**
+	 * MARK: Take one or multiple screens
+	 */
+	get deviceTakeScreen() {
+		type DeviceTakeScreen = {screens: string[]}
+		const deviceTakeScreen: AWJaction<DeviceTakeScreen> = {
+			name: 'Take Screen',
+			options: [
+				{
+					id: 'screens',
+					type: 'multidropdown',
+					label: 'Screens / Auxscreens',
+					choices: [
+						{ id: 'all', label: 'All' },
+						{ id: 'sel', label: 'Selected Screens' },
+						...this.choices.getScreenAuxChoices()
+					],
+					default: ['sel'],
+				},
+			],
+			callback: () => {}, // override
+		}
+		return deviceTakeScreen
+	}
+
+	/**
 	 * MARK: Cut one or multiple screens
 	 */
 	get deviceCutScreen() {
@@ -428,7 +454,7 @@ export default class Actions {
 				for (const screen of this.choices.getChosenScreenAuxes(action.options.screens)) {
 					this.connection.sendWSmessage(
 						[
-							...this.constants.screenGroupPath,
+							...(screen.startsWith('A') ? this.constants.auxGroupPath : this.constants.screenGroupPath),
 							'items', 
 							screen, 
 							'control', 
@@ -885,7 +911,7 @@ You can use the following keywords to be replaced on execution time:
 lw: layer width, lh: layer height, lx: layer left edge, ly: layer top edge, la: layer aspect ratio,
 bw: box width, bh: box height, bx: box left edge, by: box top edge, ba: box aspect ratio,
 iw: layer source width, ih: layer source height, ia: layer source aspect ratio,
-l1w, l1h, l1x, l1y, l1a: values of the first layer in the selection (leader),
+l1w, l1h, l1x, l1y, l1a: values of the first layer in the selection (leader), you can access all layers' properties with their number
 sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name, screen: screen name, amount: count of selected layers`
 		
 		const parseExpressionString = (expression: string, context: {[name: string]: number | string | boolean}, initialValue = 0) => {
@@ -1111,18 +1137,19 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				return newoptions
 			},
 			callback: async (action) => {
-				let layers: {screenAuxKey: string, layerKey: string}[]
+				type Layer = {screenAuxKey: string, layerKey: string, x: number, y: number, w: number, h: number, isPositionable: boolean, [name: string]: number | string | boolean}
+				let layers: Layer[]
 				if (action.options.screen === 'sel') {
 					if (action.options.layersel === 'sel') {
-						layers = this.choices.getSelectedLayers()
+						layers = this.choices.getSelectedLayers() as Layer[]
 					} else {
-						layers = [{screenAuxKey: action.options.screen, layerKey: action.options.layersel}]
+						layers = [{screenAuxKey: action.options.screen, layerKey: action.options.layersel}] as Layer[]
 					}
 				} else {
 					if (action.options[`layer${action.options.screen}`] === 'sel') {
-						layers = this.choices.getSelectedLayers().filter(layer => layer.screenAuxKey == action.options.screen)
+						layers = this.choices.getSelectedLayers().filter(layer => layer.screenAuxKey == action.options.screen) as Layer[]
 					} else {
-						layers = [{screenAuxKey: action.options.screen, layerKey: action.options[`layer${action.options.screen}`]}]
+						layers = [{screenAuxKey: action.options.screen, layerKey: action.options[`layer${action.options.screen}`]}] as Layer[]
 					}
 				}
 
@@ -1131,18 +1158,20 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				if (layers.length === 0) return
 
 				const boundingBoxes = {}
-				let leaderDim: any
-				let count = 0
 
-				for (const layerIndex in layers as {screenAuxKey: string, layerKey: string, x: number, y: number, w: number, h: number, [name: string]: number | string}[]) {
-					const layer: Record<string, any> = layers[layerIndex]
+				for (const layerIndex in layers) {
+					const layer: Layer = layers[layerIndex]
 					const presetKey = this.choices.getPreset(layer.screenAuxKey, preset)
 					const screninfo = this.choices.getScreenInfo(layer.screenAuxKey)
 
 					const laydim = getLayerDimensions(screninfo.id, presetKey, layer.layerKey)
-					if (laydim === undefined) continue // this layer does not allow for sizing
-					if (leaderDim === undefined) leaderDim = laydim
-					count += 1
+					if (laydim === undefined) {
+						layers[layerIndex].isPositionable = false
+						continue // this layer does not allow for sizing
+					} else {
+						layers[layerIndex].isPositionable = true
+					}
+						
 					Object.keys(laydim).forEach((key) => {layer[key] = laydim[key]})
 
 					if (boundingBoxes[layer.screenAuxKey] === undefined ) boundingBoxes[layer.screenAuxKey] = {}
@@ -1155,7 +1184,24 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						box.h = layer.y + layer.h - box.y
 				}
 
-				for (const layerIndex in layers as {screenAuxKey: string, layerKey: string, x: number, y: number, w: number, h: number, [name: string]: number | string}[]) {
+				layers = layers.filter(layer => layer.isPositionable)
+				const count = layers.length
+				const allLayerValues = layers.reduce((prev, layer, layIdx) => {
+					return {
+						...prev,
+						[`l${layIdx + 1}w`]: layer.w,
+						[`l${layIdx + 1}h`]: layer.h,
+						[`l${layIdx + 1}x`]: layer.x,
+						[`l${layIdx + 1}y`]: layer.y,
+						[`l${layIdx + 1}a`]: calculateAr(layer.w, layer.h)?.value ?? 0
+					}
+				}, {
+					sx: 0,
+					sy: 0,
+					amount: count
+				})
+				
+				for (const layerIndex in layers) {
 					const layer: any = layers[layerIndex]
 					const screninfo = this.choices.getScreenInfo(layer.screenAuxKey)
 					const presetKey = this.choices.getPreset(layer.screenAuxKey, preset)
@@ -1173,7 +1219,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					const screenHeight = this.state.getUnmapped(['DEVICE', ...path, 'sizeV'])
 					
 					layer.input = this.state.getUnmapped(['DEVICE', layer.path,'source','pp','inputNum']) ?? 'NONE'
-					//console.log('layer before match', layer)
+
 					if (layer.input?.match(/^IN/)) {
 						layer.inPlug = this.state.getUnmapped(`DEVICE/device/inputList/items/${layer.input}/control/pp/plug`) || '1'
 						layer.inWidth = this.state.getUnmapped(`DEVICE/device/inputList/items/${layer.input}/plugList/items/${layer.inPlug}/status/signal/pp/imageWidth`) || 0
@@ -1203,15 +1249,10 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						iw: layer.inWidth,
 						ih: layer.inHeight,
 						ia: calculateAr(layer.inWidth, layer.inHeight)?.value ?? 0,
-						l1w: leaderDim.w,
-						l1h: leaderDim.h,
-						l1x: leaderDim.x,
-						l1y: leaderDim.y,
-						l1a: calculateAr(leaderDim.w, leaderDim.h)?.value ?? 0,
 						screen: layer.screenAuxKey,
 						layer: layer.layerKey,
 						index: layerIndex,
-						amount: count
+						...allLayerValues
 					}
 
 					const xAnchorPromise = this.instance.parseVariablesInString(action.options.xAnchor)
@@ -1224,9 +1265,9 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 
 					const [xAnchorParsed, xParsed, yAnchorParsed, yParsed, wParsed, hParsed, arParsed] = await Promise.all([xAnchorPromise, xPromise, yAnchorPromise, yPromise, wPromise, hPromise, arPromise])
 
-					let xAnchor     = parseExpressionString(xAnchorParsed, context, 0)
+					let   xAnchor     = parseExpressionString(xAnchorParsed, context, 0)
 					const xPos        = parseExpressionString(xParsed, context, layer.x)
-					let yAnchor     = parseExpressionString(yAnchorParsed, context, 0)
+					let   yAnchor     = parseExpressionString(yAnchorParsed, context, 0)
 					const yPos        = parseExpressionString(yParsed, context, layer.y)
 					const widthInput  = parseExpressionString(wParsed, context, layer.w)
 					const heightInput = parseExpressionString(hParsed, context, layer.h)

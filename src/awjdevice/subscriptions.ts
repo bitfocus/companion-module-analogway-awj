@@ -335,7 +335,7 @@ export default class Subscriptions {
 
 	get screenEnabled():Subscription {
 		return {
-			pat: 'device/(?:auxiliaryS|s)creenList/items/([AS]?\\d{1,3})/status/pp/mode',
+			pat: 'device/(?:screen|auxiliaryScreen|auxiliary)List/items/([AS]?\\d{1,3})/status/pp/mode',
 			fun: (_path?: string | string[], _value?: string | string[] | number | boolean): boolean => {
 				return true
 			},

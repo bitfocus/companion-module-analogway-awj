@@ -44,6 +44,7 @@ export default class ActionsMidra extends Actions {
 		'deviceMasterMemory',
 		// 'deviceLayerMemory',
 		'deviceMultiviewerMemory',
+		'deviceTakeScreen',
 		'deviceCutScreen',
 		'deviceTbar',
 		'deviceTakeTime',
@@ -309,6 +310,20 @@ export default class ActionsMidra extends Actions {
 		}
 
 		return deviceMultiviewerMemory
+	}
+
+	/**
+	 * MARK: Take one or multiple screens
+	 */
+	get deviceTakeScreen() {
+		const deviceTakeScreen = super.deviceTakeScreen
+		deviceTakeScreen.callback = (action) => {
+			for (const screen of this.choices.getChosenScreenAuxes(action.options.screens)) {
+				const screeninfo = this.choices.getScreenInfo(screen)
+				this.connection.sendWSmessage(['device', 'transition', `${screeninfo.prefixverylong}List`, 'items', screeninfo.numstr, 'control', 'pp', 'xTake'], true)
+			}
+		}
+		return deviceTakeScreen
 	}
 
 	/**

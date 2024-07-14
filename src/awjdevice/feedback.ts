@@ -636,8 +636,8 @@ export default class Feedbacks {
 					id: 'screen',
 					type: 'dropdown',
 					label: 'Screen / Auxscreen',
-					choices: this.choices.getScreenAuxChoices(),
-					default: this.choices.getScreenAuxChoices()[0]?.id,
+					choices: [{ id: 'all', label: 'Any' }, ...this.choices.getScreenAuxChoices()],
+					default: 'all',
 				},
 				{
 					id: 'layer',
@@ -671,7 +671,15 @@ export default class Feedbacks {
 						pst = false
 					}
 				}
-				if (feedback.options.layer === 'all') {
+				if (feedback.options.layer === 'all' && feedback.options.screen === 'all') {
+					return this.choices.getSelectedLayers().length > 0 && pst
+				} else if (feedback.options.screen === 'all') {
+					return (
+						JSON.stringify(this.choices.getSelectedLayers()).includes(
+							`"layerKey":"${feedback.options.layer}"`
+						) && pst
+					)
+				} else if (feedback.options.layer === 'all') {
 					return (
 						JSON.stringify(this.choices.getSelectedLayers()).includes(
 							`{"screenAuxKey":"${this.choices.getScreenInfo(feedback.options.screen).platformLongId}","layerKey":"`
