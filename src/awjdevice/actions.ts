@@ -1178,10 +1178,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					const box = boundingBoxes[layer.screenAuxKey]
 					if (box.x === undefined  || layer.x < box.x) box.x = layer.x
 					if (box.y === undefined  || layer.y < box.y) box.y = layer.y
-					if (box.w === undefined  || layer.x + layer.w > box.x + box.w) 
-						box.w = layer.x + layer.w - box.x
-					if (box.h === undefined  || layer.y + layer.h > box.y + box.h) 
-						box.h = layer.y + layer.h - box.y
+					if (box.right === undefined  || layer.x + layer.w > box.right) box.right = layer.x + layer.w
+					if (box.bottom === undefined  || layer.y + layer.h > box.bottom) box.bottom = layer.y + layer.h
 				}
 
 				layers = layers.filter(layer => layer.isPositionable)
@@ -1229,8 +1227,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						layer.inHeight = 0
 					}
 					
-					const boxWidth = boundingBoxes[layer.screenAuxKey]?.w ?? layer.w
-					const boxHeight = boundingBoxes[layer.screenAuxKey]?.h ?? layer.h
+					const boxWidth = boundingBoxes[layer.screenAuxKey]?.right - boundingBoxes[layer.screenAuxKey]?.x ?? layer.w
+					const boxHeight = boundingBoxes[layer.screenAuxKey]?.bottom - boundingBoxes[layer.screenAuxKey]?.y ?? layer.h
 
 					const context = {
 						sw: screenWidth,
@@ -1303,17 +1301,17 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						yScale = layer.h / layer.hOriginal
 					} else if (action.options.parameters.includes('w')) {
 						// set new width by value, height by ar or leave untouched
-						xScale = widthInput / layer.wOriginal
 						layer.w = widthInput
+						xScale = layer.w / layer.wOriginal
 						if (ar !== undefined && ar !== 0) {
 							layer.h = layer.w / ar
 							yScale = layer.h / layer.hOriginal
 						}
 					} else if (action.options.parameters.includes('h')) {
 						// set new height by value, width by ar or leave untouched
-						yScale = heightInput / layer.hOriginal
 						layer.h = heightInput
-						if (ar !== undefined) {
+						yScale = layer.h / layer.hOriginal
+						if (ar !== undefined && ar !== 0) {
 							layer.w = layer.h * ar
 							xScale = layer.w / layer.wOriginal
 						}
@@ -1325,7 +1323,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					layer.x = xAnchor + (xDif * xScale)
 					layer.y = yAnchor + (yDif * yScale)
 
-					// console.log('layer', {...layer, xAnchor, yAnchor, context})
+					// console.log('layer', {...layer, widthInput, heightInput, xAnchor, yAnchor, ar, context})
 
 					// send values
 					if (Math.round(layer.x + layer.w / 2) !== Math.round(layer.xOriginal + layer.wOriginal / 2)) {
