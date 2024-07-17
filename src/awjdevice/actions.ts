@@ -1023,7 +1023,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				})
 		}
 
-		const getLayerContext = (layer: any, layerIndex: string, preset: string, boundingBoxes: ReturnType<typeof getBoundingBox>, allLayerValues: ReturnType<typeof getAllLayerValues>) => {
+		const getLayerContext = (layer: any, layerIndex: number, preset: string, boundingBoxes: ReturnType<typeof getBoundingBox>, allLayerValues: ReturnType<typeof getAllLayerValues>) => {
 			const screninfo = this.choices.getScreenInfo(layer.screenAuxKey)
 			const presetKey = this.choices.getPreset(layer.screenAuxKey, preset)
 			const laydim = getLayerDimensions(screninfo.id, presetKey, layer.layerKey)
@@ -1194,49 +1194,62 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					isVisible: (options) => {return options.parameters.includes('h') && !options.parameters.includes('w') || !options.parameters.includes('h') && options.parameters.includes('w')},
 				},
 			],
-			learn: (action) => {
+			learn: async (action) => {
 				const options = action.options
 				const newoptions:DevicePositionSize = {...options}
 
-				let layers: {screenAuxKey: string, layerKey: string}[]
+				let layers: Layer[] //{screenAuxKey: string, layerKey: string}[]
 				if (options.screen === 'sel') {
 					if (options.layersel === 'sel') {
-						layers = this.choices.getSelectedLayers()
+						layers = this.choices.getSelectedLayers() as Layer[]
 					} else {
-						layers = [{screenAuxKey: options.screen, layerKey: options.layersel}]
+						layers = [{screenAuxKey: options.screen, layerKey: options.layersel}] as Layer[]
 					}
 				} else {
 					if (options[`layer${options.screen}`] === 'sel') {
-						layers = this.choices.getSelectedLayers().filter(layer => layer.screenAuxKey == options.screen)
+						layers = this.choices.getSelectedLayers().filter(layer => layer.screenAuxKey == options.screen) as Layer[]
 					} else {
-						layers = [{screenAuxKey: options.screen, layerKey: options[`layer${options.screen}`]}]
+						layers = [{screenAuxKey: options.screen, layerKey: options[`layer${options.screen}`]}] as Layer[]
 					}
 				}
 
 				if (layers.length === 0) return options
 
+				const preset = this.choices.getPresetSelection()
+				const boundingBoxes = getBoundingBox(layers, preset)
+
+				layers = layers.filter(layer => layer.isPositionable)
+
+				const allLayerValues = getAllLayerValues(layers)
+
 				const [screen, layer] = [layers[0].screenAuxKey, layers[0].layerKey]
 				const screeninfo = this.choices.getScreenInfo(screen)
+
+				const context = getLayerContext(layers[0], 1, preset, boundingBoxes, allLayerValues )
+
+				if (context === undefined) return options
 				
 				newoptions.screen = screeninfo.id
 				newoptions[`layer${screeninfo.id}`] = layer.replace(/^\w+_/, '')
-				newoptions.preset = this.choices.getPresetSelection()
-				newoptions.xAnchor = 'lx + 0.5 * lw'
-				newoptions.yAnchor = 'ly + 0.5 * lh'
+				newoptions.preset = preset
+
 				newoptions.parameters = ['x', 'y', 'w', 'h']
 
-				const currentDimensions = getLayerDimensions(screeninfo.id, newoptions.preset, layer)
-				if (currentDimensions === undefined) {
-					this.instance.log('warn', `Selected layer ${layer} of screen ${screeninfo.id} does not support positioning, position and size couldn't be learned.`)
-					return undefined
-				}
+				const xAnchorPromise = this.instance.parseVariablesInString(action.options.xAnchor)
+				const yAnchorPromise = this.instance.parseVariablesInString(action.options.yAnchor)
+
+				const [xAnchorParsed, yAnchorParsed] = await Promise.all([xAnchorPromise, yAnchorPromise])
+
+				let   xAnchor     = parseExpressionString(xAnchorParsed, context, 0)
+				let   yAnchor     = parseExpressionString(yAnchorParsed, context, 0)
 				
-				newoptions.w = currentDimensions.w.toString()
-				newoptions.h = currentDimensions.h.toString()
-				newoptions.x = (currentDimensions.x + 0.5 * currentDimensions.w).toString()
-				newoptions.y = (currentDimensions.y + 0.5 * currentDimensions.h).toString()
 				
-				newoptions.ar = currentDimensions.h !== 0 ? calculateAr(currentDimensions.w, currentDimensions.h)?.string ?? '' : ''
+				newoptions.w = context.lw.toString()
+				newoptions.h = context.lh.toString()
+				newoptions.x = (xAnchor).toString()
+				newoptions.y = (yAnchor).toString()
+				
+				newoptions.ar = context.lh !== 0 ? calculateAr(context.lw, context.lh)?.string ?? '' : ''
 
 				return newoptions
 			},
@@ -1267,9 +1280,9 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 
 				const allLayerValues = getAllLayerValues(layers)
 				
-				for (const layerIndex in layers) {
-					const layer: any = layers[layerIndex]
-					const context = getLayerContext(layer, layerIndex, preset, boundingBoxes, allLayerValues )
+				for  (var i = 0; i<layers.length; i += 1) {  // (const layerIndex in layers) {
+					const layer: any = layers[i]
+					const context = getLayerContext(layer, i+1 , preset, boundingBoxes, allLayerValues )
 
 					if (context === undefined) continue
 
