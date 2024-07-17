@@ -169,51 +169,40 @@ export default class SubscriptionsLivepremier4 extends Subscriptions {
 			],
 			fun: (path, _value) => {
 				const setMemoryVariables = (preset: string, variableSuffix: string): void => {
+					const mempath = ['DEVICE', 'device', 'presetBank', 'status', 'presetId', screenList, 'items', screen, 'presetList', 'items', preset, 'pp']
 					const mem = this.instance.state.getUnmapped([
-						'DEVICE',
-						'device',
-						screenList, 'items', screen,
-						'presetList', 'items', preset,
-						'presetId',
-						'status',
-						'pp',
+						...mempath,
 						'id',
-					]);
+					])
 					const unmodified = this.instance.state.getUnmapped([
-						'DEVICE',
-						'device',
-						screenList, 'items', screen,
-						'presetList', 'items', preset,
-						'presetId',
-						'status',
-						'pp',
+						...mempath,
 						'isNotModified',
-					]);
+					])
 					this.instance.setVariableValues({ ['screen' + screen + 'memory' + variableSuffix]: mem ? 'M' + mem : '' });
 					this.instance.setVariableValues({ ['screen' + screen + 'memoryModified' + variableSuffix]: mem && !unmodified ? '*' : '' });
 					this.instance.setVariableValues({
 						['screen' + screen + 'memoryLabel' + variableSuffix]: mem
 							? this.instance.state.getUnmapped(['DEVICE', 'device', 'presetBank', 'bankList', 'items', mem, 'control', 'pp', 'label'])
 							: ''
-					});
-				};
-				let patharr: string[];
-				if (typeof path === 'string') {
-					patharr = path.split('/');
-				} else if (Array.isArray(path)) {
-					patharr = path;
-				} else {
-					return false;
+					})
 				}
-				const val = this.instance.state.get(patharr);
+				let patharr: string[]
+				if (typeof path === 'string') {
+					patharr = path.split('/')
+				} else if (Array.isArray(path)) {
+					patharr = path
+				} else {
+					return false
+				}
+				const val = this.instance.state.get(patharr)
 				const screen = patharr[4]
 				const screenList = screen.charAt(0) === 'A' ? 'auxiliaryList' : 'screenList'
-				let program = '', preview = '';
+				let program = '', preview = ''
 				if (val === 'AT_UP') {
-					program = 'B';
-					preview = 'A';
-					this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pgm/preset`, program);
-					this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pvw/preset`, preview);
+					program = 'B'
+					preview = 'A'
+					this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pgm/preset`, program)
+					this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pvw/preset`, preview)
 					this.instance.setVariableValues({
 						['screen' + screen + 'timePGM']: this.instance.deciSceondsToString(
 							this.instance.state.getUnmapped(['DEVICE', 'device', 'screenAuxGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
@@ -224,14 +213,14 @@ export default class SubscriptionsLivepremier4 extends Subscriptions {
 							this.instance.state.getUnmapped(['DEVICE', 'device', 'screenAuxGroupList', 'items', screen, 'control', 'pp', 'takeDownTime'])
 						)
 					});
-					setMemoryVariables(program, 'PGM');
-					setMemoryVariables(preview, 'PVW');
+					setMemoryVariables(program, 'PGM')
+					setMemoryVariables(preview, 'PVW')
 				}
 				if (val === 'AT_DOWN') {
-					program = 'A';
-					preview = 'B';
-					this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pgm/preset`, program);
-					this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pvw/preset`, preview);
+					program = 'A'
+					preview = 'B'
+					this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pgm/preset`, program)
+					this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pvw/preset`, preview)
 					this.instance.setVariableValues({
 						['screen' + screen + 'timePGM']: this.instance.deciSceondsToString(
 							this.instance.state.get([
@@ -243,17 +232,17 @@ export default class SubscriptionsLivepremier4 extends Subscriptions {
 								'takeDownTime',
 							])
 						)
-					});
+					})
 					this.instance.setVariableValues({
 						['screen' + screen + 'timePVW']: this.instance.deciSceondsToString(
 							this.instance.state.get(['DEVICE', 'device', 'screenAuxGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
 						)
-					});
-					setMemoryVariables(program, 'PGM');
-					setMemoryVariables(preview, 'PVW');
+					})
+					setMemoryVariables(program, 'PGM')
+					setMemoryVariables(preview, 'PVW')
 				}
-				this.instance.checkFeedbacks('deviceSourceTally', 'deviceScreenMemory', 'deviceTake');
-				return false;
+				this.instance.checkFeedbacks('deviceSourceTally', 'deviceScreenMemory', 'deviceTake')
+				return false
 			},
 		}
 	}
@@ -263,12 +252,12 @@ export default class SubscriptionsLivepremier4 extends Subscriptions {
 			pat: 'DEVICE/device/presetBank/status/presetId/(?:screen|auxiliary)List/items/(?:S|A)\\d{1,3}/presetList/items/(?:A|B)/pp/id',
 			fbk: 'deviceScreenMemory',
 			fun: (path, value) => {
-				if (!path) return false;
-				const screen = Array.isArray(path) ? path[7] : path.split('/')[7];
-				const pres = Array.isArray(path) ? path[10] : path.split('/')[10];
-				const presname = pres === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
-				const memorystr = value ? value.toString() : '';
-				this.instance.setVariableValues({ ['screen' + screen + 'memory' + presname]: memorystr });
+				if (!path) return false
+				const screen = Array.isArray(path) ? path[7] : path.split('/')[7]
+				const pres = Array.isArray(path) ? path[10] : path.split('/')[10]
+				const presname = pres === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW'
+				const memorystr = value ? value.toString() : ''
+				this.instance.setVariableValues({ ['screen' + screen + 'memory' + presname]:  memorystr !== '' ? 'M' + memorystr : '' })
 				this.instance.setVariableValues({
 					['screen' + screen + 'memoryLabel' + presname]: memorystr !== ''
 						? this.instance.state.getUnmapped([
@@ -284,7 +273,7 @@ export default class SubscriptionsLivepremier4 extends Subscriptions {
 						])
 						: ''
 				});
-				return false;
+				return false
 			},
 		}
 	}
@@ -295,18 +284,18 @@ export default class SubscriptionsLivepremier4 extends Subscriptions {
 			fbk: 'deviceScreenMemory',
 			fun: (path, _value) => {
 				if (!path) return false;
-				const screenList = Array.isArray(path) ? path[7] : path.split('/')[5]
+				const screenList = Array.isArray(path) ? path[5] : path.split('/')[5]
 				const screen = Array.isArray(path) ? path[7] : path.split('/')[7]
 				const pres = Array.isArray(path) ? path[10] : path.split('/')[10]
-				const presname = pres === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
+				const presname = pres === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW'
 				this.instance.setVariableValues({
 					['screen' + screen + 'memoryModified' + presname]: this.instance.state.get(
-						`DEVICE/device/${screenList}/items/${screen}/presetList/items/${pres}/presetId/status/pp/id`
+						['DEVICE','device','presetBank','status','presetId',screenList,'items',screen,'presetList','items',pres,'pp','id']
 					) && !this.instance.state.get(path)
 						? '*'
 						: ''
-				});
-				return false;
+				})
+				return false
 			},
 		}
 	}

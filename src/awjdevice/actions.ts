@@ -858,7 +858,9 @@ export default class Actions {
 	 */
 	get devicePositionSize() {
 		type DevicePositionSize = {screen: string, preset: string, layersel: string, parameters: string[], x: string, xAnchor: string, y: string, yAnchor: string, w: string, h: string, ar: string} & Record<string, string>
-		
+		type Layer = {screenAuxKey: string, layerKey: string, x: number, y: number, w: number, h: number, isPositionable: boolean, [name: string]: number | string | boolean}
+				
+
 		const calculateAr = (widthOrAr: number, height?: number) => {
 			let ar: number
 			let lowerAr: number
@@ -972,6 +974,108 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			layer.yOriginal = layer.y
 
 			return layer
+		}
+
+		const getBoundingBox = (layers: Layer[], preset: string) => {
+			const boundingBoxes = {}
+
+			for (const layerIndex in layers) {
+				const layer: Layer = layers[layerIndex]
+				const presetKey = this.choices.getPreset(layer.screenAuxKey, preset)
+				const screninfo = this.choices.getScreenInfo(layer.screenAuxKey)
+
+				const laydim = getLayerDimensions(screninfo.id, presetKey, layer.layerKey)
+				if (laydim === undefined) {
+					layers[layerIndex].isPositionable = false
+					continue // this layer does not allow for sizing
+				} else {
+					layers[layerIndex].isPositionable = true
+				}
+					
+				Object.keys(laydim).forEach((key) => {layer[key] = laydim[key]})
+
+				if (boundingBoxes[layer.screenAuxKey] === undefined ) boundingBoxes[layer.screenAuxKey] = {}
+				const box = boundingBoxes[layer.screenAuxKey]
+				if (box.x === undefined  || layer.x < box.x) box.x = layer.x
+				if (box.y === undefined  || layer.y < box.y) box.y = layer.y
+				if (box.right === undefined  || layer.x + layer.w > box.right) box.right = layer.x + layer.w
+				if (box.bottom === undefined  || layer.y + layer.h > box.bottom) box.bottom = layer.y + layer.h
+			}
+
+			return boundingBoxes
+		}
+
+		const getAllLayerValues = (layers: Layer[]) => {
+			const count = layers.length
+			return layers.reduce((prev, layer, layIdx) => {
+					return {
+						...prev,
+						[`l${layIdx + 1}w`]: layer.w,
+						[`l${layIdx + 1}h`]: layer.h,
+						[`l${layIdx + 1}x`]: layer.x,
+						[`l${layIdx + 1}y`]: layer.y,
+						[`l${layIdx + 1}a`]: calculateAr(layer.w, layer.h)?.value ?? 0
+					}
+				}, {
+					sx: 0,
+					sy: 0,
+					amount: count
+				})
+		}
+
+		const getLayerContext = (layer: any, layerIndex: string, preset: string, boundingBoxes: ReturnType<typeof getBoundingBox>, allLayerValues: ReturnType<typeof getAllLayerValues>) => {
+			const screninfo = this.choices.getScreenInfo(layer.screenAuxKey)
+			const presetKey = this.choices.getPreset(layer.screenAuxKey, preset)
+			const laydim = getLayerDimensions(screninfo.id, presetKey, layer.layerKey)
+			if (laydim === undefined) return // this layer does not allow for sizing
+			Object.keys(laydim).forEach((key) => {layer[key] = laydim[key]})
+
+			const screenpath = screninfo.isAux ? this.constants.auxPath : this.constants.screenPath
+			const path = [
+				...screenpath,
+				'items', screninfo.platformId,
+				...this.constants.screenSizePath
+			]
+			const screenWidth = this.state.getUnmapped(['DEVICE', ...path, 'sizeH'])
+			const screenHeight = this.state.getUnmapped(['DEVICE', ...path, 'sizeV'])
+			
+			layer.input = this.state.getUnmapped(['DEVICE', ...layer.path,'source','pp','inputNum']) ?? 'NONE'
+
+			if (layer.input?.match(/^IN/)) {
+				layer.inPlug = this.state.getUnmapped(`DEVICE/device/inputList/items/${layer.input}/control/pp/plug`) || '1'
+				layer.inWidth = this.state.getUnmapped(`DEVICE/device/inputList/items/${layer.input}/plugList/items/${layer.inPlug}/status/signal/pp/imageWidth`) || 0
+				layer.inHeight = this.state.getUnmapped(`DEVICE/device/inputList/items/${layer.input}/plugList/items/${layer.inPlug}/status/signal/pp/imageHeight`) || 0
+			} else {
+				layer.inWidth = 0
+				layer.inHeight = 0
+			}
+			
+			const boxWidth = boundingBoxes[layer.screenAuxKey]?.right - boundingBoxes[layer.screenAuxKey]?.x ?? layer.w
+			const boxHeight = boundingBoxes[layer.screenAuxKey]?.bottom - boundingBoxes[layer.screenAuxKey]?.y ?? layer.h
+
+			const context = {
+				sw: screenWidth,
+				sh: screenHeight,
+				sa: calculateAr(screenWidth, screenHeight)?.value ?? 0,
+				lw: layer.w,
+				lh: layer.h,
+				lx: layer.x,
+				ly: layer.y,
+				la: calculateAr(layer.w, layer.h)?.value ?? 0,
+				bx: boundingBoxes[layer.screenAuxKey]?.x ?? layer.x,
+				by: boundingBoxes[layer.screenAuxKey]?.y ?? layer.y,
+				bw: boxWidth,
+				bh: boxHeight,
+				ba: calculateAr(boxWidth, boxHeight)?.value ?? 0,
+				iw: layer.inWidth,
+				ih: layer.inHeight,
+				ia: calculateAr(layer.inWidth, layer.inHeight)?.value ?? 0,
+				screen: layer.screenAuxKey,
+				layer: layer.layerKey,
+				index: layerIndex,
+				...allLayerValues
+			}
+			return context
 		}
 
 		const devicePositionSize: AWJaction<DevicePositionSize> = {
@@ -1157,101 +1261,17 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				layers = layers.filter(layer => (!this.choices.isLocked(layer.screenAuxKey, preset) && layer.layerKey.match(/^\d+$/))) // wipe out layers of locked screens and native layer
 				if (layers.length === 0) return
 
-				const boundingBoxes = {}
-
-				for (const layerIndex in layers) {
-					const layer: Layer = layers[layerIndex]
-					const presetKey = this.choices.getPreset(layer.screenAuxKey, preset)
-					const screninfo = this.choices.getScreenInfo(layer.screenAuxKey)
-
-					const laydim = getLayerDimensions(screninfo.id, presetKey, layer.layerKey)
-					if (laydim === undefined) {
-						layers[layerIndex].isPositionable = false
-						continue // this layer does not allow for sizing
-					} else {
-						layers[layerIndex].isPositionable = true
-					}
-						
-					Object.keys(laydim).forEach((key) => {layer[key] = laydim[key]})
-
-					if (boundingBoxes[layer.screenAuxKey] === undefined ) boundingBoxes[layer.screenAuxKey] = {}
-					const box = boundingBoxes[layer.screenAuxKey]
-					if (box.x === undefined  || layer.x < box.x) box.x = layer.x
-					if (box.y === undefined  || layer.y < box.y) box.y = layer.y
-					if (box.right === undefined  || layer.x + layer.w > box.right) box.right = layer.x + layer.w
-					if (box.bottom === undefined  || layer.y + layer.h > box.bottom) box.bottom = layer.y + layer.h
-				}
+				const boundingBoxes = getBoundingBox(layers, preset)
 
 				layers = layers.filter(layer => layer.isPositionable)
-				const count = layers.length
-				const allLayerValues = layers.reduce((prev, layer, layIdx) => {
-					return {
-						...prev,
-						[`l${layIdx + 1}w`]: layer.w,
-						[`l${layIdx + 1}h`]: layer.h,
-						[`l${layIdx + 1}x`]: layer.x,
-						[`l${layIdx + 1}y`]: layer.y,
-						[`l${layIdx + 1}a`]: calculateAr(layer.w, layer.h)?.value ?? 0
-					}
-				}, {
-					sx: 0,
-					sy: 0,
-					amount: count
-				})
+
+				const allLayerValues = getAllLayerValues(layers)
 				
 				for (const layerIndex in layers) {
 					const layer: any = layers[layerIndex]
-					const screninfo = this.choices.getScreenInfo(layer.screenAuxKey)
-					const presetKey = this.choices.getPreset(layer.screenAuxKey, preset)
-					const laydim = getLayerDimensions(screninfo.id, presetKey, layer.layerKey)
-					if (laydim === undefined) continue // this layer does not allow for sizing
-					Object.keys(laydim).forEach((key) => {layer[key] = laydim[key]})
+					const context = getLayerContext(layer, layerIndex, preset, boundingBoxes, allLayerValues )
 
-					const screenpath = screninfo.isAux ? this.constants.auxPath : this.constants.screenPath
-					const path = [
-						...screenpath,
-						'items', screninfo.platformId,
-						...this.constants.screenSizePath
-					]
-					const screenWidth = this.state.getUnmapped(['DEVICE', ...path, 'sizeH'])
-					const screenHeight = this.state.getUnmapped(['DEVICE', ...path, 'sizeV'])
-					
-					layer.input = this.state.getUnmapped(['DEVICE', layer.path,'source','pp','inputNum']) ?? 'NONE'
-
-					if (layer.input?.match(/^IN/)) {
-						layer.inPlug = this.state.getUnmapped(`DEVICE/device/inputList/items/${layer.input}/control/pp/plug`) || '1'
-						layer.inWidth = this.state.getUnmapped(`DEVICE/device/inputList/items/${layer.input}/plugList/items/${layer.inPlug}/status/signal/pp/imageWidth`) || 0
-						layer.inHeight = this.state.getUnmapped(`DEVICE/device/inputList/items/${layer.input}/plugList/items/${layer.inPlug}/status/signal/pp/imageHeight`) || 0
-					} else {
-						layer.inWidth = 0
-						layer.inHeight = 0
-					}
-					
-					const boxWidth = boundingBoxes[layer.screenAuxKey]?.right - boundingBoxes[layer.screenAuxKey]?.x ?? layer.w
-					const boxHeight = boundingBoxes[layer.screenAuxKey]?.bottom - boundingBoxes[layer.screenAuxKey]?.y ?? layer.h
-
-					const context = {
-						sw: screenWidth,
-						sh: screenHeight,
-						sa: calculateAr(screenWidth, screenHeight)?.value ?? 0,
-						lw: layer.w,
-						lh: layer.h,
-						lx: layer.x,
-						ly: layer.y,
-						la: calculateAr(layer.w, layer.h)?.value ?? 0,
-						bx: boundingBoxes[layer.screenAuxKey]?.x ?? layer.x,
-						by: boundingBoxes[layer.screenAuxKey]?.y ?? layer.y,
-						bw: boxWidth,
-						bh: boxHeight,
-						ba: calculateAr(boxWidth, boxHeight)?.value ?? 0,
-						iw: layer.inWidth,
-						ih: layer.inHeight,
-						ia: calculateAr(layer.inWidth, layer.inHeight)?.value ?? 0,
-						screen: layer.screenAuxKey,
-						layer: layer.layerKey,
-						index: layerIndex,
-						...allLayerValues
-					}
+					if (context === undefined) continue
 
 					const xAnchorPromise = this.instance.parseVariablesInString(action.options.xAnchor)
 					const xPromise       = this.instance.parseVariablesInString(action.options.x)

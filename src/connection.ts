@@ -288,7 +288,7 @@ class AWJconnection {
 							data.toString().match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
 							data.toString().match(/"device","system",("deviceList","items","[1-4]",)?"temperature",/) === null
 						) {
-							console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
+							// console.log('debug', 'incoming WS message '+ data.toString().substring(0, 400))
 							this.instance.state.apply(JSON.parse(data.toString()))
 						}
 					})
@@ -481,7 +481,7 @@ class AWJconnection {
 	sendRawWSmessage(message: string): void {
 		if (this.websocket?.readyState === 1) {
 			this.websocket?.send(message)
-			this.instance.log('debug', 'sendig WS message ' + this.websocket.url + ' ' + message)
+			// this.instance.log('debug', 'sendig WS message ' + this.websocket.url + ' ' + message)
 		}
 	}
 

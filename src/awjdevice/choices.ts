@@ -370,7 +370,7 @@ export default class Choices {
 	public getMultiviewerArray(): string[] {
 		return (
 			this.state.get('DEVICE/device/monitoringList/itemKeys')?.filter((mvKey: string) => {
-				return this.state.get(['DEVICE', 'device', 'monitoringList', 'items', mvKey, 'status', 'pp', 'isEnabled'])
+				return this.state.get(['DEVICE', 'device', 'monitoringList', 'items', mvKey, 'status', 'pp', 'isEnabled']) == true
 			}) ?? ['1']
 		)
 	}

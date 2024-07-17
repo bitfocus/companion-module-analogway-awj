@@ -45,7 +45,8 @@ Starting with release 2.4.0 this module supports also software version 4.x of th
 * Bugfix: add default value for feedback showing preset selection
 * Bugfix: add default value for feedback showing screen selection
 * Bugfix: update options when still is renamed on Midra or Alta
-* Bugfix: change several numbers to reflect correct values during initialisation, e.g. maximum amount of still images on Livepremier is 47 
+* Bugfix: change several numbers to reflect correct values during initialisation
+* Bugfix: time input field for timers now correctly parses a time where you enter seconds with a leading zero like e.g. :06 instead of :6
 * Chore: update isVisible functions to newly available syntax avoiding additional code evaluation
 * Chore: refactor from commonjs to ESM
 * Chore: replace dependency superagent by ky

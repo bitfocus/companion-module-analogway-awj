@@ -45,11 +45,11 @@ export default class PresetsMidra extends Presets {
 
 	constructor(instance: AWJinstance) {
 		super(instance)
-		// this.instance = instance
-		// this.state = this.instance.state
-		// this.constants = this.instance.constants
-		// this.choices = this.instance.choices
-		// this.config= this.instance.config
+		this.instance = instance
+		this.state = this.instance.state
+		this.constants = this.instance.constants
+		this.choices = this.instance.choices
+		this.config= this.instance.config
 	}
 
 

@@ -348,7 +348,7 @@ export class AWJinstance extends InstanceBase<Config> {
 			seconds = parseInt(result[4])
 			return (hours * 3600 + minutes * 60 + seconds) * direction
 		}
-		result = timestring.match(/(?:^|\D)(-?)(\d{0,3})\D(\d|[1-5]\d)(?:\D|$)/)
+		result = timestring.match(/(?:^|\D)(-?)(\d{0,3})\D(\d|[0-5]\d)(?:\D|$)/)
 		if (result) {
 			direction = result[1] === '-' ? -1 : 1
 			minutes = parseInt(result[2])
@@ -470,6 +470,28 @@ export class AWJinstance extends InstanceBase<Config> {
 				if (this.state.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
 			}
 		} else if (
+			parts[1] === 'auxiliaryList' &&
+			parts[2] === 'items' &&
+			parts[4] === 'presetList' &&
+			parts[5] === 'items' &&
+			parts[6].toLowerCase() === 'pgm'
+		) {
+			if (this.state.get(`LOCAL/screens/A${parts[3].replace(/\D/g, '')}/pgm/preset`)) {
+				parts[6] = this.state.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pgm/preset`)
+				if (this.state.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
+			}
+		} else if (
+			parts[1] === 'auxiliaryList' &&
+			parts[2] === 'items' &&
+			parts[4] === 'presetList' &&
+			parts[5] === 'items' &&
+			parts[6].toLowerCase() === 'pvw'
+		) {
+			if (this.state.get(`LOCAL/screens/A${parts[3].replace(/\D/g, '')}/pvw/preset`)) {
+				parts[6] = this.state.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pvw/preset`)
+				if (this.state.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
+			}
+		} else if (
 			parts[1] === 'auxiliaryScreenList' &&
 			parts[2] === 'items' &&
 			parts[4] === 'presetList' &&
@@ -512,7 +534,7 @@ export class AWJinstance extends InstanceBase<Config> {
 		tpath = tpath.replace(/\/pp\//g, '/@props/')
 		tpath = tpath.replace(/^device\//, 'DeviceObject/')
 		const apath = tpath.split('/')
-		if (apath[1] === '$screen' && apath[2] === '@items' && apath[4] === '$preset' && apath[5] === '@items') {
+		if ((apath[1] === '$screen' || apath[1] === '$auxiliary' || apath[1] === '$auxiliaryScreen') && apath[2] === '@items' && apath[4] === '$preset' && apath[5] === '@items') {
 			if (this.state.get(`LOCAL/screens/${apath[3]}/pgm/preset`) === apath[6]) {
 				apath[6] = 'pgm'
 			} else {
