@@ -168,7 +168,7 @@ export default class Subscriptions {
 			fun: (path, _value) => {
 				if (this.instance.state.syncSelection) {
 					this.instance.setVariableValues({
-						selectedPreset: this.instance.state.getUnmapped(path) === 'PREVIEW' ? 'PVW' : 'PGM'
+						selectedPreset: this.instance.state.get(path) === 'PREVIEW' ? 'PVW' : 'PGM'
 					})
 				}
 				return false
@@ -191,7 +191,7 @@ export default class Subscriptions {
 			fun: (path, _value) => {
 				if (!path) return false
 				const timer = path.toString().match(/(?<=TIMER_)(\d)\//) || ['0']
-				this.instance.setVariableValues({['timer' + timer[0] + '_status']:  this.instance.state.getUnmapped(path)})
+				this.instance.setVariableValues({['timer' + timer[0] + '_status']:  this.instance.state.get(path)})
 				return false
 			},
 		}
@@ -210,21 +210,21 @@ export default class Subscriptions {
 				this.instance.setVariableValues({['screenMemory' + memory + 'label']:  label})
 				
 				for (const screen of screens) {
-					const pgmmem = this.instance.state.getUnmapped([
+					const pgmmem = this.instance.state.get([
 						'DEVICE',
 						'device',
 						'screenList', 'items', screen,
-						'presetList', 'items', this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pgm/preset'),
+						'presetList', 'items', this.instance.state.get('LOCAL/screens/' + screen + '/pgm/preset'),
 						'presetId','status','pp','id'
 					])
 					if (memory == pgmmem) {
 						this.instance.setVariableValues({['screen' + screen + 'memoryLabelPGM']:  label})
 					}
-					const pvwmem = this.instance.state.getUnmapped([
+					const pvwmem = this.instance.state.get([
 						'DEVICE',
 						'device',
 						'screenList', 'items', screen,
-						'presetList', 'items', this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pvw/preset'),
+						'presetList', 'items', this.instance.state.get('LOCAL/screens/' + screen + '/pvw/preset'),
 						'presetId','status','pp','id'
 					])
 					if (memory == pvwmem) {
@@ -251,7 +251,7 @@ export default class Subscriptions {
 			fun: (path, _value) => {
 				if (!path) return false
 				const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-				this.instance.setVariableValues({['masterMemory' + memory + 'label']:  this.instance.state.getUnmapped(path)})
+				this.instance.setVariableValues({['masterMemory' + memory + 'label']:  this.instance.state.get(path)})
 				return true
 			},
 		}
@@ -264,7 +264,7 @@ export default class Subscriptions {
 			fun: (path, _value) => {
 				if (!path) return false
 				const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-				this.instance.setVariableValues({['multiviewerMemory' + memory + 'label']:  this.instance.state.getUnmapped(path)})
+				this.instance.setVariableValues({['multiviewerMemory' + memory + 'label']:  this.instance.state.get(path)})
 				return true
 			},
 		}
@@ -277,7 +277,7 @@ export default class Subscriptions {
 			fun: (path, _value) => {
 				if (!path) return false
 				const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
-				this.instance.setVariableValues({['layerMemory' + memory + 'label']:  this.instance.state.getUnmapped(path)})
+				this.instance.setVariableValues({['layerMemory' + memory + 'label']:  this.instance.state.get(path)})
 				return true
 			},
 		}
@@ -290,7 +290,7 @@ export default class Subscriptions {
 			fun: (path, _value) => {
 				if (!path) return false
 				const input = Array.isArray(path) ? path[4] : path.split('/')[4]
-				this.instance.setVariableValues({['STILL_' + input + 'label']:  this.instance.state.getUnmapped(path)})
+				this.instance.setVariableValues({['STILL_' + input + 'label']:  this.instance.state.get(path)})
 				return true
 			},
 		}
@@ -467,7 +467,7 @@ export default class Subscriptions {
 						screen,
 						'presetList',
 						'items',
-						this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pgm/preset'),
+						this.instance.state.get('LOCAL/screens/' + screen + '/pgm/preset'),
 						'status',
 						'pp',
 						'memoryId',
@@ -483,7 +483,7 @@ export default class Subscriptions {
 						screen,
 						'presetList',
 						'items',
-						this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pvw/preset'),
+						this.instance.state.get('LOCAL/screens/' + screen + '/pvw/preset'),
 						'status',
 						'pp',
 						'memoryId',

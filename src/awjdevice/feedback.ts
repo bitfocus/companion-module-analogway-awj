@@ -92,9 +92,9 @@ export default class Feedbacks {
 			},
 			options: [],
 			callback: (_feedback) => {
-				const clients = this.state.getUnmapped('REMOTE/system/network/websocketServer/clients')
+				const clients = this.state.get('REMOTE/system/network/websocketServer/clients')
 				if (clients === undefined || Array.isArray(clients) === false) return false
-				const myid: string = this.state.getUnmapped('LOCAL/socketId')
+				const myid: string = this.state.get('LOCAL/socketId')
 				const myindex = clients.findIndex((elem) => {
 					if (elem.id === myid) {
 						return true
@@ -102,7 +102,7 @@ export default class Feedbacks {
 						return false
 					}
 				})
-				if (this.state.getUnmapped(`REMOTE/system/network/websocketServer/clients/${myindex}/isRemoteSelectionEnabled`)) {
+				if (this.state.get(`REMOTE/system/network/websocketServer/clients/${myindex}/isRemoteSelectionEnabled`)) {
 					return true
 				} else {
 					return false
@@ -126,7 +126,7 @@ export default class Feedbacks {
 			},
 			options: [],
 			callback: (_feedback) => {
-				return this.state.getUnmapped(this.constants.presetTogglePath) === this.constants.presetToggleValueValid
+				return this.state.get(this.constants.presetTogglePath) === this.constants.presetToggleValueValid
 			},
 		}
 
@@ -163,11 +163,11 @@ export default class Feedbacks {
 			callback: (feedback) => {
 				if (
 					(feedback.options.preset === 'all' || feedback.options.preset === 'pgm') &&
-					this.state.getUnmapped('DEVICE', ...this.constants.lastUsedMasterPresetPath, 'presetModeList', 'items', 'PROGRAM', 'pp', 'memoryId') == feedback.options.memory
+					this.state.get('DEVICE', ...this.constants.lastUsedMasterPresetPath, 'presetModeList', 'items', 'PROGRAM', 'pp', 'memoryId') == feedback.options.memory
 				) return true
 				if (
 					(feedback.options.preset === 'all' || feedback.options.preset === 'pvw') &&
-					this.state.getUnmapped('DEVICE', ...this.constants.lastUsedMasterPresetPath, 'presetModeList', 'items', 'PREVIEW', 'pp', 'memoryId') == feedback.options.memory
+					this.state.get('DEVICE', ...this.constants.lastUsedMasterPresetPath, 'presetModeList', 'items', 'PREVIEW', 'pp', 'memoryId') == feedback.options.memory
 				) return true
 				return false
 			},
@@ -230,7 +230,7 @@ export default class Feedbacks {
 					const screeninfo = this.choices.getScreenInfo(screen)
 					for (const preset of presets) {
 						if (
-							this.state.getUnmapped([
+							this.state.get([
 								'DEVICE',
 								...(screeninfo.isAux ? this.constants.auxPath : this.constants.screenPath),
 								'items',
@@ -242,7 +242,7 @@ export default class Feedbacks {
 							]) == feedback.options.memory
 						) {
 							if (feedback.options.unmodified === 2) return true
-							const modified = this.state.getUnmapped([
+							const modified = this.state.get([
 								'DEVICE',
 								...(screeninfo.isAux ? this.constants.auxPath : this.constants.screenPath),
 								'items',
@@ -326,7 +326,7 @@ export default class Feedbacks {
 					const screeninfo = this.choices.getScreenInfo(screen)
 					for (const preset of presets) {
 						if (
-							this.state.getUnmapped([
+							this.state.get([
 								'DEVICE',
 								'device',
 								'auxiliaryScreenList', 'items', screeninfo.numstr,
@@ -428,29 +428,29 @@ export default class Feedbacks {
 							) {
 								return true
 							}
-							if (this.state.getUnmapped([...layerpath, 'source', 'pp', 'inputNum']) === feedback.options.source) {
+							if (this.state.get([...layerpath, 'source', 'pp', 'inputNum']) === feedback.options.source) {
 								const invisible = (
-									this.state.getUnmapped([...layerpath, 'position', 'pp', 'sizeH']) === 0 ||
-									this.state.getUnmapped([...layerpath, 'position', 'pp', 'sizeV']) === 0 ||
-									this.state.getUnmapped([...layerpath, 'opacity', 'pp', 'opacity']) === 0 ||
-									this.state.getUnmapped([...layerpath, 'cropping', 'classic', 'pp', 'top']) +
-										this.state.getUnmapped([...layerpath,'cropping', 'classic', 'pp', 'bottom']) >
+									this.state.get([...layerpath, 'position', 'pp', 'sizeH']) === 0 ||
+									this.state.get([...layerpath, 'position', 'pp', 'sizeV']) === 0 ||
+									this.state.get([...layerpath, 'opacity', 'pp', 'opacity']) === 0 ||
+									this.state.get([...layerpath, 'cropping', 'classic', 'pp', 'top']) +
+										this.state.get([...layerpath,'cropping', 'classic', 'pp', 'bottom']) >
 										65528 ||
-									this.state.getUnmapped([...layerpath, 'cropping', 'classic', 'pp', 'left']) +
-										this.state.getUnmapped([...layerpath, 'cropping', 'classic', 'pp', 'right']) >
+									this.state.get([...layerpath, 'cropping', 'classic', 'pp', 'left']) +
+										this.state.get([...layerpath, 'cropping', 'classic', 'pp', 'right']) >
 										65528 ||
-									this.state.getUnmapped([...layerpath, 'cropping', 'mask', 'pp', 'top']) +
-										this.state.getUnmapped([...layerpath, 'cropping', 'mask', 'pp', 'bottom']) >
+									this.state.get([...layerpath, 'cropping', 'mask', 'pp', 'top']) +
+										this.state.get([...layerpath, 'cropping', 'mask', 'pp', 'bottom']) >
 										65528 ||
-									this.state.getUnmapped([...layerpath, 'cropping', 'mask', 'pp', 'left']) +
-										this.state.getUnmapped([...layerpath, 'cropping', 'mask', 'pp', 'right']) >
+									this.state.get([...layerpath, 'cropping', 'mask', 'pp', 'left']) +
+										this.state.get([...layerpath, 'cropping', 'mask', 'pp', 'right']) >
 										65528 ||
-									this.state.getUnmapped([...layerpath, 'position', 'pp', 'posH']) + this.state.getUnmapped([...layerpath, 'position', 'pp', 'sizeH']) / 2 <= 0 ||
-									this.state.getUnmapped([...layerpath, 'position', 'pp', 'posV']) + this.state.getUnmapped([...layerpath, 'position', 'pp', 'sizeV']) / 2 <= 0 ||
-									this.state.getUnmapped([...layerpath, 'position', 'pp', 'posH']) - this.state.getUnmapped([...layerpath, 'position', 'pp', 'sizeH']) / 2 >=
-										this.state.getUnmapped([...screenpath, 'status', 'size', 'pp', 'sizeH']) ||
-									this.state.getUnmapped([...layerpath, 'position', 'pp', 'posV']) - this.state.getUnmapped([...layerpath, 'position', 'pp', 'sizeV']) / 2 >=
-										this.state.getUnmapped([...screenpath, 'status', 'size', 'pp', 'sizeV'])
+									this.state.get([...layerpath, 'position', 'pp', 'posH']) + this.state.get([...layerpath, 'position', 'pp', 'sizeH']) / 2 <= 0 ||
+									this.state.get([...layerpath, 'position', 'pp', 'posV']) + this.state.get([...layerpath, 'position', 'pp', 'sizeV']) / 2 <= 0 ||
+									this.state.get([...layerpath, 'position', 'pp', 'posH']) - this.state.get([...layerpath, 'position', 'pp', 'sizeH']) / 2 >=
+										this.state.get([...screenpath, 'status', 'size', 'pp', 'sizeH']) ||
+									this.state.get([...layerpath, 'position', 'pp', 'posV']) - this.state.get([...layerpath, 'position', 'pp', 'sizeV']) / 2 >=
+										this.state.get([...screenpath, 'status', 'size', 'pp', 'sizeV'])
 								)
 								if (!invisible) {
 									return true
@@ -723,9 +723,9 @@ export default class Feedbacks {
 				const widget = feedback.options.widget?.toString().split(':')[1] ?? '0'
 				let widgetSelection: {widgetKey: string, mocOutputLogicKey: string}[] = []
 				if (this.state.syncSelection) {
-					widgetSelection = [...this.state.getUnmapped('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
+					widgetSelection = [...this.state.get('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
 				} else {
-					widgetSelection = this.state.getUnmapped('LOCAL/widgetSelection/widgetIds')
+					widgetSelection = this.state.get('LOCAL/widgetSelection/widgetIds')
 				}
 				return JSON.stringify(widgetSelection).includes(`{"widgetKey":"${widget}","mocOutputLogicKey":"${mvw}"}`)
 			},
@@ -758,7 +758,7 @@ export default class Feedbacks {
 			],
 			callback: (feedback) => {
 				const input = feedback.options.input?.toString().replace('LIVE', 'IN') || ''
-				const freeze = this.state.getUnmapped('DEVICE/device/inputList/items/' + input + '/control/pp/freeze')
+				const freeze = this.state.get('DEVICE/device/inputList/items/' + input + '/control/pp/freeze')
 				if (freeze) {
 					this.instance.setVariableValues({ ['frozen_' + input]: '*'})
 				} else {
@@ -845,7 +845,7 @@ export default class Feedbacks {
 						} else {
 							path = ['DEVICE', 'device', 'screenList', 'items', `${screen.index}`, 'liveLayerList', 'items', layer, 'control', 'pp', 'freeze']
 						}
-						if (this.state.getUnmapped(path)) retval = true
+						if (this.state.get(path)) retval = true
 					}
 				}
 				return retval
@@ -933,7 +933,7 @@ export default class Feedbacks {
 			],
 			callback: (feedback) => {
 				return (
-					this.state.getUnmapped('DEVICE/device/timerList/items/' + feedback.options.timer + '/status/pp/state') ===
+					this.state.get('DEVICE/device/timerList/items/' + feedback.options.timer + '/status/pp/state') ===
 					feedback.options.state
 				)
 			},
@@ -1173,7 +1173,7 @@ export default class Feedbacks {
 				if (path.length < 2) {
 					return false
 				}
-				const value = this.state.getUnmapped(['DEVICE', ...path])
+				const value = this.state.get(['DEVICE', ...path])
 				let varId = feedback.options.variable.replace(/[^A-Za-z0-9_-]/g, '')
 				if (varId === '') varId = feedback.options.path.replace(/\//g, '_').replace(/[^A-Za-z0-9_-]/g, '')
 

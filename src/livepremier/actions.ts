@@ -161,9 +161,9 @@ export default class ActionsLivepremier extends Actions {
 			const memorypath = ['items', action.options.memory]
 			const loadpath = ['control', 'load', 'slotList']
 
-			const filterpath = this.state.getUnmapped(['DEVICE', ...bankpath, list, ...memorypath, 'status', 'pp', 'isShadow']) ? ['status', 'shadow', 'pp'] : ['status', 'pp']			
+			const filterpath = this.state.get(['DEVICE', ...bankpath, list, ...memorypath, 'status', 'pp', 'isShadow']) ? ['status', 'shadow', 'pp'] : ['status', 'pp']			
 			
-			const screens = this.state.getUnmapped([
+			const screens = this.state.get([
 				'DEVICE',
 				...bankpath,
 				list,
@@ -350,7 +350,7 @@ export default class ActionsLivepremier extends Actions {
 			
 			let action = act.options.action
 			if (action === 'toggle') {
-				if (this.state.getUnmapped('DEVICE/device/screenGroupList/items/S1/control/pp/copyMode') === false) action = 'off'
+				if (this.state.get('DEVICE/device/screenGroupList/items/S1/control/pp/copyMode') === false) action = 'off'
 				else action = 'on'
 			}
 			if (action === 'on') allscreens.forEach((screen: string) =>
@@ -373,10 +373,10 @@ export default class ActionsLivepremier extends Actions {
 			const widget = action.options.widget?.split(':')[1] ?? '0'
 			let widgetSelection: Record<'mocOutputLogicKey' | 'widgetKey', string>[] = []
 			if (this.state.syncSelection) {
-				widgetSelection = [...this.state.getUnmapped('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
+				widgetSelection = [...this.state.get('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
 					.map((key) => {return {widgetKey: key.widgetKey, mocOutputLogicKey: key.multiviewerKey}})
 			} else {
-				widgetSelection = [...this.state.getUnmapped('LOCAL/widgetSelection/widgetIds')]
+				widgetSelection = [...this.state.get('LOCAL/widgetSelection/widgetIds')]
 			}
 			const idx = widgetSelection.findIndex((elem) => {
 				return elem.widgetKey == widget && elem.mocOutputLogicKey == mvw
@@ -416,10 +416,10 @@ export default class ActionsLivepremier extends Actions {
 			let widgetSelection: Record<'mocOutputLogicKey' | 'widgetKey', string>[] = []
 			if (action.options.widget === 'sel') {
 				if (this.state.syncSelection) {
-					widgetSelection = [...this.state.getUnmapped('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
+					widgetSelection = [...this.state.get('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
 						.map((key) => {return {widgetKey: key.widgetKey, mocOutputLogicKey: key.multiviewerKey}})
 				} else {
-					widgetSelection = [...this.state.getUnmapped('LOCAL/widgetSelection/widgetIds')]
+					widgetSelection = [...this.state.get('LOCAL/widgetSelection/widgetIds')]
 				}
 			} else {
 				widgetSelection = [

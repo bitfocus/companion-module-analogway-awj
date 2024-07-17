@@ -265,9 +265,9 @@ export class AWJinstance extends InstanceBase<Config> {
 		let preset: string,
 				vartext = 'PGM'
 		if (this.state.syncSelection) {
-			preset = this.state.getUnmapped('REMOTE/live/screens/presetModeSelection/presetMode')
+			preset = this.state.get('REMOTE/live/screens/presetModeSelection/presetMode')
 		} else {
-			preset = this.state.getUnmapped('LOCAL/presetMode')
+			preset = this.state.get('LOCAL/presetMode')
 		}
 		if (preset === 'PREVIEW') {
 			vartext = 'PVW'
@@ -379,10 +379,10 @@ export class AWJinstance extends InstanceBase<Config> {
 	 * @param action 0: switch off, 1: switch on, 2: toggle, 3: resend local sync state
 	 */
 	public switchSync(action: number): void {
-		const clients = this.state.getUnmapped('REMOTE/system/network/websocketServer/clients')
-		// this.log('debug', 'REMOTE ' + JSON.stringify(this.device.getUnmapped('REMOTE')))
+		const clients = this.state.get('REMOTE/system/network/websocketServer/clients')
+		// this.log('debug', 'REMOTE ' + JSON.stringify(this.device.get('REMOTE')))
 		let syncstate: boolean
-		const myid: string = this.state.getUnmapped('LOCAL/socketId')
+		const myid: string = this.state.get('LOCAL/socketId')
 		const myindex = clients.findIndex((elem: Record<string, unknown>) => {
 			if (elem.id === myid) {
 				return true
@@ -398,7 +398,7 @@ export class AWJinstance extends InstanceBase<Config> {
 				syncstate = true
 				break
 			case 2:
-				if (this.state.getUnmapped(`REMOTE/system/network/websocketServer/clients/${myindex}/isRemoteSelectionEnabled`)) {
+				if (this.state.get(`REMOTE/system/network/websocketServer/clients/${myindex}/isRemoteSelectionEnabled`)) {
 					syncstate = false
 				} else {
 					syncstate = true
@@ -415,7 +415,7 @@ export class AWJinstance extends InstanceBase<Config> {
 				syncstate = false
 				break
 		}
-		this.state.setUnmapped('LOCAL/syncSelection', syncstate)
+		this.state.set('LOCAL/syncSelection', syncstate)
 		this.connection.sendRawWSmessage(
 			`{"channel":"REMOTE","data":{"name":"enableRemoteSelection","path":"/system/network/websocketServer/clients/${myindex}","args":[${syncstate}]}}`
 		)

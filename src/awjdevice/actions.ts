@@ -673,7 +673,7 @@ export default class Actions {
 						action.options.input,
 						'plugList',
 						'items',
-						this.state.getUnmapped('DEVICE/device/inputList/items/' + action.options.input + '/status/pp/plug'),
+						this.state.get('DEVICE/device/inputList/items/' + action.options.input + '/status/pp/plug'),
 						'settings',
 						'keying',
 						'control',
@@ -723,7 +723,7 @@ export default class Actions {
 				if (action.options.mode === 1) {
 					val = true
 				} else if (action.options.mode === 2) {
-					val = !this.state.getUnmapped('DEVICE/device/inputList/items/' + input + '/control/pp/freeze')
+					val = !this.state.get('DEVICE/device/inputList/items/' + input + '/control/pp/freeze')
 				}
 				this.connection.sendWSmessage(['device', 'inputList', 'items', input, 'control', 'pp', 'freeze'], val)
 			},
@@ -791,7 +791,7 @@ export default class Actions {
 						if (action.options.mode === 1) {
 							val = true
 						} else if (action.options.mode === 2) {
-							val = !this.state.getUnmapped(['DEVICE', ...path])
+							val = !this.state.get(['DEVICE', ...path])
 						}
 						this.connection.sendWSmessage(path, val)
 					}
@@ -842,7 +842,7 @@ export default class Actions {
 					if (action.options.mode === 1) {
 						val = true
 					} else if (action.options.mode === 2) {
-						val = !this.state.getUnmapped(['DEVICE', ...path])
+						val = !this.state.get(['DEVICE', ...path])
 					}
 					this.connection.sendWSmessage(path, val)	
 				}				
@@ -950,7 +950,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				...this.choices.getLayerPath(layerId)
 			]
 
-			if (this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath]) === undefined) return undefined // this layer does not allow for sizing
+			if (this.state.get(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath]) === undefined) return undefined // this layer does not allow for sizing
 
 			const layer = {
 				w: 0,
@@ -964,13 +964,13 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				path: pathToLayer
 			}
 
-			layer.w = this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath, 'sizeH']) ?? 1920
+			layer.w = this.state.get(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath, 'sizeH']) ?? 1920
 			layer.wOriginal = layer.w
-			layer.h = this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath, 'sizeV']) ?? 1080
+			layer.h = this.state.get(['DEVICE', ...pathToLayer, ...this.constants.propsSizePath, 'sizeV']) ?? 1080
 			layer.hOriginal = layer.h
-			layer.x = (this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsPositionPath, 'posH']) ?? 0) - layer.w / 2
+			layer.x = (this.state.get(['DEVICE', ...pathToLayer, ...this.constants.propsPositionPath, 'posH']) ?? 0) - layer.w / 2
 			layer.xOriginal = layer.x
-			layer.y = (this.state.getUnmapped(['DEVICE', ...pathToLayer, ...this.constants.propsPositionPath, 'posV']) ?? 0) - layer.h / 2
+			layer.y = (this.state.get(['DEVICE', ...pathToLayer, ...this.constants.propsPositionPath, 'posV']) ?? 0) - layer.h / 2
 			layer.yOriginal = layer.y
 
 			return layer
@@ -1036,15 +1036,15 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				'items', screninfo.platformId,
 				...this.constants.screenSizePath
 			]
-			const screenWidth = this.state.getUnmapped(['DEVICE', ...path, 'sizeH'])
-			const screenHeight = this.state.getUnmapped(['DEVICE', ...path, 'sizeV'])
+			const screenWidth = this.state.get(['DEVICE', ...path, 'sizeH'])
+			const screenHeight = this.state.get(['DEVICE', ...path, 'sizeV'])
 			
-			layer.input = this.state.getUnmapped(['DEVICE', ...layer.path,'source','pp','inputNum']) ?? 'NONE'
+			layer.input = this.state.get(['DEVICE', ...layer.path,'source','pp','inputNum']) ?? 'NONE'
 
 			if (layer.input?.match(/^IN/)) {
-				layer.inPlug = this.state.getUnmapped(`DEVICE/device/inputList/items/${layer.input}/control/pp/plug`) || '1'
-				layer.inWidth = this.state.getUnmapped(`DEVICE/device/inputList/items/${layer.input}/plugList/items/${layer.inPlug}/status/signal/pp/imageWidth`) || 0
-				layer.inHeight = this.state.getUnmapped(`DEVICE/device/inputList/items/${layer.input}/plugList/items/${layer.inPlug}/status/signal/pp/imageHeight`) || 0
+				layer.inPlug = this.state.get(`DEVICE/device/inputList/items/${layer.input}/control/pp/plug`) || '1'
+				layer.inWidth = this.state.get(`DEVICE/device/inputList/items/${layer.input}/plugList/items/${layer.inPlug}/status/signal/pp/imageWidth`) || 0
+				layer.inHeight = this.state.get(`DEVICE/device/inputList/items/${layer.input}/plugList/items/${layer.inPlug}/status/signal/pp/imageHeight`) || 0
 			} else {
 				layer.inWidth = 0
 				layer.inHeight = 0
@@ -1590,18 +1590,18 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				const surface = action.surfaceId ? action.surfaceId : ''
 				const id = surface + action.controlId
 				if (sel === 6 || (sel === 5 && !id.length )) {
-					this.state.setUnmapped('LOCAL/intelligent/screenSelectionRunning', undefined)
+					this.state.set('LOCAL/intelligent/screenSelectionRunning', undefined)
 					return
 				} else if (sel === 4 && id.length) {
-					if (this.state.getUnmapped('LOCAL/intelligent/screenSelectionRunning')) {
+					if (this.state.get('LOCAL/intelligent/screenSelectionRunning')) {
 						sel = 3
 					} else {
-						this.state.setUnmapped('LOCAL/intelligent/screenSelectionRunning', id)
+						this.state.set('LOCAL/intelligent/screenSelectionRunning', id)
 						sel = 2
 					}
 				} else if (sel === 5 && id.length) {
-					if (this.state.getUnmapped('LOCAL/intelligent/screenSelectionRunning') === id) {
-						this.state.setUnmapped('LOCAL/intelligent/screenSelectionRunning', undefined)
+					if (this.state.get('LOCAL/intelligent/screenSelectionRunning') === id) {
+						this.state.set('LOCAL/intelligent/screenSelectionRunning', undefined)
 					}
 					return
 				} else if (sel === 4 && !id.length) {
@@ -1624,7 +1624,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 							break
 					}
 				} else {
-					const localSelection = this.state.getUnmapped('LOCAL/screenAuxSelection/keys') as string[]
+					const localSelection = this.state.get('LOCAL/screenAuxSelection/keys') as string[]
 					const idx = localSelection.indexOf(screeninfo.id)
 					switch (sel) {
 						case 0:
@@ -1638,7 +1638,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 							}
 							break
 						case 2:
-								this.state.setUnmapped('LOCAL/screenAuxSelection/keys', [ screeninfo.id ]) 
+								this.state.set('LOCAL/screenAuxSelection/keys', [ screeninfo.id ]) 
 							break
 						case 3:
 							if (idx >= 0) {
@@ -1725,7 +1725,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 								.map(scr => this.choices.getScreenInfo(scr).platformLongId)
 							const allLocked =
 								allscreens.find((scr) => {
-									return this.state.getUnmapped(['REMOTE', 'live', 'screens', 'presetModeLock', action.options.preset, scr]) === false
+									return this.state.get(['REMOTE', 'live', 'screens', 'presetModeLock', action.options.preset, scr]) === false
 								}) === undefined
 							let lock = 'lock'
 							if (allLocked) {
@@ -1749,7 +1749,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						}
 					}
 				} else {
-					const localLocks = this.state.getUnmapped(['LOCAL', 'presetModeLock', action.options.preset])
+					const localLocks = this.state.get(['LOCAL', 'presetModeLock', action.options.preset])
 					if (action.options.lock === 'lock') {
 						for (const screen of this.choices.getChosenScreenAuxes(screens)) {
 							localLocks[screen] = true
@@ -1763,7 +1763,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 							const allscreens = this.choices.getChosenScreenAuxes('all')
 							const allLocked =
 								allscreens.find((scr) => {
-									return this.state.getUnmapped(['LOCAL', 'presetModeLock', action.options.preset, scr]) === false
+									return this.state.get(['LOCAL', 'presetModeLock', action.options.preset, scr]) === false
 								}) === undefined
 							if (allLocked) {
 								for (const screen of allscreens) {
@@ -1988,9 +1988,9 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				},
 			],
 			callback: (action) => {
-				const clients: {id: string}[] = this.state.getUnmapped('REMOTE/system/network/websocketServer/clients') // TODO: handle secure connections
+				const clients: {id: string}[] = this.state.get('REMOTE/system/network/websocketServer/clients') // TODO: handle secure connections
 				let syncstate: boolean
-				const myid: string = this.state.getUnmapped('LOCAL/socketId')
+				const myid: string = this.state.get('LOCAL/socketId')
 				const myindex = clients.findIndex((elem) => {
 					if (elem.id === myid) {
 						return true
@@ -2006,7 +2006,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						syncstate = true
 						break
 					case 2:
-						if (this.state.getUnmapped(`REMOTE/system/network/websocketServer/clients/${myindex}/isRemoteSelectionEnabled`)) {
+						if (this.state.get(`REMOTE/system/network/websocketServer/clients/${myindex}/isRemoteSelectionEnabled`)) {
 							syncstate = false
 						} else {
 							syncstate = true
@@ -2016,7 +2016,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						syncstate = false
 						break
 				}
-				this.state.setUnmapped('LOCAL/syncSelection', syncstate)
+				this.state.set('LOCAL/syncSelection', syncstate)
 				this.connection.sendRawWSmessage(
 					`{"channel":"REMOTE","data":{"name":"enableRemoteSelection","path":"/system/network/websocketServer/clients/${myindex}","args":[${syncstate}]}}`
 				)
@@ -2031,9 +2031,9 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				let preset: string,
 					vartext = 'PGM'
 				if (syncstate) {
-					preset = this.state.getUnmapped('REMOTE/live/screens/presetModeSelection/presetMode')
+					preset = this.state.get('REMOTE/live/screens/presetModeSelection/presetMode')
 				} else {
-					preset = this.state.getUnmapped('LOCAL/presetMode')
+					preset = this.state.get('LOCAL/presetMode')
 				}
 				if (preset === 'PREVIEW') {
 					vartext = 'PVW'
@@ -2068,11 +2068,11 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			callback: (act) => {
 				let action = act.options.stream
 				if (action === 'toggle') {
-					if (this.state.getUnmapped('DEVICE/device/streaming/status/pp/mode') === 'NONE') action = 'on'
-					else if (this.state.getUnmapped('DEVICE/device/streaming/status/pp/mode') === 'LIVE') action = 'off'
+					if (this.state.get('DEVICE/device/streaming/status/pp/mode') === 'NONE') action = 'on'
+					else if (this.state.get('DEVICE/device/streaming/status/pp/mode') === 'LIVE') action = 'off'
 					else {
 						action = 'doNothing'
-						this.instance.log('warn', 'Toggle stream on/off could not be sent because stream is neither running nor stopped (stream state: '+this.state.getUnmapped('DEVICE/device/streaming/status/pp/mode')+')')
+						this.instance.log('warn', 'Toggle stream on/off could not be sent because stream is neither running nor stopped (stream state: '+this.state.get('DEVICE/device/streaming/status/pp/mode')+')')
 					}
 				}
 				if (action === 'on') {
@@ -2109,7 +2109,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			callback: (act) => {
 				let action = act.options.stream
 				if (action === 'toggle') {
-					if (this.state.getUnmapped('DEVICE/device/streaming/control/audio/live/pp/mute')) action = 'on'
+					if (this.state.get('DEVICE/device/streaming/control/audio/live/pp/mute')) action = 'on'
 					else action = 'off'
 				}
 				if (action === 'on') this.connection.sendWSmessage('device/streaming/control/audio/live/pp/mute', false)
@@ -2330,11 +2330,11 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			],
 			callback: async (action) => {
 				let timetype = 'countdownDuration'
-				const type = this.state.getUnmapped(['DEVICE', 'device', 'timerList', 'items', action.options.timer, 'control', 'pp', 'type'])
+				const type = this.state.get(['DEVICE', 'device', 'timerList', 'items', action.options.timer, 'control', 'pp', 'type'])
 				if (type === 'CURRENTTIME') {
 					timetype = 'timeOffset'
 				}
-				let time = this.state.getUnmapped(['DEVICE', 'device', 'timerList', 'items', action.options.timer, 'control', 'pp', timetype])
+				let time = this.state.get(['DEVICE', 'device', 'timerList', 'items', action.options.timer, 'control', 'pp', timetype])
 				const inputvalue = await this.instance.parseVariablesInString(action.options.time)
 				if (action.options.action === 'add') {
 					time += this.instance.timeToSeconds(inputvalue)
@@ -2695,7 +2695,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 			},
 			learn: (action) => {
 				const newoptions = {}
-				const lastMsg = this.state.getUnmapped('LOCAL/lastMsg')
+				const lastMsg = this.state.get('LOCAL/lastMsg')
 				const path = lastMsg.path
 				const value = lastMsg.value
 				if (JSON.stringify(value).length > 132) {

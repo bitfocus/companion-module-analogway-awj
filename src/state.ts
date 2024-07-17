@@ -1,6 +1,5 @@
 import { AWJinstance } from './index.js'
 import { Subscription } from '../types/Subscription.js'
-import { mapIn, MapItem } from './mappings.js'
 import { Config } from './config.js'
 
 type Channel = 'REMOTE' | 'DEVICE' | 'LOCAL' | 'LINK'
@@ -32,7 +31,7 @@ class StateMachine {
 			layerIds: [],
 			intelligentParams: {},
 			subscriptions: {} as Record<string, Subscription>,
-			mappings: [] as MapItem[],
+			mappings: [] as unknown[],
 			config: {} as Config
 		},
 	};
@@ -41,11 +40,11 @@ class StateMachine {
 	constructor(instance: AWJinstance, initialState?: {[name: string]: any}) {
 		this.instance = instance
 		if (initialState) {
-			this.setUnmapped('DEVICE', initialState)
+			this.set('DEVICE', initialState)
 		}
 	}
 
-	public getUnmapped(path?: string | string[] | undefined, root?: any): any {
+	public get(path?: string | string[] | undefined, root?: any): any {
 		if (path === undefined) {
 			return this.state
 		}
@@ -69,16 +68,16 @@ class StateMachine {
 				return undefined
 			}
 			// else if we are at an branch -> go ahead
-			return this.getUnmapped(patharray, obj[first])
+			return this.get(patharray, obj[first])
 		}
 	}
 
-	public get(path?: string | string[] | undefined, root?: any): any {
-		return this.getUnmapped(path, root)
-		// const mapped = mapOut(this.state.LOCAL.mappings, path, null)
-		// const val = this.getUnmapped(mapped.path, root) // TODO: root mapping
-		// return mapIn(this.state.LOCAL.mappings, mapped.path, val).value
-	}
+	// public get(path?: string | string[] | undefined, root?: any): any {
+	// 	return this.get(path, root)
+	// 	// const mapped = mapOut(this.state.LOCAL.mappings, path, null)
+	// 	// const val = this.get(mapped.path, root) // TODO: root mapping
+	// 	// return mapIn(this.state.LOCAL.mappings, mapped.path, val).value
+	// }
 
 	/**
 	 * concatenates parts of paths
@@ -115,11 +114,11 @@ class StateMachine {
 		if (this.lastMsgTimer && this.lastMsgTimer.hasRef()) { // there is a running timer
 			this.lastMsgTimer.refresh()
 		} else if (this.lastMsgTimer && this.lastMsgTimer.hasRef() === false) { // there is an elapsed timer
-			this.setUnmapped('LOCAL/lastMsg', msg)
+			this.set('LOCAL/lastMsg', msg)
 			this.lastMsgTimer.ref()
 			this.lastMsgTimer.refresh()
 		} else { // there is no timer
-			this.setUnmapped('LOCAL/lastMsg', msg)
+			this.set('LOCAL/lastMsg', msg)
 			clearTimeout(this.lastMsgTimer)
 			this.lastMsgTimer = setTimeout(() => { this.lastMsgTimer?.unref() }, 800)
 		}
@@ -141,9 +140,8 @@ class StateMachine {
 		let feedbacks: any
 		// eslint-disable-next-line no-prototype-builtins
 		if (data.hasOwnProperty('path') && data.hasOwnProperty('value')) {
-			this.setUnmapped(data.path, data.value, this.state[channel])
-			const mapped = mapIn(this.state.LOCAL.mappings, this.concat(channel, data.path), data.value)
-			feedbacks = this.instance.subscriptions.checkForAction(mapped.path, mapped.value)
+			this.set(data.path, data.value, this.state[channel])
+			feedbacks = this.instance.subscriptions.checkForAction(data.path, data.value)
 			if (channel === 'DEVICE' && !data.path.toString().endsWith(',pp,xUpdate')) {
 				this.storeLastMsg({ path: data.path, value: data.value })
 				if (this.instance.isRecording && JSON.stringify(data.value).length <= 132) {
@@ -187,18 +185,17 @@ class StateMachine {
 				})
 			}
 		} else if (data?.channel === 'PATCH' && data.patch) {
-			const mapped = mapIn(this.state.LOCAL.mappings, this.concat(channel, data.patch.path), data.patch.value)
 			if (data.patch.op === 'replace') {
 				try {
-					this.setUnmapped(data.patch.path, data.patch.value, this.state[channel])
-					feedbacks = this.instance.subscriptions.checkForAction(mapped.path, mapped.value)
+					this.set(data.patch.path, data.patch.value, this.state[channel])
+					feedbacks = this.instance.subscriptions.checkForAction(data.patch.path, data.patch.value)
 				} catch (error) {
 					console.log('could not replace JSON\n', error)
 				}
 			}
 			if (data.patch.op === 'add') {
 				try {
-					this.setUnmapped(data.patch.path, data.patch.value, this.state[channel])
+					this.set(data.patch.path, data.patch.value, this.state[channel])
 					feedbacks = this.instance.subscriptions.checkForAction(data.patch.path, data.patch.value)
 				} catch (error) {
 					console.log('could not add JSON\n', error)
@@ -207,7 +204,7 @@ class StateMachine {
 			if (data.patch.op === 'remove') {
 				try {
 					this.delete(data.patch.path, this.state[channel])
-					feedbacks = this.instance.subscriptions.checkForAction(mapped.path)
+					feedbacks = this.instance.subscriptions.checkForAction(data.patch.path)
 				} catch (error) {
 					console.log('could not remove element from JSON\n', error)
 				}
@@ -240,7 +237,7 @@ class StateMachine {
 		}
 	}
 
-	public setUnmapped(path: string | string[], value: any, root: any = this.state): void {
+	public set(path: string | string[], value: any, root: any = this.state): void {
 		const obj: any = root
 		let first: string
 		let patharray: string[]
@@ -260,7 +257,7 @@ class StateMachine {
 				obj[first] = {}
 			}
 			// else if we are at an branch -> go ahead
-			this.setUnmapped(patharray, value, obj[first])
+			this.set(patharray, value, obj[first])
 		}
 	}
 
@@ -271,10 +268,10 @@ class StateMachine {
 	 * @param value is the value to set the node to
 	 * @param root is the root object from where the path applies, if not given defaults to the state object
 	 */
-	public set(path: string | string[], value: unknown, root: any = this.state): void {
-		this.setUnmapped(path, value, root)
+	public setUnmapped(path: string | string[], value: unknown, root: any = this.state): void {
+		this.set(path, value, root)
 		// const mapped = mapIn(this.state.LOCAL.mappings, path, value)
-		// this.setUnmapped(mapped.path, mapped.value, root) // TODO: root mapping
+		// this.set(mapped.path, mapped.value, root) // TODO: root mapping
 	}
 
 	/**
@@ -334,7 +331,7 @@ class StateMachine {
 		return this.state.LOCAL.syncSelection
 	}
 
-	public get mappings(): MapItem[] {
+	public get mappings(): unknown[] {
 		return this.state.LOCAL.mappings
 	}
 }

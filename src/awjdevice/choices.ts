@@ -207,7 +207,7 @@ export default class Choices {
 	public getStillsArray(): Choicemeta[] {
 		const bankpath = 'DEVICE/device/stillList/'
 		return (
-			this.state.getUnmapped(this.state.concat(bankpath, 'itemKeys'))?.filter((itm: string) => {
+			this.state.get(this.state.concat(bankpath, 'itemKeys'))?.filter((itm: string) => {
 				return this.state.get(this.state.concat(bankpath, ['items', itm, 'status', 'pp', 'isAvailable'])) && this.state.get(this.state.concat(bankpath, ['items', itm, 'status', 'pp', 'isValid']))
 			}).map((itm: string) => {
 				return {
@@ -267,11 +267,11 @@ export default class Choices {
 		const bankpath = 'DEVICE/device/masterPresetBank/bankList'
 		return (
 			this.state.get(this.state.concat(bankpath, 'itemKeys'))?.filter((mem: string) => {
-				return this.state.getUnmapped(this.state.concat(bankpath, ['items', mem, 'status', 'pp', 'isValid']))
+				return this.state.get(this.state.concat(bankpath, ['items', mem, 'status', 'pp', 'isValid']))
 			}).map((mem: string) => {
 				return {
 					id: mem,
-					label: this.state.getUnmapped(this.state.concat(bankpath, ['items',mem,'control','pp','label',]))
+					label: this.state.get(this.state.concat(bankpath, ['items',mem,'control','pp','label',]))
 				}
 			}) ?? []
 		)
@@ -291,12 +291,12 @@ export default class Choices {
 		let bankpath = this.constants.screenMemoryPath
 
 		return (
-			this.state.getUnmapped(this.state.concat('DEVICE', bankpath, 'itemKeys'))?.filter((mem: string) => {
-				return this.state.getUnmapped(this.state.concat('DEVICE', bankpath, ['items', mem, 'status', 'pp', 'isValid']))
+			this.state.get(this.state.concat('DEVICE', bankpath, 'itemKeys'))?.filter((mem: string) => {
+				return this.state.get(this.state.concat('DEVICE', bankpath, ['items', mem, 'status', 'pp', 'isValid']))
 			}).map((mem: string) => {
 				return {
 					id: mem,
-					label: this.state.getUnmapped(this.state.concat('DEVICE', bankpath, ['items',mem,'control','pp','label',]))
+					label: this.state.get(this.state.concat('DEVICE', bankpath, ['items',mem,'control','pp','label',]))
 				}
 			}) ?? []
 		)
@@ -322,14 +322,14 @@ export default class Choices {
 
 	public getLayerMemoryArray(): Choicemeta[] {
 		return (
-			(this.state.getUnmapped('DEVICE/device/layerBank/bankList/itemKeys')?.filter((mem: string) => {
-				return this.state.getUnmapped(['DEVICE', 'device', 'layerBank', 'bankList', 'items', mem, 'status', 'pp', 'isValid'])
+			(this.state.get('DEVICE/device/layerBank/bankList/itemKeys')?.filter((mem: string) => {
+				return this.state.get(['DEVICE', 'device', 'layerBank', 'bankList', 'items', mem, 'status', 'pp', 'isValid'])
 			}) ?? [])
 			.map(
 				(id: string) => { 
 					return {
 						id,
-						label: this.state.getUnmapped(['DEVICE', 'device', 'layerBank', 'bankList', 'items', id, 'control', 'pp', 'label'])
+						label: this.state.get(['DEVICE', 'device', 'layerBank', 'bankList', 'items', id, 'control', 'pp', 'label'])
 					}
 				}
 			)
@@ -390,7 +390,7 @@ export default class Choices {
 	public getWidgetChoices(): Dropdown<string>[] {
 		const ret: Dropdown<string>[] = []
 		for (const multiviewer of this.getMultiviewerArray()) {
-			for (const widget of this.state.getUnmapped([
+			for (const widget of this.state.get([
 				'DEVICE',
 				'device',
 				'monitoringList',
@@ -591,7 +591,7 @@ export default class Choices {
 		if (preset.match(/^A|B$/i)) {
 			ret = preset.toUpperCase()
 		} else {
-			ret = this.state.getUnmapped(`LOCAL/screens/${screen}/${preset.toLowerCase()}/preset`)
+			ret = this.state.get(`LOCAL/screens/${screen}/${preset.toLowerCase()}/preset`)
 		}
 		return ret
 	}
@@ -716,7 +716,7 @@ export default class Choices {
 		if (this.instance.state.syncSelection) {
 			path = 'REMOTE/live/screens/screenAuxSelection/keys'
 		}
-		return [...this.state.getUnmapped(path)]
+		return [...this.state.get(path)]
 	}
 
 	public getSelectedLayers(): { screenAuxKey: string; layerKey: string} [] {
@@ -724,7 +724,7 @@ export default class Choices {
 		if (this.instance.state.syncSelection) {
 			path = 'REMOTE/live/screens/layerSelection/layerIds'
 		}
-		return this.state.getUnmapped(path)
+		return this.state.get(path)
 	}
 	
     /**

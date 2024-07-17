@@ -114,13 +114,13 @@ export default class ChoicesMidra extends Choices {
 	public getAuxArray(getAlsoDisabled = false ): Choicemeta[] {
 		const ret: Choicemeta[] = []
 
-		const screens = this.state.getUnmapped('DEVICE/device/auxiliaryScreenList/itemKeys')
+		const screens = this.state.get('DEVICE/device/auxiliaryScreenList/itemKeys')
 		if (screens) {
 			for (const screen of screens) {
-				if (getAlsoDisabled || this.state.getUnmapped('DEVICE/device/preconfig/status/stateList/items/CURRENT/auxiliaryScreenList/items/' + screen + '/pp/mode') != 'DISABLE') {
+				if (getAlsoDisabled || this.state.get('DEVICE/device/preconfig/status/stateList/items/CURRENT/auxiliaryScreenList/items/' + screen + '/pp/mode') != 'DISABLE') {
 					ret.push({
 						id: 'A' + screen,
-						label: this.state.getUnmapped('DEVICE/device/auxiliaryScreenList/items/' + screen + '/control/pp/label'),
+						label: this.state.get('DEVICE/device/auxiliaryScreenList/items/' + screen + '/control/pp/label'),
 						index: screen.replace(/\D/g, '')
 					})
 				}
@@ -147,14 +147,14 @@ export default class ChoicesMidra extends Choices {
 		const ret: Choicemeta[] = []
 	
 		if(prefix == undefined) prefix = 'INPUT'
-		const items = this.state.getUnmapped('DEVICE/device/inputList/itemKeys')
+		const items = this.state.get('DEVICE/device/inputList/itemKeys')
 		if (items) {
 			items.forEach((key: string) => {
-				if (this.state.getUnmapped('DEVICE/device/inputList/items/' + key + '/status/pp/isAvailable')) {
-					const plug = this.state.getUnmapped('DEVICE/device/inputList/items/' + key + '/control/pp/plug')
+				if (this.state.get('DEVICE/device/inputList/items/' + key + '/status/pp/isAvailable')) {
+					const plug = this.state.get('DEVICE/device/inputList/items/' + key + '/control/pp/plug')
 					ret.push({
 						id: key.replace(/^\w+_/, prefix + '_'),
-						label: this.state.getUnmapped('DEVICE/device/inputList/items/' + key + '/plugList/items/' + plug + '/control/pp/label'),
+						label: this.state.get('DEVICE/device/inputList/items/' + key + '/plugList/items/' + plug + '/control/pp/label'),
 						index: key.replace(/^\w+_/, '')
 					})
 				}
@@ -238,11 +238,11 @@ export default class ChoicesMidra extends Choices {
 		
 		return (
 			this.state.get(this.state.concat(bankpath, 'itemKeys'))?.filter((mem: string) => {
-				return this.state.getUnmapped(this.state.concat(bankpath, ['items', mem, 'status', 'pp', 'isValid']))
+				return this.state.get(this.state.concat(bankpath, ['items', mem, 'status', 'pp', 'isValid']))
 			}).map((mem: string) => {
 				return {
 					id: mem,
-					label: this.state.getUnmapped(this.state.concat(bankpath, ['items',mem,'control','pp','label',]))
+					label: this.state.get(this.state.concat(bankpath, ['items',mem,'control','pp','label',]))
 				}
 			}) ?? []
 		)
@@ -251,12 +251,12 @@ export default class ChoicesMidra extends Choices {
 	public getAuxMemoryArray(): Choicemeta[] {
 		const bankpath = 'DEVICE/device/preset/auxBank/slotList'
 		return (
-			this.state.getUnmapped(this.state.concat(bankpath, 'itemKeys'))?.filter((mem: string) => {
-				return this.state.getUnmapped(this.state.concat(bankpath, ['items', mem, 'status', 'pp', 'isValid']))
+			this.state.get(this.state.concat(bankpath, 'itemKeys'))?.filter((mem: string) => {
+				return this.state.get(this.state.concat(bankpath, ['items', mem, 'status', 'pp', 'isValid']))
 			}).map((mem: string) => {
 				return {
 					id: mem,
-					label: this.state.getUnmapped(this.state.concat(bankpath, ['items',mem,'control','pp','label',]))
+					label: this.state.get(this.state.concat(bankpath, ['items',mem,'control','pp','label',]))
 				}
 			}) ?? []
 		)
@@ -278,7 +278,7 @@ export default class ChoicesMidra extends Choices {
 
 	public getWidgetChoices(): Dropdown<string>[] {
 		const ret: Dropdown<string>[] = []
-		return this.state.getUnmapped('DEVICE/device/multiviewer/status/pp/widgetValidity').map((widget: string) => {
+		return this.state.get('DEVICE/device/multiviewer/status/pp/widgetValidity').map((widget: string) => {
 			return {
 				id: '1:' + widget,
 				label: `Widget ${parseInt(widget)}`,
@@ -332,7 +332,7 @@ export default class ChoicesMidra extends Choices {
 				ret.push({ id: 'BKG', label: 'Background Layer', longname: 'BKG' })
 			}
 			if (param.startsWith('S')) {
-				const layercount = this.state.getUnmapped(`DEVICE/device/preconfig/status/stateList/items/CURRENT/screenList/items/${param.replace(/\D/g, '')}/pp/layerCount`) ?? 1
+				const layercount = this.state.get(`DEVICE/device/preconfig/status/stateList/items/CURRENT/screenList/items/${param.replace(/\D/g, '')}/pp/layerCount`) ?? 1
 				if (bkg === undefined || bkg === true) ret.push({ id: 'NATIVE', label: 'Background Layer', longname: 'BKG' })
 				for (let i = 1; i <= layercount; i += 1) {
 					ret.push({ id: `${i}`, label: `Layer ${i}`, longname:`L${i}` })
@@ -416,7 +416,7 @@ export default class ChoicesMidra extends Choices {
 
 	public getAudioInputChoices(): Dropdown<string>[] {
 		const ret = [{ id: 'NONE', label: 'No Source' }]
-		for (const input of this.state.getUnmapped('DEVICE/device/audio/inputList/itemKeys') ?? []) {
+		for (const input of this.state.get('DEVICE/device/audio/inputList/itemKeys') ?? []) {
 			let inputtype = '', inputnum = '', inputplug = '', channelstart = 0
 			const inputlabel = ''
 			if (input.match(/^IN\d+_ACTIVE_PLUG_EMBEDDED$/)) {
@@ -437,9 +437,9 @@ export default class ChoicesMidra extends Choices {
 			} else if (input.match(/^IN_MEDIA_PLAYER/)) {
 				inputtype = 'Media Player'
 			}
-			if (this.state.getUnmapped('DEVICE/device/audio/inputList/items/' + input + '/status/pp/isAvailable')){
-				for (const channel of this.state.getUnmapped('DEVICE/device/audio/inputList/items/' + input + '/channelList/itemKeys')) {
-					if (this.state.getUnmapped('DEVICE/device/audio/inputList/items/' + input + '/channelList/items/' + channel + '/status/pp/isAvailable')) {
+			if (this.state.get('DEVICE/device/audio/inputList/items/' + input + '/status/pp/isAvailable')){
+				for (const channel of this.state.get('DEVICE/device/audio/inputList/items/' + input + '/channelList/itemKeys')) {
+					if (this.state.get('DEVICE/device/audio/inputList/items/' + input + '/channelList/items/' + channel + '/status/pp/isAvailable')) {
 						if (inputtype === 'Dante') {
 							ret.push({
 							id: `IN_DANTE_CH${channelstart + parseInt(channel)}`,
@@ -489,7 +489,7 @@ export default class ChoicesMidra extends Choices {
 		if (screen.match(/^S|A\d+$/) === null) return null
 		if (preset.match(/^up|down$/i) === null) return null
 		let ret: string
-		if (this.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) === preset.toUpperCase()) {
+		if (this.state.get(`LOCAL/screens/${screen}/pgm/preset`) === preset.toUpperCase()) {
 			ret = fullName ? 'PROGRAM' : 'pgm'
 		} else {
 			ret = fullName ? 'PREVIEW' : 'pvw'

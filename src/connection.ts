@@ -103,13 +103,13 @@ class AWJconnection {
 
 				const handleApiStateResponse = (res: {[name: string]: any}): void => {
 					if (res.device) {
-						this.instance.state.setUnmapped('DEVICE', res)
+						this.instance.state.set('DEVICE', res)
 						//console.log('rest get API device state result')
-						this.instance.state.setUnmapped('LINK', authResponse.device || authResponse.devices)
+						this.instance.state.set('LINK', authResponse.device || authResponse.devices)
 
-						const system = res.device.system // this.instance.state.getUnmapped('DEVICE/device/system')
+						const system = res.device.system // this.instance.state.get('DEVICE/device/system')
 						const device = system.pp?.dev ?? system.deviceList?.items?.['1']?.pp?.dev ?? null
-						const fwVersion = system.version?.pp?.updater ?? system.deviceList?.items?.['1']?.version?.pp?.updater ?? '0.0.0' // this.state.getUnmapped('DEVICE/device/system/version/pp/updater') ?? this.state.getUnmapped('DEVICE/device/system/deviceList/items/1/version/pp/updater') ?? '0.0.0'
+						const fwVersion = system.version?.pp?.updater ?? system.deviceList?.items?.['1']?.version?.pp?.updater ?? '0.0.0' // this.state.get('DEVICE/device/system/version/pp/updater') ?? this.state.get('DEVICE/device/system/deviceList/items/1/version/pp/updater') ?? '0.0.0'
 
 						const serialAndFirmware = (): string => {
 							const sn = system.serial?.pp?.serialNumber ?? system.deviceList?.items?.['1']?.serial?.pp?.serialNumber ?? 'unknown'

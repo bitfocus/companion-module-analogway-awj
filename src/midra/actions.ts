@@ -226,10 +226,10 @@ export default class ActionsMidra extends Actions {
 			const memorypath = ['items', action.options.memory]
 			const loadpath = ['control', 'load', 'slotList']
 
-			const filterpath = this.state.getUnmapped(['DEVICE', ...bankpath, list, ...memorypath, 'status', 'pp', 'isShadow']) ? ['status', 'shadow', 'pp'] : ['status', 'pp']			
+			const filterpath = this.state.get(['DEVICE', ...bankpath, list, ...memorypath, 'status', 'pp', 'isShadow']) ? ['status', 'shadow', 'pp'] : ['status', 'pp']			
 			
 			const screens = [
-				...this.state.getUnmapped([
+				...this.state.get([
 					'DEVICE',
 					...bankpath,
 					list,
@@ -237,7 +237,7 @@ export default class ActionsMidra extends Actions {
 					...filterpath,
 					'screenFilter',
 				]).map((scr: string) => 'S' + scr),
-				...this.state.getUnmapped([
+				...this.state.get([
 					'DEVICE',
 					...bankpath,
 					list,
@@ -599,7 +599,7 @@ export default class ActionsMidra extends Actions {
 			if (action.options.mode === 1) {
 				val = true
 			} else if (action.options.mode === 2) {
-				val = !this.state.getUnmapped('DEVICE/device/inputList/items/' + input + '/control/pp/freeze')
+				val = !this.state.get('DEVICE/device/inputList/items/' + input + '/control/pp/freeze')
 			}
 			this.connection.sendWSmessage(['device', 'inputList', 'items', input, 'control', 'pp', 'freeze'], val)
 		}
@@ -690,7 +690,7 @@ export default class ActionsMidra extends Actions {
 
 			let action = act.options.action
 			if (action === 'toggle') {
-				if (this.state.getUnmapped('DEVICE/device/transition/screenList/items/1/control/pp/enablePresetToggle') === true) action = 'off'
+				if (this.state.get('DEVICE/device/transition/screenList/items/1/control/pp/enablePresetToggle') === true) action = 'off'
 				else action = 'on'
 			}
 			if (action === 'on') allscreens.forEach((screen: string) =>
@@ -713,9 +713,9 @@ export default class ActionsMidra extends Actions {
 			const widget = action.options.widget?.split(':')[1] ?? '0'
 			let widgetSelection: Record<'mocOutputLogicKey' | 'widgetKey', string>[] = []
 			if (this.state.syncSelection) {
-				widgetSelection = [...this.state.getUnmapped('REMOTE/live/multiviewer/widgetSelection/widgetKeys').map((key: string) => {return {widgetKey: key, mocOutputLogicKey: '1'}})]
+				widgetSelection = [...this.state.get('REMOTE/live/multiviewer/widgetSelection/widgetKeys').map((key: string) => {return {widgetKey: key, mocOutputLogicKey: '1'}})]
 			} else {
-				widgetSelection = [...this.state.getUnmapped('LOCAL/widgetSelection/widgetIds')]
+				widgetSelection = [...this.state.get('LOCAL/widgetSelection/widgetIds')]
 			}
 			const idx = widgetSelection.findIndex((elem) => {
 				return elem.widgetKey == widget && elem.mocOutputLogicKey == mvw
@@ -750,9 +750,9 @@ export default class ActionsMidra extends Actions {
 			let widgetSelection: Record<'mocOutputLogicKey' | 'widgetKey', string>[] = []
 			if (action.options.widget === 'sel') {
 				if (this.state.syncSelection) {
-					widgetSelection = [...this.state.getUnmapped('REMOTE/live/multiviewer/widgetSelection/widgetKeys').map((key: string) => {return {widgetKey: key, mocOutputLogicKey: '1'}})]
+					widgetSelection = [...this.state.get('REMOTE/live/multiviewer/widgetSelection/widgetKeys').map((key: string) => {return {widgetKey: key, mocOutputLogicKey: '1'}})]
 				} else {
-					widgetSelection = [...this.state.getUnmapped('LOCAL/widgetSelection/widgetIds')]
+					widgetSelection = [...this.state.get('LOCAL/widgetSelection/widgetIds')]
 				}
 			} else {
 				widgetSelection = [
@@ -791,7 +791,7 @@ export default class ActionsMidra extends Actions {
 			let ret: Key[] = []
 			if (action.options.method?.endsWith('tgl')) {
 				if (this.state.syncSelection) {
-					ret = this.state.getUnmapped('REMOTE/live/screens/layerSelection/layerIds')
+					ret = this.state.get('REMOTE/live/screens/layerSelection/layerIds')
 						.map((key: Key) => {
 							return {
 								screenAuxKey: key.screenAuxKey.replace(/(?<!^)\D/g, ''), 
@@ -799,7 +799,7 @@ export default class ActionsMidra extends Actions {
 							}
 						})
 				} else {
-					ret = this.state.getUnmapped('LOCAL/layerIds')
+					ret = this.state.get('LOCAL/layerIds')
 				}
 			}
 			let scrs: string[] = []
@@ -875,11 +875,11 @@ export default class ActionsMidra extends Actions {
 			callback: (act) => {
 				let action = act.options.stream
 				if (action === 'toggle') {
-					if (this.state.getUnmapped('DEVICE/device/streaming/status/pp/mode') === 'NONE') action = 'on'
-					else if (this.state.getUnmapped('DEVICE/device/streaming/status/pp/mode') === 'LIVE') action = 'off'
+					if (this.state.get('DEVICE/device/streaming/status/pp/mode') === 'NONE') action = 'on'
+					else if (this.state.get('DEVICE/device/streaming/status/pp/mode') === 'LIVE') action = 'off'
 					else {
 						action = 'doNothing'
-						this.instance.log('warn', 'Toggle stream on/off could not be sent because stream is neither running nor stopped (stream state: '+this.state.getUnmapped('DEVICE/device/streaming/status/pp/mode')+')')
+						this.instance.log('warn', 'Toggle stream on/off could not be sent because stream is neither running nor stopped (stream state: '+this.state.get('DEVICE/device/streaming/status/pp/mode')+')')
 					}
 				}
 				if (action === 'on') {
@@ -916,7 +916,7 @@ export default class ActionsMidra extends Actions {
 			callback: (act) => {
 				let action = act.options.stream
 				if (action === 'toggle') {
-					if (this.state.getUnmapped('DEVICE/device/streaming/control/audio/live/pp/mute')) action = 'on'
+					if (this.state.get('DEVICE/device/streaming/control/audio/live/pp/mute')) action = 'on'
 					else action = 'off'
 				}
 				if (action === 'on') this.connection.sendWSmessage('device/streaming/control/audio/live/pp/mute', false)
@@ -994,7 +994,7 @@ export default class ActionsMidra extends Actions {
 						const block = sink.toString().split(':')[0]
 						const channel = sink.toString().split(':')[1]
 						if (!routings[block]) {
-							routings[block] = [...this.state.getUnmapped('DEVICE/device/audio/custom/sourceList/items/' + block + '/control/pp/channelMapping')] as string[]
+							routings[block] = [...this.state.get('DEVICE/device/audio/custom/sourceList/items/' + block + '/control/pp/channelMapping')] as string[]
 						}
 						routings[block][parseInt(channel) - 1] = source.toString()
 
@@ -1077,7 +1077,7 @@ export default class ActionsMidra extends Actions {
 						const block = sink.toString().split(':')[0]
 						const channel = sink.toString().split(':')[1]
 						if (!routings[block]) {
-							routings[block] = [...this.state.getUnmapped('DEVICE/device/audio/custom/sourceList/items/' + block + '/control/pp/channelMapping')] as string[]
+							routings[block] = [...this.state.get('DEVICE/device/audio/custom/sourceList/items/' + block + '/control/pp/channelMapping')] as string[]
 						}
 						routings[block][parseInt(channel) - 1] = source.toString()
 

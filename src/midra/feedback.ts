@@ -99,23 +99,23 @@ export default class FeedbacksMidra extends Feedbacks  {
 	
 						// check if source is used in background set on a screen
 						if (layer.id === 'NATIVE') {
-							const set = this.state.getUnmapped([...presetpath, 'background', 'source', 'pp', 'set'])
+							const set = this.state.get([...presetpath, 'background', 'source', 'pp', 'set'])
 							if (set === 'NONE') continue
-							const setinput = this.state.getUnmapped([...screenpath, 'backgroundSetList', 'items', set, 'control', 'pp', 'singleContent']) // TODO: check input format
+							const setinput = this.state.get([...screenpath, 'backgroundSetList', 'items', set, 'control', 'pp', 'singleContent']) // TODO: check input format
 							if (setinput === feedback.options.source) return true
 							else continue
 						}
 	
 						// check if source is used in background layer on a aux
 						if (layer.id === 'BKG') {
-							const bkginput = this.state.getUnmapped([...presetpath, 'background', 'source', 'pp', 'content'])
+							const bkginput = this.state.get([...presetpath, 'background', 'source', 'pp', 'content'])
 							if (bkginput === feedback.options.source) return true
 							else continue
 						}
 	
 						// check if source is used in top layer
 						if (layer.id === 'TOP') {
-							const frginput = this.state.getUnmapped([...presetpath, 'top', 'source', 'pp', 'frame'])
+							const frginput = this.state.get([...presetpath, 'top', 'source', 'pp', 'frame'])
 							if (frginput === feedback.options.source) return true
 							else continue
 						}
@@ -123,29 +123,29 @@ export default class FeedbacksMidra extends Feedbacks  {
 						if ((feedback.options.source === 'NONE' || feedback.options.source?.toString().startsWith('BACKGROUND') && this.state.get([...presetpath, 'source', 'pp', 'inputNum']) === feedback.options.source)) {
 							return true
 						}
-						if (this.state.getUnmapped([...layerpath, 'source', 'pp', 'inputNum']) === feedback.options.source) {
+						if (this.state.get([...layerpath, 'source', 'pp', 'inputNum']) === feedback.options.source) {
 							const invisible = (
-								this.state.getUnmapped([...layerpath, 'position', 'pp', 'sizeH']) === 0 ||
-								this.state.getUnmapped([...layerpath, 'position', 'pp', 'sizeV']) === 0 ||
-								this.state.getUnmapped([...layerpath, 'opacity', 'pp', 'opacity']) === 0 ||
-								this.state.getUnmapped([...layerpath, 'crop', 'pp', 'top']) +
-									this.state.getUnmapped([...layerpath,'crop', 'pp', 'bottom']) >
+								this.state.get([...layerpath, 'position', 'pp', 'sizeH']) === 0 ||
+								this.state.get([...layerpath, 'position', 'pp', 'sizeV']) === 0 ||
+								this.state.get([...layerpath, 'opacity', 'pp', 'opacity']) === 0 ||
+								this.state.get([...layerpath, 'crop', 'pp', 'top']) +
+									this.state.get([...layerpath,'crop', 'pp', 'bottom']) >
 									65528 ||
-								this.state.getUnmapped([...layerpath, 'crop', 'pp', 'left']) +
-									this.state.getUnmapped([...layerpath, 'crop', 'pp', 'right']) >
+								this.state.get([...layerpath, 'crop', 'pp', 'left']) +
+									this.state.get([...layerpath, 'crop', 'pp', 'right']) >
 									65528 ||
-								this.state.getUnmapped([...layerpath, 'mask', 'pp', 'top']) +
-									this.state.getUnmapped([...layerpath, 'mask', 'pp', 'bottom']) >
+								this.state.get([...layerpath, 'mask', 'pp', 'top']) +
+									this.state.get([...layerpath, 'mask', 'pp', 'bottom']) >
 									65528 ||
-								this.state.getUnmapped([...layerpath, 'mask', 'pp', 'left']) +
-									this.state.getUnmapped([...layerpath, 'mask', 'pp', 'right']) >
+								this.state.get([...layerpath, 'mask', 'pp', 'left']) +
+									this.state.get([...layerpath, 'mask', 'pp', 'right']) >
 									65528 ||
-								this.state.getUnmapped([...layerpath, 'position', 'pp', 'posH']) + this.state.getUnmapped([...layerpath, 'position', 'pp', 'sizeH']) / 2 <= 0 ||
-								this.state.getUnmapped([...layerpath, 'position', 'pp', 'posV']) + this.state.getUnmapped([...layerpath, 'position', 'pp', 'sizeV']) / 2 <= 0 ||
-								this.state.getUnmapped([...layerpath, 'position', 'pp', 'posH']) - this.state.getUnmapped([...layerpath, 'position', 'pp', 'sizeH']) / 2 >=
-									this.state.getUnmapped([...screenpath, 'canvas', 'status', 'size', 'pp', 'sizeH']) ||
-								this.state.getUnmapped([...layerpath, 'position', 'pp', 'posV']) - this.state.getUnmapped([...layerpath, 'position', 'pp', 'sizeV']) / 2 >=
-									this.state.getUnmapped([...screenpath, 'canvas', 'status', 'size', 'pp', 'sizeV'])
+								this.state.get([...layerpath, 'position', 'pp', 'posH']) + this.state.get([...layerpath, 'position', 'pp', 'sizeH']) / 2 <= 0 ||
+								this.state.get([...layerpath, 'position', 'pp', 'posV']) + this.state.get([...layerpath, 'position', 'pp', 'sizeV']) / 2 <= 0 ||
+								this.state.get([...layerpath, 'position', 'pp', 'posH']) - this.state.get([...layerpath, 'position', 'pp', 'sizeH']) / 2 >=
+									this.state.get([...screenpath, 'canvas', 'status', 'size', 'pp', 'sizeH']) ||
+								this.state.get([...layerpath, 'position', 'pp', 'posV']) - this.state.get([...layerpath, 'position', 'pp', 'sizeV']) / 2 >=
+									this.state.get([...screenpath, 'canvas', 'status', 'size', 'pp', 'sizeV'])
 							)
 							if (!invisible) {
 								return true
@@ -241,11 +241,11 @@ export default class FeedbacksMidra extends Feedbacks  {
 			let widgetSelection: {widgetKey: string, mocOutputLogicKey: string}[] = []
 			if (this.state.syncSelection) {
 				widgetSelection = [
-					...this.state.getUnmapped('REMOTE/live/multiviewer/widgetSelection/widgetKeys')
+					...this.state.get('REMOTE/live/multiviewer/widgetSelection/widgetKeys')
 					.map((key: string) => {return {widgetKey: key, mocOutputLogicKey: '1'}})
 				]
 			} else {
-				widgetSelection = this.state.getUnmapped('LOCAL/widgetSelection/widgetIds')
+				widgetSelection = this.state.get('LOCAL/widgetSelection/widgetIds')
 			}
 			return JSON.stringify(widgetSelection).includes(`{"widgetKey":"${widget}","mocOutputLogicKey":"1"}`)
 		}
@@ -259,7 +259,7 @@ export default class FeedbacksMidra extends Feedbacks  {
 
 		deviceInputFreeze.callback = (feedback) => {
 			const input = feedback.options.input?.toString().replace('LIVE', 'INPUT') || ''
-			const freeze = this.state.getUnmapped('DEVICE/device/inputList/items/' + input + '/control/pp/freeze')
+			const freeze = this.state.get('DEVICE/device/inputList/items/' + input + '/control/pp/freeze')
 			if (freeze) {
 				this.instance.setVariableValues({ ['frozen_' + input]: '*'})
 			} else {
@@ -296,7 +296,7 @@ export default class FeedbacksMidra extends Feedbacks  {
 			],
 			callback: (feedback) => {
 				return (
-					this.state.getUnmapped([
+					this.state.get([
 						'DEVICE',
 						'device',
 						'streaming',

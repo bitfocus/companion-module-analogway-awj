@@ -206,10 +206,10 @@ export default class FeedbacksLivepremier extends Feedbacks  {
 				type WidgetSelection = {widgetKey: string, mocOutputLogicKey?: string, multiviewerKey?: string}
 				let widgetSelection: WidgetSelection[] = []
 				if (this.state.syncSelection) {
-					widgetSelection = [...this.state.getUnmapped('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
+					widgetSelection = [...this.state.get('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
 						.map((key: WidgetSelection) => {return {widgetKey: key.widgetKey, mocOutputLogicKey: key.multiviewerKey}})
 				} else {
-					widgetSelection = this.state.getUnmapped('LOCAL/widgetSelection/widgetIds')
+					widgetSelection = this.state.get('LOCAL/widgetSelection/widgetIds')
 				}
 				return JSON.stringify(widgetSelection).includes(`{"widgetKey":"${widget}","mocOutputLogicKey":"${mvw}"}`)
 		}

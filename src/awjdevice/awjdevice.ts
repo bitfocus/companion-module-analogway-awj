@@ -62,8 +62,8 @@ class AWJdevice extends StateMachine{
         this.presets = new Presets(this.instance)
         this.subscriptions = new Subscriptions(this.instance)
 
-        this.setUnmapped('LOCAL/config', this.instance.config)
-        this.setUnmapped('LOCAL/platform', 'genericAWJ')
+        this.set('LOCAL/config', this.instance.config)
+        this.set('LOCAL/platform', 'genericAWJ')
     }
 
     /**

@@ -137,21 +137,21 @@ export default class SubscriptionsMidra extends Subscriptions {
 				const screens = this.instance.choices.getChosenScreens('all')
 
 				for (const screen of screens) {
-					const pgmmem = this.instance.state.getUnmapped([
+					const pgmmem = this.instance.state.get([
 						'DEVICE',
 						'device',
 						'screenList', 'items', screen.replace(/\D/g, ''),
-						'presetList', 'items', this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pgm/preset'),
+						'presetList', 'items', this.instance.state.get('LOCAL/screens/' + screen + '/pgm/preset'),
 						'status','pp','memoryId'
 					])
 					if (memory == pgmmem) {
 						this.instance.setVariableValues({['screen' + screen + 'memoryLabelPGM']:  label})
 					}
-					const pvwmem = this.instance.state.getUnmapped([
+					const pvwmem = this.instance.state.get([
 						'DEVICE',
 						'device',
 						'screenList', 'items', screen.replace(/\D/g, ''),
-						'presetList', 'items', this.instance.state.getUnmapped('LOCAL/screens/' + screen + '/pvw/preset'),
+						'presetList', 'items', this.instance.state.get('LOCAL/screens/' + screen + '/pvw/preset'),
 						'status','pp','memoryId'
 					])
 					if (memory == pvwmem) {
@@ -204,7 +204,7 @@ export default class SubscriptionsMidra extends Subscriptions {
 			fun: (path, _value) => {
 				if (!path) return false
 				const input = Array.isArray(path) ? path[5] : path.split('/')[5]
-				this.instance.setVariableValues({['STILL_' + input + 'label']:  this.instance.state.getUnmapped(path)})
+				this.instance.setVariableValues({['STILL_' + input + 'label']:  this.instance.state.get(path)})
 				return true
 			},
 		}
@@ -226,8 +226,8 @@ export default class SubscriptionsMidra extends Subscriptions {
 			fun: (path, _value) => {
 				if (!path) return false
 				const input = Array.isArray(path) ? path[4] : path.split('/')[4]
-				this.instance.setVariableValues({['SCREEN_' + input + 'label']:  this.instance.state.getUnmapped(path)})
-				this.instance.setVariableValues({['screenS' + input + 'label']:  this.instance.state.getUnmapped(path)})
+				this.instance.setVariableValues({['SCREEN_' + input + 'label']:  this.instance.state.get(path)})
+				this.instance.setVariableValues({['screenS' + input + 'label']:  this.instance.state.get(path)})
 				return true
 			},
 		}
@@ -240,8 +240,8 @@ export default class SubscriptionsMidra extends Subscriptions {
 			fun: (path, _value) => {
 				if (!path) return false
 				const input = Array.isArray(path) ? path[4] : path.split('/')[4]
-				this.instance.setVariableValues({['AUXSCREEN_' + input + 'label']:  this.instance.state.getUnmapped(path)})
-				this.instance.setVariableValues({['screenA' + input + 'label']:  this.instance.state.getUnmapped(path)})
+				this.instance.setVariableValues({['AUXSCREEN_' + input + 'label']:  this.instance.state.get(path)})
+				this.instance.setVariableValues({['screenA' + input + 'label']:  this.instance.state.get(path)})
 				return true
 			},
 		}
@@ -300,14 +300,14 @@ export default class SubscriptionsMidra extends Subscriptions {
 			],
 			fun: (path, _value) => {
 				const setMemoryVariables = (preset: string, variableSuffix: string): void => {
-					const mem = this.instance.state.getUnmapped([
+					const mem = this.instance.state.get([
 						'DEVICE',
 						'device',
 						...screenpath,
 						'presetList', 'items', preset,
 						'status', 'pp', 'memoryId',
 					])
-					const modified = this.instance.state.getUnmapped([
+					const modified = this.instance.state.get([
 						'DEVICE',
 						'device',
 						...screenpath,
@@ -318,7 +318,7 @@ export default class SubscriptionsMidra extends Subscriptions {
 					this.instance.setVariableValues({ ['screen' + prefix + screenNum + 'memoryModified' + variableSuffix]: mem && modified ? '*' : '' });
 					this.instance.setVariableValues({
 						['screen' + prefix + screenNum + 'memoryLabel' + variableSuffix]: mem
-							? this.instance.state.getUnmapped(['DEVICE', 'device', 'presetBank', 'bankList', 'items', mem, 'control', 'pp', 'label'])
+							? this.instance.state.get(['DEVICE', 'device', 'presetBank', 'bankList', 'items', mem, 'control', 'pp', 'label'])
 							: ''
 					});
 				}
@@ -331,20 +331,20 @@ export default class SubscriptionsMidra extends Subscriptions {
 				} else {
 					return false;
 				}
-				const val = this.instance.state.getUnmapped(patharr);
+				const val = this.instance.state.get(patharr);
 				const screenpath = patharr.slice(3,6) // (auxiliaryS|s)creenList/items/\\d+
 				const screenNum = patharr[5];
 				const prefix = patharr[3].charAt(0).toUpperCase()
 				let program = '', preview = ''
 				const takeTime = this.instance.deciSceondsToString(
-						this.instance.state.getUnmapped(['DEVICE', 'device', 'transition', ...screenpath, 'control', 'pp', 'takeTime'])
+						this.instance.state.get(['DEVICE', 'device', 'transition', ...screenpath, 'control', 'pp', 'takeTime'])
 					)
 
 				if (val === 'AT_UP') {
 					program = 'UP' // B
 					preview = 'DOWN' // A
-					this.instance.state.setUnmapped(`LOCAL/screens/${prefix}${screenNum}/pgm/preset`, program);
-					this.instance.state.setUnmapped(`LOCAL/screens/${prefix}${screenNum}/pvw/preset`, preview);
+					this.instance.state.set(`LOCAL/screens/${prefix}${screenNum}/pgm/preset`, program);
+					this.instance.state.set(`LOCAL/screens/${prefix}${screenNum}/pvw/preset`, preview);
 					
 					this.instance.setVariableValues({ ['screen' + prefix + screenNum + 'timePGM']: takeTime } )
 					this.instance.setVariableValues({ ['screen' + prefix + screenNum + 'timePVW']: takeTime } )
@@ -355,8 +355,8 @@ export default class SubscriptionsMidra extends Subscriptions {
 				if (val === 'AT_DOWN') {
 					program = 'DOWN' // A
 					preview = 'UP' // B
-					this.instance.state.setUnmapped(`LOCAL/screens/${prefix}${screenNum}/pgm/preset`, program);
-					this.instance.state.setUnmapped(`LOCAL/screens/${prefix}${screenNum}/pvw/preset`, preview);
+					this.instance.state.set(`LOCAL/screens/${prefix}${screenNum}/pgm/preset`, program);
+					this.instance.state.set(`LOCAL/screens/${prefix}${screenNum}/pvw/preset`, preview);
 
 					this.instance.setVariableValues({ ['screen' + prefix + screenNum + 'timePGM']: takeTime } )
 					this.instance.setVariableValues({ ['screen' + prefix + screenNum + 'timePVW']: takeTime } )
@@ -385,12 +385,12 @@ export default class SubscriptionsMidra extends Subscriptions {
 				if (!path) return false;
 				const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
 				const pres = Array.isArray(path) ? path[7] : path.split('/')[7];
-				const presname = pres === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
+				const presname = pres === this.instance.state.get(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
 				const memorystr = value ? value.toString() : '';
 				this.instance.setVariableValues({ ['screen' + screen + 'memory' + presname]: memorystr });
 				this.instance.setVariableValues({
 					['screenS' + screen + 'memoryLabel' + presname]: memorystr !== ''
-						? this.instance.state.getUnmapped([
+						? this.instance.state.get([
 							'DEVICE',
 							'device',
 							'preset',
@@ -417,9 +417,9 @@ export default class SubscriptionsMidra extends Subscriptions {
 				if (!path) return false;
 				const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
 				const pres = Array.isArray(path) ? path[7] : path.split('/')[7];
-				const presname = pres === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
+				const presname = pres === this.instance.state.get(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
 				this.instance.setVariableValues({
-					['screenS' + screen + 'memoryModified' + presname]: this.instance.state.getUnmapped(
+					['screenS' + screen + 'memoryModified' + presname]: this.instance.state.get(
 						'DEVICE/device/screenList/items/' + screen + '/presetList/items/' + pres + '/status/pp/memoryId'
 					) && this.instance.state.get(path)
 						? '*'
@@ -438,9 +438,9 @@ export default class SubscriptionsMidra extends Subscriptions {
 				if (!path) return false;
 				const input = Array.isArray(path) ? path[4] : path.split('/')[4];
 				this.instance.setVariableValues({
-					[input.replace(/^\w+_/, 'INPUT_') + 'label']: this.instance.state.getUnmapped([
+					[input.replace(/^\w+_/, 'INPUT_') + 'label']: this.instance.state.get([
 						'DEVICE', 'device', 'inputList', 'items', input,
-						'plugList', 'items', this.instance.state.getUnmapped(path),
+						'plugList', 'items', this.instance.state.get(path),
 						'control', 'pp', 'label'
 					])
 				});
@@ -456,11 +456,11 @@ export default class SubscriptionsMidra extends Subscriptions {
 				if (!path) return false;
 				const input = Array.isArray(path) ? path[4] : path.split('/')[4];
 				const plug = Array.isArray(path) ? path[7] : path.split('/')[7];
-				if (this.instance.state.getUnmapped([
+				if (this.instance.state.get([
 					'DEVICE', 'device', 'inputList', 'items', input, 'status', 'pp', 'plug'
 				]) == plug) {
 					this.instance.setVariableValues({
-						[input.replace(/^\w+_/, 'INPUT_') + 'label']: this.instance.state.getUnmapped(path)
+						[input.replace(/^\w+_/, 'INPUT_') + 'label']: this.instance.state.get(path)
 					});
 					return true;
 				} else {
@@ -501,7 +501,7 @@ export default class SubscriptionsMidra extends Subscriptions {
 				} else if (value === false) {
 					this.instance.setVariableValues({ [`frozen_S${screen}_L${layer}`]: ' ' });
 				} else if (value === undefined) {
-					value = this.instance.state.getUnmapped(path);
+					value = this.instance.state.get(path);
 					this.instance.setVariableValues({ [`frozen_S${screen}_L${layer}`]: value === true ? '*' : ' ' });
 				} else {
 					this.instance.setVariableValues({ [`frozen_S${screen}_L${layer}`]: '-' });
@@ -524,7 +524,7 @@ export default class SubscriptionsMidra extends Subscriptions {
 				} else if (value === false) {
 					this.instance.setVariableValues({ [`frozen_S${screen}_NATIVE`]: ' ' });
 				} else if (value === undefined) {
-					value = this.instance.state.getUnmapped(path);
+					value = this.instance.state.get(path);
 					this.instance.setVariableValues({ [`frozen_S${screen}_NATIVE`]: value === true ? '*' : ' ' });
 				} else {
 					this.instance.setVariableValues({ [`frozen_S${screen}_NATIVE`]: '-' });

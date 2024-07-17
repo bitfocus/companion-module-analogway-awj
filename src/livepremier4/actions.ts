@@ -162,9 +162,9 @@ export default class ActionsLivepremier4 extends Actions {
 			const memorypath = ['items', action.options.memory]
 			const loadpath = ['control', 'load', 'slotList']
 
-			const filterpath = this.state.getUnmapped(['DEVICE', ...bankpath, list, ...memorypath, 'status', 'pp', 'isShadow']) ? ['status', 'shadow', 'pp'] : ['status', 'pp']			
+			const filterpath = this.state.get(['DEVICE', ...bankpath, list, ...memorypath, 'status', 'pp', 'isShadow']) ? ['status', 'shadow', 'pp'] : ['status', 'pp']			
 			
-			const screens = this.state.getUnmapped([
+			const screens = this.state.get([
 				'DEVICE',
 				...bankpath,
 				list,
@@ -173,7 +173,7 @@ export default class ActionsLivepremier4 extends Actions {
 				'screenFilter',
 			])
 
-			const auxScreens = this.state.getUnmapped([
+			const auxScreens = this.state.get([
 				'DEVICE',
 				...bankpath,
 				list,
@@ -362,7 +362,7 @@ export default class ActionsLivepremier4 extends Actions {
 			
 			let action = act.options.action
 			if (action === 'toggle') {
-				if (this.state.getUnmapped('DEVICE/device/screenAuxGroupList/items/S1/control/pp/copyMode') === false) action = 'off'
+				if (this.state.get('DEVICE/device/screenAuxGroupList/items/S1/control/pp/copyMode') === false) action = 'off'
 				else action = 'on'
 			}
 			if (action === 'on') allscreens.forEach((screen: string) =>
@@ -384,7 +384,7 @@ export default class ActionsLivepremier4 extends Actions {
 			let ret: Record<string, string>[] = []
 			if (action.options.method?.endsWith('tgl')) {
 				if (this.state.syncSelection) {
-					ret = this.state.getUnmapped('REMOTE/live/screens/layerSelection/layerIds')
+					ret = this.state.get('REMOTE/live/screens/layerSelection/layerIds')
 						.map((layer: Record<string, string>) => {
 							if (layer.type === 'SCREEN_LAYER_ID') return {
 								screenAuxKey: layer.screenKey,
@@ -408,7 +408,7 @@ export default class ActionsLivepremier4 extends Actions {
 							}
 						})
 				} else {
-					ret = this.state.getUnmapped('LOCAL/layerIds')
+					ret = this.state.get('LOCAL/layerIds')
 				}
 			}
 			let scrs: string[] = []
@@ -466,7 +466,7 @@ export default class ActionsLivepremier4 extends Actions {
 					]
 				)
 			} else {
-				this.state.setUnmapped('LOCAL/layerIds', ret)
+				this.state.set('LOCAL/layerIds', ret)
 				this.instance.checkFeedbacks('remoteLayerSelection')
 			}
 		}
@@ -485,9 +485,9 @@ export default class ActionsLivepremier4 extends Actions {
 			const widget = action.options.widget?.split(':')[1] ?? '0'
 			let widgetSelection: Record<'mocOutputLogicKey' | 'widgetKey', string>[] = []
 			if (this.state.syncSelection) {
-				widgetSelection = [...this.state.getUnmapped('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
+				widgetSelection = [...this.state.get('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
 			} else {
-				widgetSelection = [...this.state.getUnmapped('LOCAL/widgetSelection/widgetIds')]
+				widgetSelection = [...this.state.get('LOCAL/widgetSelection/widgetIds')]
 			}
 			const idx = widgetSelection.findIndex((elem) => {
 				return elem.widgetKey == widget && elem.mocOutputLogicKey == mvw
@@ -522,9 +522,9 @@ export default class ActionsLivepremier4 extends Actions {
 			let widgetSelection: Record<'mocOutputLogicKey' | 'widgetKey', string>[] = []
 			if (action.options.widget === 'sel') {
 				if (this.state.syncSelection) {
-					widgetSelection = [...this.state.getUnmapped('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
+					widgetSelection = [...this.state.get('REMOTE/live/multiviewers/widgetSelection/widgetIds')]
 				} else {
-					widgetSelection = [...this.state.getUnmapped('LOCAL/widgetSelection/widgetIds')]
+					widgetSelection = [...this.state.get('LOCAL/widgetSelection/widgetIds')]
 				}
 			} else {
 				widgetSelection = [

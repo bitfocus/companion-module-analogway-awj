@@ -114,15 +114,15 @@ export default class SubscriptionsLivepremier extends Subscriptions {
 				const screen = Array.isArray(path) ? path[4] : path.split('/')[4]
 				const pres = Array.isArray(path) ? path[7] : path.split('/')[7]
 				if (pres === 'takeUpTime') {
-					const presname = 'B' === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
+					const presname = 'B' === this.instance.state.get(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
 					this.instance.setVariableValues({
-						['screen' + screen + 'time' + presname]: this.instance.deciSceondsToString(this.instance.state.getUnmapped(path))
+						['screen' + screen + 'time' + presname]: this.instance.deciSceondsToString(this.instance.state.get(path))
 					})
 				}
 				if (pres === 'takeDownTime') {
-					const presname = 'A' === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
+					const presname = 'A' === this.instance.state.get(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
 					this.instance.setVariableValues({
-						['screen' + screen + 'time' + presname]: this.instance.deciSceondsToString(this.instance.state.getUnmapped(path))
+						['screen' + screen + 'time' + presname]: this.instance.deciSceondsToString(this.instance.state.get(path))
 					})
 				}
 				
@@ -139,7 +139,7 @@ export default class SubscriptionsLivepremier extends Subscriptions {
 				if (!path) return false
 				const input = Array.isArray(path) ? path[4] : path.split('/')[4]
 				this.instance.setVariableValues({[input.replace('S', 'SCREEN_') + 'label']:  this.instance.state.get(path)})
-				this.instance.setVariableValues({['screen' + input + 'label']:  this.instance.state.getUnmapped(path)})
+				this.instance.setVariableValues({['screen' + input + 'label']:  this.instance.state.get(path)})
 				return true
 			},
 		}
@@ -153,7 +153,7 @@ export default class SubscriptionsLivepremier extends Subscriptions {
 				if (!path) return false
 				const input = Array.isArray(path) ? path[4] : path.split('/')[4]
 				this.instance.setVariableValues({[input.replace('A', 'AUXSCREEN_') + 'label']:  this.instance.state.get(path)})
-				this.instance.setVariableValues({['screen' + input + 'label']:  this.instance.state.getUnmapped(path)})
+				this.instance.setVariableValues({['screen' + input + 'label']:  this.instance.state.get(path)})
 				return true
 			},
 		}
@@ -169,7 +169,7 @@ export default class SubscriptionsLivepremier extends Subscriptions {
 			],
 			fun: (path, _value) => {
 				const setMemoryVariables = (screen: string, preset: string, variableSuffix: string): void => {
-					const mem = this.instance.state.getUnmapped([
+					const mem = this.instance.state.get([
 						'DEVICE',
 						'device',
 						'screenList', 'items', screen,
@@ -179,7 +179,7 @@ export default class SubscriptionsLivepremier extends Subscriptions {
 						'pp',
 						'id',
 					]);
-					const unmodified = this.instance.state.getUnmapped([
+					const unmodified = this.instance.state.get([
 						'DEVICE',
 						'device',
 						'screenList', 'items', screen,
@@ -193,7 +193,7 @@ export default class SubscriptionsLivepremier extends Subscriptions {
 					this.instance.setVariableValues({ ['screen' + screen + 'memoryModified' + variableSuffix]: mem && !unmodified ? '*' : '' });
 					this.instance.setVariableValues({
 						['screen' + screen + 'memoryLabel' + variableSuffix]: mem
-							? this.instance.state.getUnmapped(['DEVICE', 'device', 'presetBank', 'bankList', 'items', mem, 'control', 'pp', 'label'])
+							? this.instance.state.get(['DEVICE', 'device', 'presetBank', 'bankList', 'items', mem, 'control', 'pp', 'label'])
 							: ''
 					});
 				};
@@ -211,16 +211,16 @@ export default class SubscriptionsLivepremier extends Subscriptions {
 				if (val === 'AT_UP') {
 					program = 'B';
 					preview = 'A';
-					this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pgm/preset`, program);
-					this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pvw/preset`, preview);
+					this.instance.state.set(`LOCAL/screens/${screen}/pgm/preset`, program);
+					this.instance.state.set(`LOCAL/screens/${screen}/pvw/preset`, preview);
 					this.instance.setVariableValues({
 						['screen' + screen + 'timePGM']: this.instance.deciSceondsToString(
-							this.instance.state.getUnmapped(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
+							this.instance.state.get(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
 						)
 					});
 					this.instance.setVariableValues({
 						['screen' + screen + 'timePVW']: this.instance.deciSceondsToString(
-							this.instance.state.getUnmapped(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeDownTime'])
+							this.instance.state.get(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeDownTime'])
 						)
 					});
 					setMemoryVariables(screen, program, 'PGM');
@@ -229,8 +229,8 @@ export default class SubscriptionsLivepremier extends Subscriptions {
 				if (val === 'AT_DOWN') {
 					program = 'A';
 					preview = 'B';
-					this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pgm/preset`, program);
-					this.instance.state.setUnmapped(`LOCAL/screens/${screen}/pvw/preset`, preview);
+					this.instance.state.set(`LOCAL/screens/${screen}/pgm/preset`, program);
+					this.instance.state.set(`LOCAL/screens/${screen}/pvw/preset`, preview);
 					this.instance.setVariableValues({
 						['screen' + screen + 'timePGM']: this.instance.deciSceondsToString(
 							this.instance.state.get([
@@ -265,12 +265,12 @@ export default class SubscriptionsLivepremier extends Subscriptions {
 				if (!path) return false;
 				const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
 				const pres = Array.isArray(path) ? path[7] : path.split('/')[7];
-				const presname = pres === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
+				const presname = pres === this.instance.state.get(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
 				const memorystr = value ? value.toString() : '';
 				this.instance.setVariableValues({ ['screen' + screen + 'memory' + presname]: memorystr });
 				this.instance.setVariableValues({
 					['screen' + screen + 'memoryLabel' + presname]: memorystr !== ''
-						? this.instance.state.getUnmapped([
+						? this.instance.state.get([
 							'DEVICE',
 							'device',
 							'presetBank',
@@ -296,11 +296,11 @@ export default class SubscriptionsLivepremier extends Subscriptions {
 				if (!path) return false;
 				const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
 				const pres = Array.isArray(path) ? path[7] : path.split('/')[7];
-				const presname = pres === this.instance.state.getUnmapped(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
+				const presname = pres === this.instance.state.get(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
 				this.instance.setVariableValues({
-					['screen' + screen + 'memoryModified' + presname]: this.instance.state.getUnmapped(
+					['screen' + screen + 'memoryModified' + presname]: this.instance.state.get(
 						'DEVICE/device/screenList/items/' + screen + '/presetList/items/' + pres + '/presetId/status/pp/id'
-					) && !this.instance.state.getUnmapped(path)
+					) && !this.instance.state.get(path)
 						? '*'
 						: ''
 				});

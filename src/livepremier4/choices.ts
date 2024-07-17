@@ -43,13 +43,13 @@ export default class ChoicesLivepremier4 extends Choices {
 	/** returns array of the currently available and active auxscreens only (no regular screens)*/
 	public getAuxArray(getAlsoDisabled = false ): Choicemeta[] {
 		const ret: Choicemeta[] = []
-			const screens = this.state.getUnmapped('DEVICE/device/auxiliaryList/itemKeys')
+			const screens = this.state.get('DEVICE/device/auxiliaryList/itemKeys')
 			if (screens) {
 				screens.forEach((screen: string) => {
-					if (getAlsoDisabled || this.state.getUnmapped('DEVICE/device/auxiliaryList/items/' + screen + '/status/pp/mode') != 'DISABLED') {
+					if (getAlsoDisabled || this.state.get('DEVICE/device/auxiliaryList/items/' + screen + '/status/pp/mode') != 'DISABLED') {
 						ret.push({
 							id: screen,
-							label: this.state.getUnmapped('DEVICE/device/auxiliaryList/items/' + screen + '/control/pp/label'),
+							label: this.state.get('DEVICE/device/auxiliaryList/items/' + screen + '/control/pp/label'),
 							index: screen.slice(1)
 						})
 					}
@@ -80,15 +80,15 @@ export default class ChoicesLivepremier4 extends Choices {
 	public getLiveInputArray(prefix?: string): Choicemeta[] {
 		const ret: Choicemeta[] = []
 		if(prefix == undefined) prefix = 'IN'
-		const items = this.state.getUnmapped('DEVICE/device/inputList/itemKeys')
+		const items = this.state.get('DEVICE/device/inputList/itemKeys')
 		if (items) {
 			items.forEach((key: string) => {
-				if (this.state.getUnmapped('DEVICE/device/inputList/items/' + key + '/status/pp/isAvailable')
-					&& (this.state.getUnmapped('LOCAL/config/showDisabled') || this.state.getUnmapped('DEVICE/device/inputList/items/' + key + '/status/pp/isEnabled'))
+				if (this.state.get('DEVICE/device/inputList/items/' + key + '/status/pp/isAvailable')
+					&& (this.state.get('LOCAL/config/showDisabled') || this.state.get('DEVICE/device/inputList/items/' + key + '/status/pp/isEnabled'))
 				) {
 					ret.push({
 						id: key.replace(/^\w+_/, prefix + '_'),
-						label: this.state.getUnmapped('DEVICE/device/inputList/items/' + key + '/control/pp/label'),
+						label: this.state.get('DEVICE/device/inputList/items/' + key + '/control/pp/label'),
 						index: key.replace(/^\w+_/, '')
 					})
 				}
@@ -227,28 +227,28 @@ export default class ChoicesLivepremier4 extends Choices {
 	public getAudioOutputsArray(device?: number): Choicemeta[] {
 		if (typeof device !== 'number') device = 1
 		const ret: Choicemeta[] = []
-		const outputs = this.state.getUnmapped(`DEVICE/device/audio/control/deviceList/items/${device}/txList/itemKeys`) ?? []
+		const outputs = this.state.get(`DEVICE/device/audio/control/deviceList/items/${device}/txList/itemKeys`) ?? []
 		for (const out of outputs) {
 			const outputnum = out.split('_')[1]
-			if (out.startsWith('OUTPUT') && this.state.getUnmapped(`DEVICE/device/outputList/items/${ (device-1) * 24 + Number(outputnum) }/status/pp/isAvailable`)) {
+			if (out.startsWith('OUTPUT') && this.state.get(`DEVICE/device/outputList/items/${ (device-1) * 24 + Number(outputnum) }/status/pp/isAvailable`)) {
 				ret.push({
 					id: out,
-					label: this.state.getUnmapped(`DEVICE/device/outputList/items/${ (device-1) * 24 + Number(outputnum) }/control/pp/label`),
+					label: this.state.get(`DEVICE/device/outputList/items/${ (device-1) * 24 + Number(outputnum) }/control/pp/label`),
 					index: outputnum,
 					longname: 'Output'
 				})
 			}
-			if (out.startsWith('DANTE') && this.state.getUnmapped(`DEVICE/device/system/deviceList/items/${device}/dante/channelList/items/${out}_CHANNEL_8/status/pp/isAvailable`)) {
+			if (out.startsWith('DANTE') && this.state.get(`DEVICE/device/system/deviceList/items/${device}/dante/channelList/items/${out}_CHANNEL_8/status/pp/isAvailable`)) {
 				ret.push({
 					id: out,
-					label: this.state.getUnmapped(
+					label: this.state.get(
 						`DEVICE/device/system/deviceList/items/${device}/dante/channelList/items/${out}_CHANNEL_1/transmitter/status/pp/label`
 					),
 					index: outputnum,
 					longname: 'Dante'
 				})
 			}
-			if (out.startsWith('MVW') && this.state.getUnmapped(`DEVICE/device/monitoringList/items/${ (device-1) * 2 + Number(outputnum) }/status/pp/isAvailable`)) {
+			if (out.startsWith('MVW') && this.state.get(`DEVICE/device/monitoringList/items/${ (device-1) * 2 + Number(outputnum) }/status/pp/isAvailable`)) {
 				ret.push({
 					id: out,
 					label: this.state.get(`DEVICE/device/monitoringList/items/${ (device-1) * 2 + Number(outputnum) }/control/pp/label`),
@@ -264,14 +264,14 @@ export default class ChoicesLivepremier4 extends Choices {
 		if (typeof device !== 'number') device = 1
 		const ret: Dropdown<string>[] = []
 		for (const out of this.getAudioOutputsArray()) {
-			const channels = this.state.getUnmapped(`DEVICE/device/audio/control/deviceList/items/${device}/txList/items/${out.id}/channelList/itemKeys`) ?? []
+			const channels = this.state.get(`DEVICE/device/audio/control/deviceList/items/${device}/txList/items/${out.id}/channelList/itemKeys`) ?? []
 			const [outputtype, outnum] = out.id.split('_')
 			for (const channel of channels) {
 				let label = ''
 				if (outputtype === 'OUTPUT') {
 					label = `Output ${outnum} Channel ${channel}${out.label === '' ? '' : ' - ' + out.label}`
 				} else if (outputtype === 'DANTE') {
-					const channelLabel = this.state.getUnmapped(
+					const channelLabel = this.state.get(
 						`DEVICE/device/system/deviceList/items/${device}/dante/channelList/items/${out.id}_CHANNEL_${channel}/transmitter/status/pp/label`
 					)
 					label = `Dante Channel ${(parseInt(outnum) - 1) * 8 + parseInt(channel)}${
@@ -293,19 +293,19 @@ export default class ChoicesLivepremier4 extends Choices {
 	public getAudioInputChoices(device?: number): Dropdown<string>[] {
 		if (typeof device !== 'number') device = 1
 		const ret = [{ id: 'NONE', label: 'No Source' }]
-		const inputs = this.state.getUnmapped(`DEVICE/device/audio/control/deviceList/items/${device}/rxList/itemKeys`) ?? []
+		const inputs = this.state.get(`DEVICE/device/audio/control/deviceList/items/${device}/rxList/itemKeys`) ?? []
 		for (const input of inputs) {
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			const [inputtype, inputnum, _channel, channelnum] = input.split('_')
-			if (inputtype === 'INPUT' && this.state.getUnmapped('DEVICE/device/inputList/items/IN_' + inputnum + '/status/pp/isAvailable')) {
-				const inputLabel = this.state.getUnmapped(`DEVICE/device/inputList/items/IN_${ (device-1) * 64 + Number(inputnum)}/control/pp/label`)
+			if (inputtype === 'INPUT' && this.state.get('DEVICE/device/inputList/items/IN_' + inputnum + '/status/pp/isAvailable')) {
+				const inputLabel = this.state.get(`DEVICE/device/inputList/items/IN_${ (device-1) * 64 + Number(inputnum)}/control/pp/label`)
 				ret.push({
 					id: input,
 					label: `Input ${inputnum} Channel ${channelnum}${inputLabel === '' ? '' : ' - ' + inputLabel}`,
 				})
 			} else if (
 				inputtype === 'DANTE' &&
-				this.state.getUnmapped(`DEVICE/device/system/deviceList/items/${device}/dante/channelList/items/${input}/status/pp/isAvailable`)
+				this.state.get(`DEVICE/device/system/deviceList/items/${device}/dante/channelList/items/${input}/status/pp/isAvailable`)
 			) {
 				const inputLabel = this.state.get(`DEVICE/device/system/deviceList/items/${device}/dante/channelList/items/${input}/source/status/pp/label`)
 				ret.push({
@@ -323,7 +323,7 @@ export default class ChoicesLivepremier4 extends Choices {
 		let ret: { screenAuxKey: string; layerKey: string}[] = [] 
 
 		if (this.instance.state.syncSelection) {
-			ret = this.state.getUnmapped('REMOTE/live/screens/layerSelection/layerIds')
+			ret = this.state.get('REMOTE/live/screens/layerSelection/layerIds')
 				.map((layer: Record<string, string>) => {
 					if (layer.type === 'SCREEN_LAYER_ID') return {
 						screenAuxKey: layer.screenKey,
@@ -349,7 +349,7 @@ export default class ChoicesLivepremier4 extends Choices {
 
 
 		} else {
-			ret = this.state.getUnmapped('LOCAL/layerIds')
+			ret = this.state.get('LOCAL/layerIds')
 		}
 		return ret
 	}
@@ -360,7 +360,7 @@ export default class ChoicesLivepremier4 extends Choices {
 	getLinkedDevicesChoices(): Dropdown<number>[] {
 		const ret = [{id: 1, label: '1 (Leader 👑)'}]
 		ret.push(
-			...this.instance.state.getUnmapped('LINK/followers') ?? []
+			...this.instance.state.get('LINK/followers') ?? []
 			.map((_follower, i) => [{id: (i + 2),  label: (i + 2).toString()}])
 		)
 		return ret
