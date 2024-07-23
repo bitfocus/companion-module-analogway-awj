@@ -711,6 +711,7 @@ export default class Choices {
 		return screens
 	}
 
+	/** Returns selected screens always in LP format */
 	public getSelectedScreens(): string[] {
 		let path = 'LOCAL/screenAuxSelection/keys'
 		if (this.instance.state.syncSelection) {
@@ -719,6 +720,7 @@ export default class Choices {
 		return [...this.state.get(path)]
 	}
 
+	/** Returns selected layers always in LP format */
 	public getSelectedLayers(): { screenAuxKey: string; layerKey: string} [] {
 		let path = 'LOCAL/layerIds'
 		if (this.instance.state.syncSelection) {

@@ -24,8 +24,8 @@ export default class ConstantsMidra extends Constants {
 
     static override readonly macAddressPath = 'DEVICE/device/system/network/adapter/pp/macAddress'
 
-    static override readonly xUpdatePath = '"device","screenGroupList","control","pp","xUpdate"' // livepremier + livepremier4
-    // static readonly xUpdatePath = '""device","preset","control","pp","xUpdate"' // midra
+    // static override readonly xUpdatePath = '"device","screenGroupList","control","pp","xUpdate"' // livepremier + livepremier4
+    static override readonly xUpdatePath = '"device","preset","control","pp","xUpdate"' // midra
 
     static override readonly screenGroupPath = ['device', 'transition', 'screenList']
     static override readonly auxGroupPath = ['device', 'transition', 'auxiliaryScreenList']
@@ -43,6 +43,8 @@ export default class ConstantsMidra extends Constants {
     static override readonly screenSizePath = ['canvas', 'status', 'size', 'pp']
     static override readonly propsSizePath = ['size', 'pp']
     static override readonly propsPositionPath = ['position', 'pp']
+    static override readonly propsCroppingPath = ['crop', 'pp']
+    static override readonly propsMaskPath = ['mask', 'pp']
 
     static override readonly screenLayerList = ['liveLayerList', 'items']
 

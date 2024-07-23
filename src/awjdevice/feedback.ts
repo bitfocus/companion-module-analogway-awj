@@ -163,11 +163,11 @@ export default class Feedbacks {
 			callback: (feedback) => {
 				if (
 					(feedback.options.preset === 'all' || feedback.options.preset === 'pgm') &&
-					this.state.get('DEVICE', ...this.constants.lastUsedMasterPresetPath, 'presetModeList', 'items', 'PROGRAM', 'pp', 'memoryId') == feedback.options.memory
+					this.state.get(['DEVICE', ...this.constants.lastUsedMasterPresetPath, 'presetModeList', 'items', 'PROGRAM', 'pp', 'memoryId']) == feedback.options.memory
 				) return true
 				if (
 					(feedback.options.preset === 'all' || feedback.options.preset === 'pvw') &&
-					this.state.get('DEVICE', ...this.constants.lastUsedMasterPresetPath, 'presetModeList', 'items', 'PREVIEW', 'pp', 'memoryId') == feedback.options.memory
+					this.state.get(['DEVICE', ...this.constants.lastUsedMasterPresetPath, 'presetModeList', 'items', 'PREVIEW', 'pp', 'memoryId']) == feedback.options.memory
 				) return true
 				return false
 			},
@@ -342,7 +342,7 @@ export default class Feedbacks {
 								'presetList', 'items', this.choices.getPreset(screen, preset),
 								'status','pp','isModified',
 							])
-							if ( ((true && modified) || (false && !modified)) == feedback.options.unmodified) {
+							if (modified == feedback.options.unmodified) {
 								return true
 							}
 						}
@@ -682,13 +682,13 @@ export default class Feedbacks {
 				} else if (feedback.options.layer === 'all') {
 					return (
 						JSON.stringify(this.choices.getSelectedLayers()).includes(
-							`{"screenAuxKey":"${this.choices.getScreenInfo(feedback.options.screen).platformLongId}","layerKey":"`
+							`{"screenAuxKey":"${this.choices.getScreenInfo(feedback.options.screen).id}","layerKey":"`
 						) && pst
 					)
 				} else {
 					return (
 						JSON.stringify(this.choices.getSelectedLayers()).includes(
-							`{"screenAuxKey":"${this.choices.getScreenInfo(feedback.options.screen).platformLongId}","layerKey":"${feedback.options.layer}"}`
+							`{"screenAuxKey":"${this.choices.getScreenInfo(feedback.options.screen).id}","layerKey":"${feedback.options.layer}"}`
 						) && pst
 					)
 				}
@@ -921,7 +921,7 @@ export default class Feedbacks {
 				{
 					id: 'state',
 					type: 'dropdown',
-					label: 'StateMachine',
+					label: 'State',
 					choices: [
 						{ id: 'RUNNING', label: 'Running' },
 						{ id: 'PAUSED', label: 'Paused' },
@@ -990,7 +990,7 @@ export default class Feedbacks {
 		
 		const deviceGpioIn: AWJfeedback<{gpi: number, state: number }> = {
 			type: 'boolean',
-			name: 'GPI StateMachine',
+			name: 'GPI State',
 			description: 'Shows wether a general purpose input is currently active',
 			defaultStyle: {
 				color: this.config.color_dark,

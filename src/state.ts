@@ -141,7 +141,7 @@ class StateMachine {
 		// eslint-disable-next-line no-prototype-builtins
 		if (data.hasOwnProperty('path') && data.hasOwnProperty('value')) {
 			this.set(data.path, data.value, this.state[channel])
-			feedbacks = this.instance.subscriptions.checkForAction(data.path, data.value)
+			feedbacks = this.instance.subscriptions.checkForAction(this.concat(channel, data.path), data.value)
 			if (channel === 'DEVICE' && !data.path.toString().endsWith(',pp,xUpdate')) {
 				this.storeLastMsg({ path: data.path, value: data.value })
 				if (this.instance.isRecording && JSON.stringify(data.value).length <= 132) {
@@ -188,7 +188,7 @@ class StateMachine {
 			if (data.patch.op === 'replace') {
 				try {
 					this.set(data.patch.path, data.patch.value, this.state[channel])
-					feedbacks = this.instance.subscriptions.checkForAction(data.patch.path, data.patch.value)
+					feedbacks = this.instance.subscriptions.checkForAction(this.concat(channel, data.patch.path), data.patch.value)
 				} catch (error) {
 					console.log('could not replace JSON\n', error)
 				}
@@ -196,7 +196,7 @@ class StateMachine {
 			if (data.patch.op === 'add') {
 				try {
 					this.set(data.patch.path, data.patch.value, this.state[channel])
-					feedbacks = this.instance.subscriptions.checkForAction(data.patch.path, data.patch.value)
+					feedbacks = this.instance.subscriptions.checkForAction(this.concat(channel, data.patch.path), data.patch.value)
 				} catch (error) {
 					console.log('could not add JSON\n', error)
 				}
@@ -204,7 +204,7 @@ class StateMachine {
 			if (data.patch.op === 'remove') {
 				try {
 					this.delete(data.patch.path, this.state[channel])
-					feedbacks = this.instance.subscriptions.checkForAction(data.patch.path)
+					feedbacks = this.instance.subscriptions.checkForAction(this.concat(channel, data.patch.path))
 				} catch (error) {
 					console.log('could not remove element from JSON\n', error)
 				}
@@ -218,14 +218,7 @@ class StateMachine {
 				this.instance.log('debug', 'could not set JSON while init\n' + error)
 			}
 		}
-		if (feedbacks && typeof feedbacks === 'string') {
-			// console.log('checking feedback from external msg', feedbacks)
-			if (feedbacks.startsWith('id:')) {
-				this.instance.checkFeedbacksById(feedbacks.substring(3))
-			} else {
-				this.instance.checkFeedbacks(feedbacks)
-			}
-		} else if (feedbacks && Array.isArray(feedbacks)) {
+		if (feedbacks && Array.isArray(feedbacks)) {
 			// console.log('checking feedbacks from external msg', feedbacks)
 			feedbacks.forEach((fb) => {
 				if (fb.startsWith('id:')) {

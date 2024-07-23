@@ -519,4 +519,27 @@ export default class ChoicesMidra extends Choices {
 		}
 	}
 
+	/** Returns selected layers in LP format */
+	public getSelectedLayers(): { screenAuxKey: string; layerKey: string} [] {
+		if (this.instance.state.syncSelection) {
+			return this.state.get('REMOTE/live/screens/layerSelection/layerIds')
+				.map(sel => {
+					return {
+						screenAuxKey: sel.screenAuxKey.replace(/CREEN_|UX_/, ''), 
+						layerKey: sel.layerKey.replace(/^LIVE_/, '').replace('BKG', 'NATIVE')
+					}
+				})
+		}
+		return this.state.get('LOCAL/layerIds')
+	}
+
+	/** Returns selected screens in LP format */
+	public getSelectedScreens(): string[] {
+		if (this.instance.state.syncSelection) {
+			return [...this.state.get('REMOTE/live/screens/screenAuxSelection/keys')]
+				.map(scr => scr.replace(/CREEN_|UX_/, ''))
+		}		
+		return [...this.state.get('LOCAL/screenAuxSelection/keys')]
+	}
+
 }

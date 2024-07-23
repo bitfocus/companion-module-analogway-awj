@@ -21,7 +21,7 @@ Starting with release 2.4.0 this module supports also software version 4.x of th
 
 ## :rocket: Version history:
 
-### 2.4.0 (2024 upcoming)
+### 2.4.0 (2024-07 upcoming)
 * Feature: add compatibility with LivePremier software version 4.x
     Although this feature itself is not a breaking change, unfortunately many AWJ paths have been changed by Analog Way with LivePremier v4 and if you upgrade to v4 from an earlier version and use such a path, you will have to adjust your actions or feedbacks. 
     Affected:
@@ -56,7 +56,9 @@ Starting with release 2.4.0 this module supports also software version 4.x of th
 * Chore: bump word-wrap from 1.2.3 to 1.2.4
 * Chore: bump eslint from 8.36.0 to 8.57.0
 * Chore: bump @tsconfig/node18 from 1.0.1 to 1.0.3
-* Chore: bump ws from 8.13.0 to 8.16.0
+* Chore: bump ws from 8.13.0 to 8.17.1
+* Chore: bump braces from 3.0.2 to 3.0.3
+* Chore: bump tar from 6.2.0 to 6.2.1
 
 ### 2.3.0 (2023-06-28)
 * Feature: generate screen and aux memory recall presets additionally for each individual screen

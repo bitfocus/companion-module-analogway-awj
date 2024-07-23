@@ -95,7 +95,7 @@ class AWJconnection {
 			const authResponse = await ky.get(`${urlObj.protocol()}://${urlObj.host()}/auth/status`, {
 				...fetchDefaultParameters,
 			}).json<{[name: string]: any}>()
-			console.log('auth response', authResponse)
+			// console.log('auth response', authResponse)
 			const isAuth = authResponse.authentication?.isAuthenticationEnabled
 			const deviceObj = authResponse.device || authResponse.devices?.leader || undefined
 			if (isAuth !== undefined && deviceObj !== undefined) {
@@ -108,12 +108,13 @@ class AWJconnection {
 						this.instance.state.set('LINK', authResponse.device || authResponse.devices)
 
 						const system = res.device.system // this.instance.state.get('DEVICE/device/system')
-						const device = system.pp?.dev ?? system.deviceList?.items?.['1']?.pp?.dev ?? null
+						const deviceroot = system.pp ?? system.deviceList?.items?.['1']?.pp ?? null
+						const device = deviceroot.dev ?? null
 						const fwVersion = system.version?.pp?.updater ?? system.deviceList?.items?.['1']?.version?.pp?.updater ?? '0.0.0' // this.state.get('DEVICE/device/system/version/pp/updater') ?? this.state.get('DEVICE/device/system/deviceList/items/1/version/pp/updater') ?? '0.0.0'
 
 						const serialAndFirmware = (): string => {
-							const sn = system.serial?.pp?.serialNumber ?? system.deviceList?.items?.['1']?.serial?.pp?.serialNumber ?? 'unknown'
-							if (sn.startsWith('ZZ99')) return ` Simulator, fw ${fwVersion}`
+							const sn:string = system.serial?.pp?.serialNumber ?? system.deviceList?.items?.['1']?.serial?.pp?.serialNumber ?? 'unknown'
+							if (sn.startsWith('ZZ9') || deviceroot.isSimulated) return ` Simulator, fw ${fwVersion}`
 							else return `, S/N: ${sn}, fw ${fwVersion}`
 						}
 
@@ -261,7 +262,7 @@ class AWJconnection {
 
 					this.websocket.on('error', (error) => {
 						this.hadError = true
-						console.log('ws error', error.toString())
+						console.log('websocket error', error.toString())
 						this.instance.updateStatus(InstanceStatus.ConnectionFailure)
 						if (error.toString().match(/Error: Opening handshake has timed out/)) {
 							this.instance.log(
@@ -281,14 +282,14 @@ class AWJconnection {
 					})
 
 					this.websocket.on('message', (data, isBinary) => {
-						// console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
+						// console.log('debug', 'incoming WS message '+ data.toString().substring(0, 400))
 						if (
 							isBinary != true &&
 							data.toString().match(/"op":"replace","path":"\/system\/status\/current(Device)?Time","value":/) === null &&
 							data.toString().match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
 							data.toString().match(/"device","system",("deviceList","items","[1-4]",)?"temperature",/) === null
 						) {
-							// console.log('debug', 'incoming WS message '+ data.toString().substring(0, 400))
+							console.log('debug', 'incoming WS message '+ data.toString().substring(0, 400))
 							this.instance.state.apply(JSON.parse(data.toString()))
 						}
 					})
@@ -337,7 +338,6 @@ class AWJconnection {
 			
 
 		} catch (error) {
-			console.log(`Can't connect to device webserver.`, error)
 			// console.log('ws close and retry in', this.reconnectinterval)
 			this.disconnect()
 			if (this.wsTimeout) clearTimeout(this.wsTimeout)
@@ -346,6 +346,14 @@ class AWJconnection {
 			}, this.reconnectinterval)
 			this.reconnectinterval *= 1.2
 			if (this.reconnectinterval > this.reconnectmax) this.reconnectinterval = this.reconnectmax
+			const retrysec = Math.round(this.reconnectinterval / 100)/10
+			if(String(error).match(/fetch failed/)) {
+				this.instance.log('error', `Can't connect to device, probably offline. Will retry in ${retrysec}s`)
+			} else if(String(error).match(/terminated/)) {
+				this.instance.log('error', `Connection to device has been terminated unexpectedly. Will retry in ${retrysec}s`)
+			} else {
+				this.instance.log('error', `Can't connect to device webserver. ${error}\nWill retry in ${retrysec}s`)
+			}
 		}		
 	}
 
@@ -481,7 +489,7 @@ class AWJconnection {
 	sendRawWSmessage(message: string): void {
 		if (this.websocket?.readyState === 1) {
 			this.websocket?.send(message)
-			// this.instance.log('debug', 'sendig WS message ' + this.websocket.url + ' ' + message)
+			this.instance.log('debug', 'sendig WS message ' + this.websocket.url + ' ' + message)
 		}
 	}
 

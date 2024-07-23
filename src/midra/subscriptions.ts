@@ -58,7 +58,7 @@ export default class SubscriptionsMidra extends Subscriptions {
 		'screenMemoryChange',
 		// 'screenMemoryLabel',
 		// 'screenMemoryModifiedChange',
-		// 'auxMemoryLabel',
+		'auxMemoryLabel',
 		'plugChange',
 		// 'inputLabel',
 		'auxMemoriesChange',
@@ -285,7 +285,7 @@ export default class SubscriptionsMidra extends Subscriptions {
 
 	get presetToggle():Subscription {
 		return {
-			pat: 'DEVICE/device/transition/screenList/items/1/control/pp/enablePresetToggle',
+			pat: 'device/transition/screenList/items/1/control/pp/enablePresetToggle',
 			fbk: 'presetToggle'
 		}
 	}
@@ -318,7 +318,7 @@ export default class SubscriptionsMidra extends Subscriptions {
 					this.instance.setVariableValues({ ['screen' + prefix + screenNum + 'memoryModified' + variableSuffix]: mem && modified ? '*' : '' });
 					this.instance.setVariableValues({
 						['screen' + prefix + screenNum + 'memoryLabel' + variableSuffix]: mem
-							? this.instance.state.get(['DEVICE', 'device', 'presetBank', 'bankList', 'items', mem, 'control', 'pp', 'label'])
+							? this.instance.state.get(['DEVICE', 'device', 'preset', prefix === 'A' ? 'auxBank' : 'bank', 'slotList', 'items', mem, 'control', 'pp', 'label'])
 							: ''
 					});
 				}
@@ -379,22 +379,23 @@ export default class SubscriptionsMidra extends Subscriptions {
 
 	get screenMemoryChange():Subscription {
 		return {
-			pat: 'DEVICE/device/screenList/items/\\d{1,3}/presetList/items/(UP|DOWN)/status/pp/memoryId',
-			fbk: 'deviceScreenMemory',
+			pat: 'DEVICE/device/(s|auxiliaryS)creenList/items/\\d{1,3}/presetList/items/(UP|DOWN)/status/pp/memoryId',
+			fbk: ['deviceScreenMemory', 'deviceAuxMemory'],
 			fun: (path, value) => {
 				if (!path) return false;
-				const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
+				const screenPrefix = (Array.isArray(path) ? path[2] : path.split('/')[2]).charAt(0).toUpperCase()
+				const screenNum = Array.isArray(path) ? path[4] : path.split('/')[4];
 				const pres = Array.isArray(path) ? path[7] : path.split('/')[7];
-				const presname = pres === this.instance.state.get(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
+				const presname = pres === this.instance.state.get(`LOCAL/screens/${screenPrefix}${screenNum}/pgm/preset`) ? 'PGM' : 'PVW';
 				const memorystr = value ? value.toString() : '';
-				this.instance.setVariableValues({ ['screen' + screen + 'memory' + presname]: memorystr });
+				this.instance.setVariableValues({ ['screen' + screenPrefix + screenNum + 'memory' + presname]: memorystr });
 				this.instance.setVariableValues({
-					['screenS' + screen + 'memoryLabel' + presname]: memorystr !== ''
+					['screen' + screenPrefix + screenNum + 'memoryLabel' + presname]: memorystr !== ''
 						? this.instance.state.get([
 							'DEVICE',
 							'device',
 							'preset',
-							'bank',
+							screenPrefix === 'A' ? 'auxBank' : 'bank',
 							'slotList',
 							'items',
 							memorystr,
@@ -411,16 +412,23 @@ export default class SubscriptionsMidra extends Subscriptions {
 
 	get screenMemoryModifiedChange():Subscription {
 		return {
-			pat: 'DEVICE/device/screenList/items/\\d{1,3}/presetList/items/(UP|DOWN)/status/pp/isModified',
-			fbk: 'deviceScreenMemory',
+			pat: 'DEVICE/device/(s|auxiliaryS)creenList/items/\\d{1,3}/presetList/items/(UP|DOWN)/status/pp/isModified',
+			fbk: ['deviceScreenMemory', 'deviceAuxMemory'],
 			fun: (path, _value) => {
 				if (!path) return false;
-				const screen = Array.isArray(path) ? path[4] : path.split('/')[4];
+				const screenType = Array.isArray(path) ? path[2] : path.split('/')[2]
+				const screenPrefix = screenType.charAt(0).toUpperCase()
+				const screenNum = Array.isArray(path) ? path[4] : path.split('/')[4];
 				const pres = Array.isArray(path) ? path[7] : path.split('/')[7];
-				const presname = pres === this.instance.state.get(`LOCAL/screens/${screen}/pgm/preset`) ? 'PGM' : 'PVW';
+				const presName = pres === this.instance.state.get(`LOCAL/screens/${screenPrefix}${screenNum}/pgm/preset`) ? 'PGM' : 'PVW';
 				this.instance.setVariableValues({
-					['screenS' + screen + 'memoryModified' + presname]: this.instance.state.get(
-						'DEVICE/device/screenList/items/' + screen + '/presetList/items/' + pres + '/status/pp/memoryId'
+					['screen' + screenPrefix + screenNum + 'memoryModified' + presName]: this.instance.state.get(
+						[
+							'DEVICE','device',
+							screenType,'items', screenNum, 
+							'presetList','items', pres,
+							'status','pp','memoryId'
+						]
 					) && this.instance.state.get(path)
 						? '*'
 						: ''

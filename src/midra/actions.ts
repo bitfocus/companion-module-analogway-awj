@@ -420,15 +420,16 @@ export default class ActionsMidra extends Actions {
 
 		deviceSelectSource.callback = (action) => {
 			if (action.options.method === 'spec') {
-				for (const screen of action.options.screen) {
-					if (this.choices.isLocked(screen, action.options.preset)) continue
+				for (const scr of action.options.screen) {
+					const screen = this.choices.getScreenInfo(scr)
+					if (this.choices.isLocked(screen.id, action.options.preset)) continue
 					const presetpath = [
 						'device', 
-						screen.startsWith('A') ? 'auxiliaryScreenList' : 'screenList',
-						'items', screen.replaceAll(/\D/g, ''), 
-						'presetList', 'items', this.choices.getPreset(screen, action.options.preset)
+						screen.prefixverylong + 'List',
+						'items', screen.platformId, 
+						'presetList', 'items', this.choices.getPreset(screen.id, action.options.preset)
 					]
-					if (screen.startsWith('A') && action.options['sourceBack'] !== 'keep')
+					if (screen.isAux && action.options['sourceBack'] !== 'keep')
 						// on Midra on aux there is only background, so we don't show a layer dropdown and just set the background
 						this.connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'content'], action.options['sourceBack'])
 					else
@@ -447,16 +448,22 @@ export default class ActionsMidra extends Actions {
 				const preset = this.choices.getPresetSelection('sel')
 				this.choices.getSelectedLayers()
 					.filter((selection) => this.choices.isLocked(selection.screenAuxKey, preset) === false)
+					.map(layer => {
+						return {
+							screen: this.choices.getScreenInfo(layer.screenAuxKey),
+							layerKey: layer.layerKey 
+						}
+					})
 					.forEach((layer) => {
 						const presetpath = [
 							'device', 
-							layer.screenAuxKey.startsWith('A') ? 'auxiliaryScreenList' : 'screenList',
-							'items', layer.screenAuxKey, 
-							'presetList', 'items', this.choices.getPreset(layer.screenAuxKey,'sel')
+							layer.screen.isAux ? 'auxiliaryScreenList' : 'screenList',
+							'items', layer.screen.platformId, 
+							'presetList', 'items', this.choices.getPreset(layer.screen.id,'sel')
 						]
-						if (layer.layerKey === 'BKG' && layer.screenAuxKey.startsWith('S') && action.options['sourceNative'] !== 'keep') {
+						if (layer.layerKey === 'BKG' && layer.screen.isScreen && action.options['sourceNative'] !== 'keep') {
 								this.connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'set'], action.options['sourceNative'].replace(/\D/g, ''))
-							} else if (layer.layerKey === 'BKG' && layer.screenAuxKey.startsWith('A') && action.options['sourceBack'] !== 'keep') {
+							} else if (layer.layerKey === 'BKG' && layer.screen.isAux && action.options['sourceBack'] !== 'keep') {
 								this.connection.sendWSmessage([...presetpath, 'background', 'source', 'pp', 'content'], action.options['sourceBack'])
 							} else if (layer.layerKey === 'TOP' && action.options['sourceFront'] !== 'keep') {
 								this.connection.sendWSmessage([...presetpath, 'top', 'source', 'pp', 'frame'], action.options['sourceFront'].replace(/\D/g, ''))

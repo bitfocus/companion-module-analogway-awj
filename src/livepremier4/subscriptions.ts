@@ -302,7 +302,7 @@ export default class SubscriptionsLivepremier4 extends Subscriptions {
 
 	get presetToggle():Subscription {
 		return {
-			pat: 'DEVICE/device/screenAuxGroupList/items/S1/control/pp/copyMode',
+			pat: 'device/screenAuxGroupList/items/S1/control/pp/copyMode',
 			fbk: 'presetToggle'
 		}
 	}

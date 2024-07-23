@@ -110,7 +110,7 @@ export class AWJinstance extends InstanceBase<Config> {
 	 * is OK to start doing things.
 	 */
 	public async init(config: Config): Promise<void> {
-		this.updateStatus(InstanceStatus.Disconnected)
+		this.updateStatus(InstanceStatus.Disconnected, 'Init')
 
 		this.config = config
 		this.oldlabel = this.label

@@ -95,8 +95,7 @@ export default class FeedbacksMidra extends Feedbacks  {
 							screeninfo.numstr
 						]
 						const presetpath = [...screenpath, 'presetList', 'items', preset]
-						const layerpath = [...presetpath, 'liveLayerList', 'items', layer.id]
-	
+						
 						// check if source is used in background set on a screen
 						if (layer.id === 'NATIVE') {
 							const set = this.state.get([...presetpath, 'background', 'source', 'pp', 'set'])
@@ -107,14 +106,14 @@ export default class FeedbacksMidra extends Feedbacks  {
 						}
 	
 						// check if source is used in background layer on a aux
-						if (layer.id === 'BKG') {
+						else if (layer.id === 'BKG') {
 							const bkginput = this.state.get([...presetpath, 'background', 'source', 'pp', 'content'])
 							if (bkginput === feedback.options.source) return true
 							else continue
 						}
 	
 						// check if source is used in top layer
-						if (layer.id === 'TOP') {
+						else if (layer.id === 'TOP') {
 							const frginput = this.state.get([...presetpath, 'top', 'source', 'pp', 'frame'])
 							if (frginput === feedback.options.source) return true
 							else continue
@@ -123,10 +122,12 @@ export default class FeedbacksMidra extends Feedbacks  {
 						if ((feedback.options.source === 'NONE' || feedback.options.source?.toString().startsWith('BACKGROUND') && this.state.get([...presetpath, 'source', 'pp', 'inputNum']) === feedback.options.source)) {
 							return true
 						}
-						if (this.state.get([...layerpath, 'source', 'pp', 'inputNum']) === feedback.options.source) {
+						
+						const layerpath = [...presetpath, 'liveLayerList', 'items', layer.id]
+						if (this.state.get([...layerpath, 'source', 'pp', 'input']) === feedback.options.source) {
 							const invisible = (
-								this.state.get([...layerpath, 'position', 'pp', 'sizeH']) === 0 ||
-								this.state.get([...layerpath, 'position', 'pp', 'sizeV']) === 0 ||
+								this.state.get([...layerpath, 'size', 'pp', 'sizeH']) === 0 ||
+								this.state.get([...layerpath, 'size', 'pp', 'sizeV']) === 0 ||
 								this.state.get([...layerpath, 'opacity', 'pp', 'opacity']) === 0 ||
 								this.state.get([...layerpath, 'crop', 'pp', 'top']) +
 									this.state.get([...layerpath,'crop', 'pp', 'bottom']) >
@@ -140,11 +141,11 @@ export default class FeedbacksMidra extends Feedbacks  {
 								this.state.get([...layerpath, 'mask', 'pp', 'left']) +
 									this.state.get([...layerpath, 'mask', 'pp', 'right']) >
 									65528 ||
-								this.state.get([...layerpath, 'position', 'pp', 'posH']) + this.state.get([...layerpath, 'position', 'pp', 'sizeH']) / 2 <= 0 ||
-								this.state.get([...layerpath, 'position', 'pp', 'posV']) + this.state.get([...layerpath, 'position', 'pp', 'sizeV']) / 2 <= 0 ||
-								this.state.get([...layerpath, 'position', 'pp', 'posH']) - this.state.get([...layerpath, 'position', 'pp', 'sizeH']) / 2 >=
+								this.state.get([...layerpath, 'position', 'pp', 'posH']) + this.state.get([...layerpath, 'size', 'pp', 'sizeH']) / 2 <= 0 ||
+								this.state.get([...layerpath, 'position', 'pp', 'posV']) + this.state.get([...layerpath, 'size', 'pp', 'sizeV']) / 2 <= 0 ||
+								this.state.get([...layerpath, 'position', 'pp', 'posH']) - this.state.get([...layerpath, 'size', 'pp', 'sizeH']) / 2 >=
 									this.state.get([...screenpath, 'canvas', 'status', 'size', 'pp', 'sizeH']) ||
-								this.state.get([...layerpath, 'position', 'pp', 'posV']) - this.state.get([...layerpath, 'position', 'pp', 'sizeV']) / 2 >=
+								this.state.get([...layerpath, 'position', 'pp', 'posV']) - this.state.get([...layerpath, 'size', 'pp', 'sizeV']) / 2 >=
 									this.state.get([...screenpath, 'canvas', 'status', 'size', 'pp', 'sizeV'])
 							)
 							if (!invisible) {
@@ -193,43 +194,6 @@ export default class FeedbacksMidra extends Feedbacks  {
 		}
 
 		return deviceTake
-	}
-
-	// MARK: remoteLayerSelection
-	get remoteLayerSelection() {
-		const remoteLayerSelection = super.remoteLayerSelection
-		remoteLayerSelection.callback = ({options}) => {
-			if (options.screen.charAt(0) === 'A' && options.layer.match(/^\d/)) return false // impossible to have regular layer at midra auxscreen
-			let layer = options.layer.replace(/^(\d+)$/, 'LIVE_$1').replace('NATIVE', 'BKG')
-			let pst = true
-			if (options.preset != 'all') {
-				let preset: string
-				if (this.state.syncSelection) {
-					preset = this.state.get('REMOTE/live/screens/presetModeSelection/presetMode')
-				} else {
-					preset = this.state.get('LOCAL/presetMode')
-				}
-				if (preset != options.preset) {
-					pst = false
-				}
-			}
-			if (layer === 'all') {
-				return (
-					JSON.stringify(this.choices.getSelectedLayers()).includes(
-						`{"screenAuxKey":"${this.choices.getScreenInfo(options.screen).platformLongId}","layerKey":"`
-					) && pst
-				)
-			} else {
-				return (
-					JSON.stringify(this.choices.getSelectedLayers()).includes(
-						`{"screenAuxKey":"${this.choices.getScreenInfo(options.screen).platformLongId}","layerKey":"${layer}"}`
-					) && pst
-				)
-			}
-
-		}
-
-		return remoteLayerSelection
 	}
 
 	// MARK: remoteWidgetSelection

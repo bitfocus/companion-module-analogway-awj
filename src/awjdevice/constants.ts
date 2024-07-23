@@ -20,7 +20,7 @@ export default class Constants {
 
     static readonly macAddressPath = 'DEVICE/device/system/network/adapter/pp/macAddress'
 
-    static readonly xUpdatePath = '"device","screenGroupList","control","pp","xUpdate"' // livepremier + livepremier4
+    static readonly xUpdatePath: string = '"device","screenGroupList","control","pp","xUpdate"' // livepremier + livepremier4
     // static readonly xUpdatePath = '""device","preset","control","pp","xUpdate"' // midra
 
     static readonly screenGroupPath = ['device', 'screenAuxGroupList']
@@ -39,6 +39,8 @@ export default class Constants {
     static readonly screenSizePath = ['status', 'size', 'pp']
     static readonly propsSizePath = ['position', 'pp']
     static readonly propsPositionPath = ['position', 'pp']
+    static readonly propsCroppingPath = ['cropping', 'classic', 'pp']
+    static readonly propsMaskPath = ['cropping', 'mask', 'pp']
 
     static readonly screenLayerList = ['layerList', 'items']
 

@@ -159,7 +159,7 @@ export default class PresetsMidra extends Presets {
 		for (const screen of [{ id: 'sel', label: 'Selected', index: '0' }, ...this.choices.getAuxArray()]) {
 			for (const memory of this.choices.getAuxMemoryArray()) {
 				// const label = this.state.get(['DEVICE', 'device', 'presetBank', 'bankList', 'items', memory, 'control', 'pp', 'label'])
-				const bgcolor = parseInt(this.state.get(['REMOTE', 'banks', 'screen', 'items', memory.id, 'color'])?.slice(1), 16)
+				const bgcolor = parseInt(this.state.get(['REMOTE', 'banks', 'aux', 'items', memory.id, 'color'])?.slice(1), 16)
 
 				presets[`LoadAuxMemory_${memory.id}_${screen.id}`] = {
 					type: 'button',

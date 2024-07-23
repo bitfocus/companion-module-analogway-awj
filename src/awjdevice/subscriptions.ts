@@ -156,7 +156,7 @@ export default class Subscriptions {
 
 	get sourceVisibility():Subscription {
 		return {
-			pat: 'device/(auxiliaryScreen|screen|auxiliary)List/items/(S|A)?(\\d{1,3})/presetList/items/(\\w+)/l(iveL)?ayerList/items/(\\d{1,3}|NATIVE)/(source|position|opacity|cropping)',
+			pat: 'device/(auxiliaryScreen|screen|auxiliary)List/items/(S|A)?(\\d{1,3})/presetList/items/(\\w+)/l(iveL)?ayerList/items/(\\d{1,3}|NATIVE)/(source|position|size|opacity|crop|mask)',
 			fbk: 'deviceSourceTally',
 		}
 	}
@@ -449,6 +449,7 @@ export default class Subscriptions {
 		}
 	}
 
+	// Midra only
 	get auxMemoryLabel():Subscription {
 		return {
 			pat: 'DEVICE/device/preset/auxBank/slotList/items/(\\d+)/control/pp/label',
@@ -458,38 +459,38 @@ export default class Subscriptions {
 				const memory = Array.isArray(path) ? path[6] : path.split('/')[6];
 				const label = memory.toString() !== '0' ? this.instance.state.get(path) : '';
 				this.instance.setVariableValues({ ['auxMemory' + memory + 'label']: label });
-				for (const screen of this.instance.choices.getChosenAuxes('all')) {
+				for (const screenId of this.instance.choices.getChosenAuxes('all')) {
 					const pgmmem = this.instance.state.get([
 						'DEVICE',
 						'device',
-						'screenList',
+						'auxiliaryScreenList',
 						'items',
-						screen,
+						screenId.replace(/\D/g, ''),
 						'presetList',
 						'items',
-						this.instance.state.get('LOCAL/screens/' + screen + '/pgm/preset'),
+						this.instance.state.get('LOCAL/screens/' + screenId + '/pgm/preset'),
 						'status',
 						'pp',
 						'memoryId',
 					]);
 					if (memory == pgmmem) {
-						this.instance.setVariableValues({ ['screen' + screen + 'memoryLabelPGM']: label });
+						this.instance.setVariableValues({ ['screen' + screenId + 'memoryLabelPGM']: label });
 					}
 					const pvwmem = this.instance.state.get([
 						'DEVICE',
 						'device',
-						'screenList',
+						'auxiliaryScreenList',
 						'items',
-						screen,
+						screenId.replace(/\D/g, ''),
 						'presetList',
 						'items',
-						this.instance.state.get('LOCAL/screens/' + screen + '/pvw/preset'),
+						this.instance.state.get('LOCAL/screens/' + screenId + '/pvw/preset'),
 						'status',
 						'pp',
 						'memoryId',
 					]);
 					if (memory == pvwmem) {
-						this.instance.setVariableValues({ ['screen' + screen + 'memoryLabelPVW']: label });
+						this.instance.setVariableValues({ ['screen' + screenId + 'memoryLabelPVW']: label });
 					}
 				}
 				return true;
@@ -520,7 +521,7 @@ export default class Subscriptions {
 	 * Returns a string with the feedback ID if a feedback exists and runs an action if there is a 'fun' property
 	 * @param pat The path in the state object to check if a feedback or action exists for, if undefined checks all possible subscriptions
 	 */
-	checkForAction(pat?: string | string[], value?: any): string | string[] | undefined {
+	checkForAction(pat?: string | string[], value?: any): string[] | undefined {
 		// console.log('Checking for action', pat, value);
 		const subscriptions = this.subscriptions
 		let path: string
@@ -568,14 +569,13 @@ export default class Subscriptions {
 				// console.log('found feedback', fbk)
 				if (typeof fbk === 'string') {
 					ret.push(fbk)
-				} else if (Array.isArray(fbk))
-				ret = [...ret, ...fbk]
+				} else if (Array.isArray(fbk)) {
+					ret.push(...fbk)
+				}
 			}
 		})
 
-		if (ret.length === 1) {
-			return ret[0]
-		} else if (ret.length > 1) {
+		if (ret.length >= 1) {
 			return ret
 		} else {
 			return undefined

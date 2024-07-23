@@ -4,7 +4,7 @@
 **[Beware of selection synchronization!](#sync)**  
 **There are many presets but many more actions and feedbacks, presets are a good starting point though.**
 
-TOC:
+TOC:  
 [Configuration](#configuration)  
 [Actions](#actions)  
 [Feedbacks](#feedbacks)  
@@ -25,6 +25,9 @@ Because of space restrictions on our small Stream Deck buttons, some things are 
 - Aux 1...x: A1 ... Ax
 - Program: PGM
 - Preview: PVW (not PRW like in WebRCS)
+
+Another general advice: the connection protocol between Companion and the AWJ device is fast, but not insanely fast. If you change a parameter at the device it will need a few milliseconds until that parameter is stored remote, the change is executed, the acknowledge is returned and that new value is stored in Companion again. That has no relevance for parameters you just set, but there are some actions which first read parameters and then act on them, e.g. if you use a toggle action the current state is first read, then toggled, then that command is send and then it is complete when the new value acknowledge has been received. If you trigger a new toggle while the first action hasn't been finished, it will still be based on the original state because the toggled one hasn't been received yet.  
+This behavior will most likely lead to unexpected results when incrementing or decrementing values at short intervals e.g. by using a rotary encoder. You can avoid this problem by either slowing down your input frequency or by not using values from the device, but custom variables instead. Then you would increment or decrement the custom variable and send the value to the device. Unfortunately you will loose the two way communication by doing so and if the parameter changes outside of Companion the variable will not stay in sync.
 
 ## <a name="configuration"></a>Configuration
 
@@ -47,7 +50,7 @@ If you check this box, the selection synchronization will be automatically turne
 
 ### Show also disabled inputs in dropdowns  
 
-If you disable an input, it won't be included in dropdowns where inputs are shown. If you check this box also disabled inputs are shown.
+If you disable an input, it won't be included in dropdowns where inputs are shown. If you check this box also disabled inputs are shown and can be used.
 
 ### Colors
 

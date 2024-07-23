@@ -223,7 +223,6 @@ export default class Actions {
 				},
 			],
 			callback: (action) => {
-				console.log('LM options', action.options)
 				let layers: { screenAuxKey: string; layerKey: string }[] = []
 				let preset: string
 				if (action.options.method === 'sel') {
@@ -1359,27 +1358,33 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					// console.log('layer', {...layer, widthInput, heightInput, xAnchor, yAnchor, ar, context})
 
 					// send values
-					if (Math.round(layer.x + layer.w / 2) !== Math.round(layer.xOriginal + layer.wOriginal / 2)) {
+					const posH = Math.round(layer.x + layer.w / 2)
+					if (posH !== Math.round(layer.xOriginal + layer.wOriginal / 2)) {
+						this.state.set(['DEVICE', ...layer.path, ...this.constants.propsPositionPath, 'posH'], posH)
 						this.connection.sendWSmessage(
-							[...layer.path,'position','pp', 'posH'],
-							Math.round(layer.x + layer.w / 2)
+							[...layer.path, ...this.constants.propsPositionPath, 'posH'],
+							posH
 						)
 					}
-					if (Math.round(layer.y + layer.h / 2) !== Math.round(layer.yOriginal + layer.hOriginal / 2)) {
+					const posV = Math.round(layer.y + layer.h / 2)
+					if (posV !== Math.round(layer.yOriginal + layer.hOriginal / 2)) {
+						this.state.set(['DEVICE', ...layer.path, ...this.constants.propsPositionPath, 'posV'], posV)
 						this.connection.sendWSmessage(
-							[...layer.path,'position','pp', 'posV'],
-							Math.round(layer.y + layer.h / 2)
+							[...layer.path,...this.constants.propsPositionPath, 'posV'],
+							posV
 						)
 					}
 					if (layer.w !== layer.wOriginal) {
+						this.state.set(['DEVICE', ...layer.path, ...this.constants.propsSizePath, 'sizeH'], Math.round(layer.w))
 						this.connection.sendWSmessage(
-							[...layer.path,'position','pp', 'sizeH'],
+							[...layer.path, ...this.constants.propsSizePath, 'sizeH'],
 							Math.round(layer.w)
 						)
 					}
 					if (layer.h !== layer.hOriginal) {
+						this.state.set(['DEVICE', ...layer.path, ...this.constants.propsSizePath, 'sizeV'], Math.round(layer.h))
 						this.connection.sendWSmessage(
-							[...layer.path,'position','pp', 'sizeV'],
+							[...layer.path, ...this.constants.propsSizePath, 'sizeV'],
 							Math.round(layer.h)
 						)
 					}
