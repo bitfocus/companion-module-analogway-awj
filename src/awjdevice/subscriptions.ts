@@ -118,7 +118,7 @@ export default class Subscriptions {
 		return this.subscriptions[subscription]
 	}
 
-	// export const commonSubscriptions: Record<string, Subscription> = {
+	/** Does a client sync its selection to server? */
 	get syncselection():Subscription {
 		return {
 			pat: this.constants.subSyncselectionPat,
@@ -126,6 +126,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** Selected screens change */
 	get liveselection():Subscription {
 		return {
 			pat: 'live/screens/screenAuxSelection',
@@ -133,6 +134,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** Selected layers change */
 	get layerselection():Subscription {
 		return {
 			pat: 'live/screens/layerSelection/layerIds',
@@ -140,6 +142,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** Selected multiviewer widgets change */
 	get widgetSelection():Subscription {
 		return {
 			pat: 'live/multiviewers?/widgetSelection',
@@ -147,6 +150,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** Lock status of a screen changes */
 	get screenLock():Subscription {
 		return {
 			pat: 'live/screens/presetModeLock/PR',
@@ -154,6 +158,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** Any parameter that has relevance for the visibility of a source changes (source, position, size, opacity, crop, mask) */
 	get sourceVisibility():Subscription {
 		return {
 			pat: 'device/(auxiliaryScreen|screen|auxiliary)List/items/(S|A)?(\\d{1,3})/presetList/items/(\\w+)/l(iveL)?ayerList/items/(\\d{1,3}|NATIVE)/(source|position|size|opacity|crop|mask)',
@@ -161,6 +166,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** The selected preset (program or preview) changes */
 	get selectedPreset():Subscription {
 		return {
 			pat: '/live/screens/presetModeSelection/presetMode',
@@ -176,6 +182,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** Freeze status of an input changes */
 	get inputFreeze():Subscription {
 		return {
 			pat: 'device/inputList/items/(\\w+?)/control/pp/freeze',
@@ -183,11 +190,12 @@ export default class Subscriptions {
 		}
 	}
 
+	/** Timer state changes */
 	get timerState():Subscription {
 		return {
 			pat: 'DEVICE/device/timerList/items/TIMER_(\\d)/status/pp/state',
 			fbk: 'timerState',
-			ini: ['1', '2', '3', '4'],
+			ini: Array.from( {length: this.constants.maxTimers}, (_, i) => (i + 1).toString() ),
 			fun: (path, _value) => {
 				if (!path) return false
 				const timer = path.toString().match(/(?<=TIMER_)(\d)\//) || ['0']
@@ -197,6 +205,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** Screen memory gets renamed */
 	get screenMemoryLabel():Subscription {
 		return {
 			pat: 'DEVICE/device/presetBank/bankList/items/(\\d{1,4})/control/pp/label',
@@ -236,6 +245,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** Last used master memory changes */
 	get masterMemory():Subscription {
 		return {
 			pat: 'DEVICE/device/masterPresetBank/status/lastUsed/presetModeList/items/(PROGRAM|PREVIEW)/pp/memoryId',
@@ -244,10 +254,11 @@ export default class Subscriptions {
 		}
 	}
 
+	/** Master memory gets renamed */
 	get masterMemoryLabel():Subscription {
 		return {
 			pat: 'DEVICE/device/masterPresetBank/bankList/items/(\\d+)/control/pp/label',
-			ini: Array.from({ length: 499 }, (_, i) => (i + 1).toString()),
+			ini: Array.from({ length: this.constants.maxMasterMemories }, (_, i) => (i + 1).toString()),
 			fun: (path, _value) => {
 				if (!path) return false
 				const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
@@ -257,10 +268,11 @@ export default class Subscriptions {
 		}
 	}
 
+	/** Multiviewer memory gets renamed */
 	get multiviewerMemoryLabel():Subscription {
 		return {
 			pat: 'DEVICE/device/monitoringBank/bankList/items/(\\d+)/control/pp/label',
-			ini: Array.from({ length: 49 }, (_, i) => (i + 1).toString()),
+			ini: Array.from({ length: this.constants.maxMultiviewerMemories }, (_, i) => (i + 1).toString()),
 			fun: (path, _value) => {
 				if (!path) return false
 				const memory = Array.isArray(path) ? path[5] : path.split('/')[5]
@@ -270,6 +282,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** Layer memory gets renamed */
 	get layerMemoryLabel():Subscription {
 		return {
 			pat: 'DEVICE/device/layerBank/bankList/items/(\\d+)/control/pp/label',
@@ -283,6 +296,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** Still gets renamed */
 	get stillLabel():Subscription {
 		return {
 			pat: 'DEVICE/device/stillList/items/(\\d+)/control/pp/label',
@@ -296,6 +310,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** A still slot gets filled with an image or cleared */
 	get stillValid():Subscription {
 		return {
 			pat: 'DEVICE/device/stillList/items/(\\d+)/status/pp/isValid',
@@ -305,6 +320,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** Screen gets renamed */
 	get screenLabel():Subscription {
 		return {
 			pat: 'DEVICE/device/screenList/items/S(\\d{1,2})/control/pp/label',
@@ -319,6 +335,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** Auxscreen gets renamed */
 	get auxscreenLabel():Subscription {
 		return {
 			pat: 'DEVICE/device/screenList/items/A(\\d{1,2})/control/pp/label',
@@ -333,6 +350,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** Screen gets enabled or disabled */
 	get screenEnabled():Subscription {
 		return {
 			pat: 'device/(?:screen|auxiliaryScreen|auxiliary)List/items/([AS]?\\d{1,3})/status/pp/mode',
@@ -342,6 +360,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** Input gets enabled or disabled */
 	get liveInputsChange():Subscription {
 		return {
 			pat: 'DEVICE/device/inputList/items/IN_(\\d{1,2})/status/pp/isEnabled',
@@ -351,6 +370,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** A master memory gets added or removed */
 	get masterMemoriesChange():Subscription {
 		return {
 			pat: 'DEVICE/device/masterPresetBank/bankList/items/(\\d{1,3})/status/pp/isValid',
@@ -360,6 +380,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** A screen memory gets added or removed */
 	get screenMemoriesChange():Subscription {
 		return {
 			pat: 'DEVICE/device/presetBank/bankList/items/(\\d{1,4})/status/pp/isValid',
@@ -369,6 +390,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** A layer memory gets added or removed */
 	get layerMemoriesChange():Subscription {
 		return {
 			pat: 'DEVICE/device/layerBank/bankList/items/(\\d{1,3})/status/pp/isValid',
@@ -378,6 +400,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** A multiviewer memory gets added or removed */
 	get multiviewerMemoriesChange():Subscription {
 		return {
 			pat: 'DEVICE/device/monitoringBank/bankList/items/(\\d{1,3})/status/pp/isValid',
@@ -387,6 +410,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** A layer gets added or removed */
 	get layerCountChange():Subscription {
 		return {
 			pat: 'DEVICE/device/screenList/items/((?:S|A)\\d{1,2})/status/pp/layerCount',
@@ -396,6 +420,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** The color of a memory gets changed */
 	get memoryColorChange():Subscription {
 		return {
 			pat: 'banks/(\\w+)/items/(\\d+)/color',
@@ -405,17 +430,7 @@ export default class Subscriptions {
 		}
 	}
 
-	//}
-	//export const livepremierSubscriptions: Record<string, Subscription> = {
-
-	// get liveselection():Subscription {
-	// 	return {
-	// 		pat: 'live/screens/screenAuxSelection',
-	// 		fbk: 'liveScreenSelection',
-	// 	}
-	// }
-
-
+	/** The label of an input gets changed */
 	get inputLabel():Subscription {
 		return {
 			pat: 'DEVICE/device/inputList/items/IN_(\\d+)/control/pp/label',
@@ -429,6 +444,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** device is shut down */
 	get shutdown():Subscription {
 		return {
 			pat: 'DEVICE/device/system/shutdown/cmd/pp/xRequest',
@@ -442,6 +458,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** Used background set gets changed */
 	get backgroundSet():Subscription {
 		return {
 			pat: 'DEVICE/device/screenList/items/((?:S|A)\\d{1,3})/presetList/items/(A|B)/background/source/pp',
@@ -449,7 +466,7 @@ export default class Subscriptions {
 		}
 	}
 
-	// Midra only
+	/** Aux memory gets renamed (Midra only) */
 	get auxMemoryLabel():Subscription {
 		return {
 			pat: 'DEVICE/device/preset/auxBank/slotList/items/(\\d+)/control/pp/label',
@@ -498,6 +515,7 @@ export default class Subscriptions {
 		}
 	}
 
+	/** The used plug of an input gets changed */
 	get plugChange():Subscription {
 		return {
 			pat: 'DEVICE/device/inputList/items/(\\w+)/status/pp/plug',
@@ -520,6 +538,7 @@ export default class Subscriptions {
 	/**
 	 * Returns a string with the feedback ID if a feedback exists and runs an action if there is a 'fun' property
 	 * @param pat The path in the state object to check if a feedback or action exists for, if undefined checks all possible subscriptions
+	 * @returns an array containing the ids of feedbacks that need to be checked when a subscription matches. undefined if none
 	 */
 	checkForAction(pat?: string | string[], value?: any): string[] | undefined {
 		// console.log('Checking for action', pat, value);

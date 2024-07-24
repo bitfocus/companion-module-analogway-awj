@@ -9,11 +9,14 @@ export default class Constants {
     static readonly maxAuxScreens: number = 96
     static readonly maxInputs: number = 256
     static readonly maxLayers: number = 128
-    static readonly maxScreenMemories: number = 999
-    static readonly maxStills: number = 191
+    static readonly maxScreenMemories: number = 1000
+    static readonly maxMasterMemories: number = 500
+    static readonly maxMultiviewerMemories: number = 50
+    static readonly maxStills: number = 192
+    static readonly maxTimers: number = 4
 
-    static readonly presetTogglePath = ['DEVICE','device','screenGroupList','items','S1','control','pp','copyMode']
-    static readonly presetToggleValueValid = false
+    static readonly presetTogglePath = ['device','screenGroupList','items','S1','control','pp','copyMode']
+    static readonly presetToggleValueValid: boolean = false
 
     static readonly lockPrefixScreen: string = 'S'
     static readonly lockPrefixAux: string = 'A'

@@ -691,19 +691,17 @@ export default class ActionsMidra extends Actions {
 		const devicePresetToggle = super.devicePresetToggle
 
 		devicePresetToggle.callback = (act) => {
-			const allscreens = this.choices.getScreensAuxArray(true).map((itm) => itm.id)
-			// device/transition/screenList/items/1/control/pp/enablePresetToggle
-			// device/screenGroupList/items/S1/control/pp/copyMode
+			const allscreens = this.choices.getScreensAuxArray(true).map((itm) => this.choices.getScreenInfo(itm.id))
 
 			let action = act.options.action
 			if (action === 'toggle') {
 				if (this.state.get('DEVICE/device/transition/screenList/items/1/control/pp/enablePresetToggle') === true) action = 'off'
 				else action = 'on'
 			}
-			if (action === 'on') allscreens.forEach((screen: string) =>
-				this.connection.sendWSmessage('device/transition/screenList/items/' + screen.replace(/\D/g, '') + '/control/pp/enablePresetToggle', true))
-			if (action === 'off') allscreens.forEach((screen: string) =>
-				this.connection.sendWSmessage('device/transition/screenList/items/' + screen.replace(/\D/g, '') + '/control/pp/enablePresetToggle', false))
+			if (action === 'on') allscreens.forEach((screen) =>
+				this.connection.sendWSmessage(['device','transition', screen.prefixverylong + 'List','items', screen.numstr ,'control','pp','enablePresetToggle'], true))
+			if (action === 'off') allscreens.forEach((screen) =>
+				this.connection.sendWSmessage(['device','transition', screen.prefixverylong + 'List','items', screen.numstr ,'control','pp','enablePresetToggle'], false))
 		}
 
 		return devicePresetToggle
@@ -890,10 +888,10 @@ export default class ActionsMidra extends Actions {
 					}
 				}
 				if (action === 'on') {
-					this.connection.sendWSmessage('device/streaming/control/pp/start', true)				
+					this.connection.sendWSmessage(['device','streaming','control','pp','start'], true)				
 				}
 				if (action === 'off') {
-					this.connection.sendWSmessage('device/streaming/control/pp/start', false)				
+					this.connection.sendWSmessage(['device','streaming','control','pp','start'], false)				
 				}
 			}
 		}
@@ -926,8 +924,8 @@ export default class ActionsMidra extends Actions {
 					if (this.state.get('DEVICE/device/streaming/control/audio/live/pp/mute')) action = 'on'
 					else action = 'off'
 				}
-				if (action === 'on') this.connection.sendWSmessage('device/streaming/control/audio/live/pp/mute', false)
-				if (action === 'off') this.connection.sendWSmessage('device/streaming/control/audio/live/pp/mute', true)
+				if (action === 'on') this.connection.sendWSmessage(['device','streaming','control','audio','live','pp','mute'], false)
+				if (action === 'off') this.connection.sendWSmessage(['device','streaming','control','audio','live','pp','mute'], true)
 			}
 		}
 
@@ -1283,7 +1281,7 @@ export default class ActionsMidra extends Actions {
 					this.connection.sendWSmessage(path, 'SWITCH_OFF')
 				}
 				if (action.options.action === 'reboot') {
-					this.connection.sendWSmessage('device/system/shutdown/pp/xReboot', false, true)
+					this.connection.sendWSmessage(['device','system','shutdown','pp','xReboot'], false, true)
 				}
 			}
 		}

@@ -126,7 +126,7 @@ export default class Feedbacks {
 			},
 			options: [],
 			callback: (_feedback) => {
-				return this.state.get(this.constants.presetTogglePath) === this.constants.presetToggleValueValid
+				return this.state.get(['DEVICE', ...this.constants.presetTogglePath]) === this.constants.presetToggleValueValid
 			},
 		}
 

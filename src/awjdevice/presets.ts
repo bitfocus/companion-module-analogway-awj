@@ -577,10 +577,10 @@ export default class Presets {
 			name: 'Toggle Preset',
 			category: 'Live',
 			style: {
-				text: '⬇︎\\nPVW',
-				size: '24',
-				color: this.config.color_dark,
-				bgcolor: this.config.color_green,
+				text: 'Toggle preset\\nPGM/PVW',
+				size: '14',
+				color: this.config.color_bright,
+				bgcolor: this.config.color_dark,
 			},
 			steps: [
 				{
@@ -599,12 +599,27 @@ export default class Presets {
 				{
 					feedbackId: 'livePresetSelection',
 					options: {
+						preset: 'PREVIEW',
+					},
+					style: {
+						text: 'PVW',
+						size: '24',
+						color: this.inverseColorBW(this.config.color_green),
+						bgcolor: this.config.color_green,
+						png64: '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'
+					},
+				},
+				{
+					feedbackId: 'livePresetSelection',
+					options: {
 						preset: 'PROGRAM',
 					},
 					style: {
-						text: 'PGM\\n⬆︎',
+						text: 'PGM',
+						size: '24',
 						color: this.inverseColorBW(this.config.color_red),
 						bgcolor: this.config.color_red,
+						png64: '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'
 					},
 				},
 			],

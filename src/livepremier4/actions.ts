@@ -357,8 +357,6 @@ export default class ActionsLivepremier4 extends Actions {
 
 		devicePresetToggle.callback = (act) => {
 			const allscreens = this.choices.getScreensAuxArray(true).map(itm => itm.id)
-			// device/transition/screenList/items/1/control/pp/enablePresetToggle
-			// device/screenGroupList/items/S1/control/pp/copyMode
 			
 			let action = act.options.action
 			if (action === 'toggle') {

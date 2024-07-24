@@ -13,11 +13,14 @@ export default class ConstantsMidra extends Constants {
     static override readonly maxAuxScreens = 4
     static override readonly maxInputs = 16
     static override readonly maxLayers = 8 as const
-    static override readonly maxScreenMemories = 199 as const
-    static override readonly maxStills = 49 as const
+    static override readonly maxScreenMemories = 200 as const
+    static override readonly maxMasterMemories = 50 as const
+    static override readonly maxMultiviewerMemories = 20 as const
+    static override readonly maxStills = 50 as const
+    static override readonly maxTimers = 3 as const
     
-    static override readonly presetTogglePath = ['DEVICE','device','screenGroupList','items','S1','control','pp','copyMode']
-    static override readonly presetToggleValueValid = false
+    static override readonly presetTogglePath = ['device','transition','screenList','items','1','control','pp','enablePresetToggle']
+    static override readonly presetToggleValueValid = true
 
     static override readonly lockPrefixScreen = 'SCREEN_'
     static override readonly lockPrefixAux = 'AUX_'
