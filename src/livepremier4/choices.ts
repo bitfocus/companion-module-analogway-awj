@@ -195,7 +195,7 @@ export default class ChoicesLivepremier4 extends Choices {
 	/**
 	 * Returns array with some layer choices
 	 * @param param if it is a number that number of layer choices are returned, if it is a string the layers of the screen are returned
-	 * @param bkg wether to include only live layers (false) or also background and eventually foreground layer (true or omitted) 
+	 * @param bkg whether to include only live layers (false) or also background and eventually foreground layer (true or omitted) 
 	 */
 	public getLayersAsArray(param: string | number, bkg?: boolean): Choicemeta[] {
 		const ret: Choicemeta[] = []

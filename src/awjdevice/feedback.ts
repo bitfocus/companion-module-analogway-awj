@@ -85,7 +85,7 @@ export default class Feedbacks {
 		const syncselection: CompanionBooleanFeedbackDefinition = {
 			type: 'boolean',
 			name: 'Synchronization of the selection',
-			description: 'Shows wether this client synchronizes its selection to the device',
+			description: 'Shows whether this client synchronizes its selection to the device',
 			defaultStyle: {
 				color: this.config.color_dark,
 				bgcolor: this.config.color_highlight,
@@ -119,7 +119,7 @@ export default class Feedbacks {
 		const presetToggle: CompanionBooleanFeedbackDefinition = {
 			type: 'boolean',
 			name: 'Preset Toggle',
-			description: 'Shows wether preset toggle is on or off',
+			description: 'Shows whether preset toggle is on or off',
 			defaultStyle: {
 				color: this.config.color_dark,
 				bgcolor: this.config.color_highlight,
@@ -182,7 +182,7 @@ export default class Feedbacks {
 		const deviceScreenMemory = {
 			type: 'boolean',
 			name: 'Screen Memory',
-			description: 'Shows wether a screen Memory is loaded on a screen',
+			description: 'Shows whether a screen Memory is loaded on a screen',
 			defaultStyle: {
 				color: this.config.color_dark,
 				bgcolor: this.config.color_highlight,
@@ -276,7 +276,7 @@ export default class Feedbacks {
 		const deviceAuxMemory: AWJfeedback<{ screens: string[], preset: string, memory: string, unmodified: number }> = {
 			type: 'boolean',
 			name: 'Aux Memory',
-			description: 'Shows wether a Aux Memory is loaded on a auxscreen',
+			description: 'Shows whether a Aux Memory is loaded on a auxscreen',
 			defaultStyle: {
 				color: this.config.color_dark,
 				bgcolor: this.config.color_highlight,
@@ -361,7 +361,7 @@ export default class Feedbacks {
 		const deviceSourceTally: AWJfeedback<{ screens: string[], preset: string, source: string }> = {
 			type: 'boolean',
 			name: 'Source Tally',
-			description: 'Shows wether a source is visible on program or preview in a screen',
+			description: 'Shows whether a source is visible on program or preview in a screen',
 			defaultStyle: {
 				color: this.config.color_dark,
 				bgcolor: this.config.color_highlight,
@@ -486,7 +486,7 @@ export default class Feedbacks {
 		const deviceTake: AWJfeedback<{screens: string}> = {
 			type: 'boolean',
 			name: 'Transition active',
-			description: 'Shows wether a screen is currently in a take/fade transition',
+			description: 'Shows whether a screen is currently in a take/fade transition',
 			defaultStyle: {
 				color: this.config.color_dark,
 				bgcolor: this.config.color_highlight,
@@ -517,7 +517,7 @@ export default class Feedbacks {
 		const liveScreenSelection: AWJfeedback<{screen: string}> = {
 			type: 'boolean',
 			name: 'Screen Selection',
-			description: 'Shows wether a screen is currently selected',
+			description: 'Shows whether a screen is currently selected',
 			defaultStyle: {
 				color: this.config.color_dark,
 				bgcolor: this.config.color_highlight,
@@ -545,7 +545,7 @@ export default class Feedbacks {
 		const liveScreenLock: AWJfeedback<{screen: string, preset: string }> = {
 			type: 'boolean',
 			name: 'Screen Lock',
-			description: 'Shows wether a screen currently is locked',
+			description: 'Shows whether a screen currently is locked',
 			defaultStyle: {
 				png64:
 					'iVBORw0KGgoAAAANSUhEUgAAADcAAAA3CAYAAACo29JGAAABSklEQVRoge2a2w7DIAhAZdl3N60/zp5MjBNLBdwknKe19cIZLdVlKTkGrCc4jgOpazln0/lNBh8JUViIqg44I9WiKaky0J0UwHgaxO/uAADXdYnieol6J7lYacNp9xSxHMVMwHV77KXzaQySzlTWmiB5gRB9JM+geuZKkIjIFivt2zHEscx27GWtFmvOd+fp3Xq9MWazp565JgNAiZXr2vPXqMm1cXIDb9uVL0fD26xa/gMhtyshtyshtyshtyshtyuu5YarU40ffKwZbYdcZ+7NbWi89WKBiAkA2Dt815kLuV1hP3NSzvOE6vOSKrwkc7VY79gKczlKZIWgqdydgLWg64IScrPcVUXrqrmioHQFVrwOVr0KcHRsRbzndiXkJLhdofyakJsl1paGuJYz3YmvWolQuM6cazn2banwPzMVnsThOnOu5VzzARnBeIM8tq0ZAAAAAElFTkSuQmCC',
@@ -584,7 +584,7 @@ export default class Feedbacks {
 		const livePresetSelection: AWJfeedback<{preset: string }> = {
 			type: 'boolean',
 			name: 'Preset Selection',
-			description: 'Shows wether program or preview is currently selected',
+			description: 'Shows whether program or preview is currently selected',
 			defaultStyle: {
 				color: this.config.color_dark,
 				bgcolor: this.config.color_highlight,
@@ -626,7 +626,7 @@ export default class Feedbacks {
 		const remoteLayerSelection: AWJfeedback<{screen: string, layer: string, preset: string }> = {
 			type: 'boolean',
 			name: 'Layer Selection',
-			description: 'Shows wether a layer is currently selected',
+			description: 'Shows whether a layer is currently selected',
 			defaultStyle: {
 				color: this.config.color_dark,
 				bgcolor: this.config.color_highlight,
@@ -704,7 +704,7 @@ export default class Feedbacks {
 		const remoteWidgetSelection: AWJfeedback<{widget: string }> = {
 			type: 'boolean',
 			name: 'Widget Selection',
-			description: 'Shows wether a multiviewer widget is currently selected',
+			description: 'Shows whether a multiviewer widget is currently selected',
 			defaultStyle: {
 				color: this.config.color_dark,
 				bgcolor: this.config.color_highlight,
@@ -740,7 +740,7 @@ export default class Feedbacks {
 		const deviceInputFreeze: AWJfeedback<{input: string}> = {
 			type: 'boolean',
 			name: 'Input Freeze',
-			description: 'Shows wether an input currently is frozen',
+			description: 'Shows whether an input currently is frozen',
 			defaultStyle: {
 				color: this.config.color_bright,
 				bgcolor: combineRgb(0, 0, 100),
@@ -778,7 +778,7 @@ export default class Feedbacks {
 		const deviceLayerFreeze: AWJfeedback<{screen: string}> = {
 			type: 'boolean',
 			name: 'Layer Freeze',
-			description: 'Shows wether a layer currently is frozen',
+			description: 'Shows whether a layer currently is frozen',
 			defaultStyle: {
 				color: this.config.color_bright,
 				bgcolor: combineRgb(0, 0, 100),
@@ -863,7 +863,7 @@ export default class Feedbacks {
 		const deviceScreenFreeze: AWJfeedback<{screen: string}> = {
 			type: 'boolean',
 			name: 'Screen Freeze',
-			description: 'Shows wether a screen currently is frozen',
+			description: 'Shows whether a screen currently is frozen',
 			defaultStyle: {
 				color: this.config.color_bright,
 				bgcolor: combineRgb(0, 0, 100),
@@ -905,7 +905,7 @@ export default class Feedbacks {
 		const timerState: AWJfeedback<{timer: string, state: string }> = {
 			type: 'boolean',
 			name: 'Timer State',
-			description: 'Shows wether a timer is currently stopped or running',
+			description: 'Shows whether a timer is currently stopped or running',
 			defaultStyle: {
 				color: this.config.color_dark,
 				bgcolor: this.config.color_highlight,
@@ -949,7 +949,7 @@ export default class Feedbacks {
 		const deviceGpioOut: AWJfeedback<{gpo: number, state: number }> = {
 			type: 'boolean',
 			name: 'GPO State',
-			description: 'Shows wether a general purpose output is currently active',
+			description: 'Shows whether a general purpose output is currently active',
 			defaultStyle: {
 				color: this.config.color_dark,
 				bgcolor: this.config.color_highlight,
@@ -991,7 +991,7 @@ export default class Feedbacks {
 		const deviceGpioIn: AWJfeedback<{gpi: number, state: number }> = {
 			type: 'boolean',
 			name: 'GPI State',
-			description: 'Shows wether a general purpose input is currently active',
+			description: 'Shows whether a general purpose input is currently active',
 			defaultStyle: {
 				color: this.config.color_dark,
 				bgcolor: this.config.color_highlight,

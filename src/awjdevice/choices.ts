@@ -426,8 +426,8 @@ export default class Choices {
 	/**
 	 * Returns array with some layer choices
 	 * @param param if it is a number that number of layer choices are returned, if it is a string the layers of the screen are returned
-	 * @param bkg wether to include only live layers (false) or also background and eventually foreground layer (true or omitted) 
-	 * @param top wether to include foreground layer if available, follows bkg if omitted 
+	 * @param bkg whether to include only live layers (false) or also background and eventually foreground layer (true or omitted) 
+	 * @param top whether to include foreground layer if available, follows bkg if omitted 
 	*/
 	public getLayersAsArray(param: string | number, bkg?: boolean, _top?: boolean): Choicemeta[] {
 		const ret: Choicemeta[] = []
@@ -444,8 +444,8 @@ export default class Choices {
 	/**
 	 * Returns array with some layer choices
 	 * @param param if it is a number that number of layer choices are returned, if it is a string the layers of the screen are returned
-	 * @param bkg wether to include only live layers (false) or also background and eventually foreground layer (true or omitted) 
-	 * @param top wether to include foreground layer if available, follows bkg if omitted
+	 * @param bkg whether to include only live layers (false) or also background and eventually foreground layer (true or omitted) 
+	 * @param top whether to include foreground layer if available, follows bkg if omitted
 	 */
 	public getLayerChoices(param: string | number, bkg?: boolean, top?: boolean): Dropdown<string>[] {
 		const ret: Dropdown<string>[] = this.getLayersAsArray(param, bkg, top)

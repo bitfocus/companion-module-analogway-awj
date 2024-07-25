@@ -96,7 +96,7 @@ export default class FeedbacksLivepremier extends Feedbacks  {
 		const deviceGpioOut: AWJfeedback<{gpo: number, state: number }> = {
 			type: 'boolean',
 			name: 'GPO State',
-			description: 'Shows wether a general purpose output is currently active',
+			description: 'Shows whether a general purpose output is currently active',
 			defaultStyle: {
 				color: this.config.color_dark,
 				bgcolor: this.config.color_highlight,
@@ -149,7 +149,7 @@ export default class FeedbacksLivepremier extends Feedbacks  {
 		const deviceGpioIn: AWJfeedback<{gpi: number, state: number }> = {
 			type: 'boolean',
 			name: 'GPI State',
-			description: 'Shows wether a general purpose input is currently active',
+			description: 'Shows whether a general purpose input is currently active',
 			defaultStyle: {
 				color: this.config.color_dark,
 				bgcolor: this.config.color_highlight,
