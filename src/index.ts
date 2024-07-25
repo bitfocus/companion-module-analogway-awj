@@ -335,45 +335,6 @@ export class AWJinstance extends InstanceBase<Config> {
 		}
 	}
 
-	public timeToSeconds(timestring: string): number {
-		let hours = 0
-		let minutes = 0
-		let seconds = 0
-		let direction = 1
-		let result = timestring.match(/(?:^|\D)(-?)(\d|1\d|2[0-3])\D(\d|[0-5]\d)\D(\d|[0-5]\d)(?:\D|$)/)
-		if (result) {
-			direction = result[1] === '-' ? -1 : 1
-			hours = parseInt(result[2])
-			minutes = parseInt(result[3])
-			seconds = parseInt(result[4])
-			return (hours * 3600 + minutes * 60 + seconds) * direction
-		}
-		result = timestring.match(/(?:^|\D)(-?)(\d{0,3})\D(\d|[0-5]\d)(?:\D|$)/)
-		if (result) {
-			direction = result[1] === '-' ? -1 : 1
-			minutes = parseInt(result[2])
-			seconds = parseInt(result[3])
-			return (hours * 3600 + minutes * 60 + seconds) * direction
-		}
-		result = timestring.match(/(?:^|\D)(-?)(\d{0,5})(?:\D|$)/)
-		if (result) {
-			direction = result[1] === '-' ? -1 : 1
-			seconds = parseInt(result[2])
-			return (hours * 3600 + minutes * 60 + seconds) * direction
-		}
-		return 0
-	}
-
-	public deciSceondsToString(time: number): string {
-		return (
-			Math.floor(time / 600)
-				.toString()
-				.padStart(2, '0') +
-			':' +
-			((time % 600) / 10).toFixed(2).padStart(5, '0')
-		)
-	}
-
 	/**
 	 * Switches sync on or off
 	 * @param action 0: switch off, 1: switch on, 2: toggle, 3: resend local sync state

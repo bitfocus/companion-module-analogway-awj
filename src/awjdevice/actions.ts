@@ -15,6 +15,7 @@ import { AWJconnection } from '../connection.js'
 import { splitRgb } from '@companion-module/base'
 import { StateMachine } from '../state.js'
 import Constants from './constants.js'
+import { timeToSeconds } from '../util.js'
 
 /**
  * T = Object like {option1id: type, option2id: type}
@@ -2342,11 +2343,11 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				let time = this.state.get(['DEVICE', 'device', 'timerList', 'items', action.options.timer, 'control', 'pp', timetype])
 				const inputvalue = await this.instance.parseVariablesInString(action.options.time)
 				if (action.options.action === 'add') {
-					time += this.instance.timeToSeconds(inputvalue)
+					time += timeToSeconds(inputvalue)
 				} else if (action.options.action === 'sub') {
-					time -= this.instance.timeToSeconds(inputvalue)
+					time -= timeToSeconds(inputvalue)
 				} else if (action.options.action === 'set') {
-					time = this.instance.timeToSeconds(inputvalue)
+					time = timeToSeconds(inputvalue)
 				} else {
 					time = 0
 				}

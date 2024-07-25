@@ -1,6 +1,7 @@
 import {AWJinstance} from '../index.js'
 import { Subscription } from '../../types/Subscription.js'
 import Subscriptions from '../awjdevice/subscriptions.js'
+import { deciSceondsToString } from '../util.js'
 
 /**
  * Class for managing and checking of the subscriptions.
@@ -116,13 +117,13 @@ export default class SubscriptionsLivepremier extends Subscriptions {
 				if (pres === 'takeUpTime') {
 					const presname = 'B' === this.instance.state.get(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
 					this.instance.setVariableValues({
-						['screen' + screen + 'time' + presname]: this.instance.deciSceondsToString(this.instance.state.get(path))
+						['screen' + screen + 'time' + presname]: deciSceondsToString(this.instance.state.get(path))
 					})
 				}
 				if (pres === 'takeDownTime') {
 					const presname = 'A' === this.instance.state.get(`LOCAL/screens/${screen}/pgm/preset`) ? 'PVW' : 'PGM'
 					this.instance.setVariableValues({
-						['screen' + screen + 'time' + presname]: this.instance.deciSceondsToString(this.instance.state.get(path))
+						['screen' + screen + 'time' + presname]: deciSceondsToString(this.instance.state.get(path))
 					})
 				}
 				
@@ -214,12 +215,12 @@ export default class SubscriptionsLivepremier extends Subscriptions {
 					this.instance.state.set(`LOCAL/screens/${screen}/pgm/preset`, program);
 					this.instance.state.set(`LOCAL/screens/${screen}/pvw/preset`, preview);
 					this.instance.setVariableValues({
-						['screen' + screen + 'timePGM']: this.instance.deciSceondsToString(
+						['screen' + screen + 'timePGM']: deciSceondsToString(
 							this.instance.state.get(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
 						)
 					});
 					this.instance.setVariableValues({
-						['screen' + screen + 'timePVW']: this.instance.deciSceondsToString(
+						['screen' + screen + 'timePVW']: deciSceondsToString(
 							this.instance.state.get(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeDownTime'])
 						)
 					});
@@ -232,7 +233,7 @@ export default class SubscriptionsLivepremier extends Subscriptions {
 					this.instance.state.set(`LOCAL/screens/${screen}/pgm/preset`, program);
 					this.instance.state.set(`LOCAL/screens/${screen}/pvw/preset`, preview);
 					this.instance.setVariableValues({
-						['screen' + screen + 'timePGM']: this.instance.deciSceondsToString(
+						['screen' + screen + 'timePGM']: deciSceondsToString(
 							this.instance.state.get([
 								'DEVICE',
 								'device',
@@ -244,7 +245,7 @@ export default class SubscriptionsLivepremier extends Subscriptions {
 						)
 					});
 					this.instance.setVariableValues({
-						['screen' + screen + 'timePVW']: this.instance.deciSceondsToString(
+						['screen' + screen + 'timePVW']: deciSceondsToString(
 							this.instance.state.get(['DEVICE', 'device', 'screenGroupList', 'items', screen, 'control', 'pp', 'takeUpTime'])
 						)
 					});

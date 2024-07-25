@@ -2,6 +2,7 @@ import {AWJinstance} from '../index.js'
 import { Subscription } from '../../types/Subscription.js'
 import { InstanceStatus } from '@companion-module/base'
 import Subscriptions from '../awjdevice/subscriptions.js'
+import { deciSceondsToString } from '../util.js'
 
 /**
  * Class for managing and checking of the subscriptions.
@@ -91,10 +92,10 @@ export default class SubscriptionsMidra extends Subscriptions {
 				const screenNumber = Array.isArray(path) ? path[5] : path.split('/')[5]
 
 				this.instance.setVariableValues({
-					['screenS' + screenNumber + 'timePVW']: this.instance.deciSceondsToString(this.instance.state.get(path))
+					['screenS' + screenNumber + 'timePVW']: deciSceondsToString(this.instance.state.get(path))
 				})
 				this.instance.setVariableValues({
-					['screenS' + screenNumber + 'timePGM']: this.instance.deciSceondsToString(this.instance.state.get(path))
+					['screenS' + screenNumber + 'timePGM']: deciSceondsToString(this.instance.state.get(path))
 				})
 			
 				return false
@@ -113,10 +114,10 @@ export default class SubscriptionsMidra extends Subscriptions {
 				const screenNumber = Array.isArray(path) ? path[5] : path.split('/')[5]
 
 				this.instance.setVariableValues({
-					['screenA' + screenNumber + 'timePVW']: this.instance.deciSceondsToString(this.instance.state.get(path))
+					['screenA' + screenNumber + 'timePVW']: deciSceondsToString(this.instance.state.get(path))
 				})
 				this.instance.setVariableValues({
-					['screenA' + screenNumber + 'timePGM']: this.instance.deciSceondsToString(this.instance.state.get(path))
+					['screenA' + screenNumber + 'timePGM']: deciSceondsToString(this.instance.state.get(path))
 				})
 			
 				return false
@@ -336,7 +337,7 @@ export default class SubscriptionsMidra extends Subscriptions {
 				const screenNum = patharr[5];
 				const prefix = patharr[3].charAt(0).toUpperCase()
 				let program = '', preview = ''
-				const takeTime = this.instance.deciSceondsToString(
+				const takeTime = deciSceondsToString(
 						this.instance.state.get(['DEVICE', 'device', 'transition', ...screenpath, 'control', 'pp', 'takeTime'])
 					)
 
