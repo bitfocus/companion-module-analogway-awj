@@ -571,7 +571,7 @@ export default class Subscriptions {
 		})
 		let ret: string[] = []
 		subscriptionlist.forEach((subscription) => {
-			console.log('found subscription', subscription)
+			// console.log('found subscription', subscription)
 			const subscriptionobj = subscriptions[subscription]
 			if (subscriptionobj.fun && typeof subscriptionobj.fun === 'function') {
 				// console.log('found subscription fun')

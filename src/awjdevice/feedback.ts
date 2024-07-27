@@ -237,7 +237,7 @@ export default class Feedbacks {
 								screeninfo.platformId,
 								'presetList',
 								'items',
-								this.choices.getPreset(screen, preset),
+								this.choices.getPreset(screeninfo.id, preset),
 								...this.constants.activeScreenMemoryIdPath,
 							]) == feedback.options.memory
 						) {

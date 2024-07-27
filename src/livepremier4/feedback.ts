@@ -71,6 +71,37 @@ export default class FeedbacksLivepremier4 extends Feedbacks  {
 				default: ['all'],
 			} as any // TODO: fix type of dropdown with multiple: true property
 
+		deviceScreenMemory.callback =  (feedback) => {
+			const screens = this.choices.getChosenScreensSupportedByScreenMemories(feedback.options.screens)
+			const presets = feedback.options.preset === 'all' ? ['pgm', 'pvw'] : [feedback.options.preset]
+			
+			for (const screen of screens) {
+				const screeninfo = this.choices.getScreenInfo(screen)
+				for (const preset of presets) {
+					const propPath = [
+							'DEVICE', 'device', 'presetBank', 'status', 'presetId',
+							screeninfo.prefixverylong + 'List',
+							'items',
+							screeninfo.platformId,
+							'presetList',
+							'items',
+							this.choices.getPreset(screeninfo.id, preset),
+							'pp'
+						]
+					if (
+						this.state.get([...propPath, 'id']) == feedback.options.memory
+					) {
+						if (feedback.options.unmodified === 2) return true
+						const notModified = this.state.get([...propPath, 'isNotModified'])
+						if (notModified == feedback.options.unmodified) {
+							return true
+						}
+					}
+				}
+			}
+			return false
+		}
+
 		return deviceScreenMemory
 	}
 

@@ -1682,6 +1682,67 @@ export default class Presets {
 			}
 		}
 
+		presets[`posSizeSizeHVrot`] = {
+			type: 'button',
+			name: `size with rotary`,
+			category: 'Position / Size',
+			options: {
+				rotaryActions: true
+			},
+			style: {
+				text: '',
+				size: 14 as CompanionTextSize,
+				color: this.config.color_bright,
+				bgcolor: this.config.color_dark,
+				png64: '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',
+			},
+			steps: [
+				{
+					rotate_right: [
+						{
+							actionId: 'devicePositionSize',
+							options: {
+								screen: 'sel',
+								preset: 'sel',
+								layersel: 'sel',
+								...screensSelections,
+								parameters: ['w'],
+								x: '0.5 * sw', 
+								xAnchor: 'bx + 0.5 * bw',
+								y: '0.5 * sh',
+								yAnchor: 'by + 0.5 * bh',
+								w: 'lw * 1.02',
+								h: 'lh * 1.02',
+								ar: 'keep'
+							},
+						},
+					],
+					rotate_left: [
+						{
+							actionId: 'devicePositionSize',
+							options: {
+								screen: 'sel',
+								preset: 'sel',
+								layersel: 'sel',
+								...screensSelections,
+								parameters: ['w'],
+								x: '0.5 * sw', 
+								xAnchor: 'bx + 0.5 * bw',
+								y: '0.5 * sh',
+								yAnchor: 'by + 0.5 * bh',
+								w: 'lw / 1.02',
+								h: 'lh / 1.02',
+								ar: 'keep'
+							},
+						},
+					],
+					up: [],
+					down: [],
+				},
+			],
+			feedbacks: [],
+		}
+
 
 		return presets
 	}

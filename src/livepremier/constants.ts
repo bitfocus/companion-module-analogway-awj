@@ -14,8 +14,8 @@ export default class ConstantsLivepremier extends Constants {
     static readonly maxInputs = 32
     static override readonly maxLayers = 48 as const
     static override readonly maxStills = 47 as const
-    
-    static readonly presetTogglePath = ['DEVICE','device','screenGroupList','items','S1','control','pp','copyMode']
+
+    static readonly presetTogglePath = ['device','screenGroupList','items','S1','control','pp','copyMode']
     static readonly presetToggleValueValid = false
 
     static readonly macAddressPath = 'DEVICE/device/system/network/adapter/pp/macAddress'

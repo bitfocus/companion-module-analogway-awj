@@ -108,8 +108,27 @@ class AWJconnection {
 						this.instance.state.set('LINK', authResponse.device || authResponse.devices)
 
 						const system = res.device.system // this.instance.state.get('DEVICE/device/system')
-						const deviceroot = system.pp ?? system.deviceList?.items?.['1']?.pp ?? null
-						const device = deviceroot.dev ?? null
+						if (!system) {
+							this.instance.updateStatus(InstanceStatus.ConnectionFailure)
+							this.instance.log('error', 'Probably connected to an Analog Way device but device type is not compatible with this module')
+							return
+						}
+
+						let deviceroot = system.deviceList.items['1'].pp
+						if (!deviceroot) deviceroot = system.pp
+						if (!deviceroot) {
+							this.instance.updateStatus(InstanceStatus.ConnectionFailure)
+							this.instance.log('error', 'Quite probably connected to an Analog Way device but device type is not compatible with this module')
+							return
+						}
+
+						const device = deviceroot.dev
+						if (!device) {
+							this.instance.updateStatus(InstanceStatus.ConnectionFailure)
+							this.instance.log('error', 'Connected to an Analog Way device but device type is not compatible with this module')
+							return
+						}
+
 						const fwVersion = system.version?.pp?.updater ?? system.deviceList?.items?.['1']?.version?.pp?.updater ?? '0.0.0' // this.state.get('DEVICE/device/system/version/pp/updater') ?? this.state.get('DEVICE/device/system/deviceList/items/1/version/pp/updater') ?? '0.0.0'
 
 						const serialAndFirmware = (): string => {
@@ -118,116 +137,113 @@ class AWJconnection {
 							else return `, S/N: ${sn}, fw ${fwVersion}`
 						}
 
-						if (device) {
-							let newPlatform = ''
-							if (device.substring(0, 3) === 'NLC') {
-								this.instance.updateStatus(InstanceStatus.Ok)
-								this.instance.log(
-									'info',
-									'Connected to ' +
-									device.replace('NLC_', 'Aquilon ') + serialAndFirmware()
-								)
-								const major = parseInt(fwVersion.split('.')[0])
-								if (!isNaN(major) && major >= 4) {
-									newPlatform = `livepremier4`
-								} else {
-									newPlatform = 'livepremier'
-								}
-							} else if (device.match(/^EIKOS/)) {
-								this.instance.updateStatus(InstanceStatus.Ok)
-								this.instance.log(
-									'info',
-									'Connected to Eikos 4k' + serialAndFirmware()
-								)
-								newPlatform = 'midra'
-							} else if (device.match(/^PULSE/)) {
-								this.instance.updateStatus(InstanceStatus.Ok)
-								this.instance.log(
-									'info',
-									'Connected to Pulse 4k' + serialAndFirmware()
-								)
-								newPlatform = 'midra'
-							} else if (device.match(/^QMX/)) {
-								this.instance.updateStatus(InstanceStatus.Ok)
-								this.instance.log(
-									'info',
-									'Connected to QuikMatrix 4k' + serialAndFirmware()
-								)
-								newPlatform = 'midra'
-							} else if (device.match(/^QVU/)) {
-								this.instance.updateStatus(InstanceStatus.Ok)
-								this.instance.log(
-									'info',
-									'Connected to QuickVu 4k' + serialAndFirmware()
-								)
-								newPlatform = 'midra'
-							} else if (device.match(/^ZEN100/)) {
-								this.instance.updateStatus(InstanceStatus.Ok)
-								this.instance.log(
-									'info',
-									'Connected to Zenith 100' + serialAndFirmware()
-								)
-								newPlatform = 'midra'
-							} else if (device.match(/^ZEN200/)) {
-								this.instance.updateStatus(InstanceStatus.Ok)
-								this.instance.log(
-									'info',
-									'Connected to Zenith 200' + serialAndFirmware()
-								)
-								newPlatform = 'midra'
-							} else if (device.match(/^DBG/)) {
-								this.instance.updateStatus(InstanceStatus.Ok)
-								this.instance.log(
-									'info',
-									'Connected to MNG_DEBUG' + serialAndFirmware()
-								)
-								newPlatform = 'midra'
+
+						let newPlatform = ''
+						if (device.substring(0, 3) === 'NLC') {
+							this.instance.updateStatus(InstanceStatus.Ok)
+							this.instance.log(
+								'info',
+								'Connected to ' +
+								device.replace('NLC_', 'Aquilon ') + serialAndFirmware()
+							)
+							const major = parseInt(fwVersion.split('.')[0])
+							if (!isNaN(major) && major >= 4) {
+								newPlatform = `livepremier4`
 							} else {
-								this.instance.updateStatus(InstanceStatus.ConnectionFailure)
-								this.instance.log('error', `Connected to an AWJ device of type '${device}', firmware '${fwVersion}'. Device type or firmware can not be determined or is not compatible with this module`)
-								return
+								newPlatform = 'livepremier'
 							}
-
-							try {
-								this.instance.setDevice(newPlatform)
-							} catch (error: any) {
-								this.instance.log('error', `setting device platform to ${newPlatform} failed:\n${error}`) 
-							}
-							try {
-								this.instance.subscriptions.initSubscriptions()
-							} catch (error: any) {
-								this.instance.log('error', `setting up subscriptions for device failed:\n${error.stack}`) 
-							}
-
-
-							if (this.instance.config.sync === true && this.hadError === false) {
-								console.log('switching sync on because of config')
-								this.instance.switchSync(1)
-							} else if (this.hadError === true) {
-								this.instance.switchSync(3)
-								console.log('setting sync again after reconnection')
-							} else {
-								this.instance.switchSync(0)
-								console.log('setting sync off by default')
-							}
-							this.hadError = false
-							
-
-							try {
-								const deviceMacaddr = this.instance.choices.getMACaddress()
-								const configMacaddr = this.instance.config.macaddress.split(/[,:-_.\s]/).join(':')
-								if (configMacaddr !== deviceMacaddr) {
-									this.instance.config.macaddress = deviceMacaddr
-									this.instance.saveConfig(this.instance.config)
-								}
-							} catch (error) {
-								this.instance.log('error', 'getting MAC address from device failed ' + error)
-							}
-							return
+						} else if (device.match(/^EIKOS/)) {
+							this.instance.updateStatus(InstanceStatus.Ok)
+							this.instance.log(
+								'info',
+								'Connected to Eikos 4k' + serialAndFirmware()
+							)
+							newPlatform = 'midra'
+						} else if (device.match(/^PULSE/)) {
+							this.instance.updateStatus(InstanceStatus.Ok)
+							this.instance.log(
+								'info',
+								'Connected to Pulse 4k' + serialAndFirmware()
+							)
+							newPlatform = 'midra'
+						} else if (device.match(/^QMX/)) {
+							this.instance.updateStatus(InstanceStatus.Ok)
+							this.instance.log(
+								'info',
+								'Connected to QuikMatrix 4k' + serialAndFirmware()
+							)
+							newPlatform = 'midra'
+						} else if (device.match(/^QVU/)) {
+							this.instance.updateStatus(InstanceStatus.Ok)
+							this.instance.log(
+								'info',
+								'Connected to QuickVu 4k' + serialAndFirmware()
+							)
+							newPlatform = 'midra'
+						} else if (device.match(/^ZEN100/)) {
+							this.instance.updateStatus(InstanceStatus.Ok)
+							this.instance.log(
+								'info',
+								'Connected to Zenith 100' + serialAndFirmware()
+							)
+							newPlatform = 'midra'
+						} else if (device.match(/^ZEN200/)) {
+							this.instance.updateStatus(InstanceStatus.Ok)
+							this.instance.log(
+								'info',
+								'Connected to Zenith 200' + serialAndFirmware()
+							)
+							newPlatform = 'midra'
+						} else if (device.match(/^DBG/)) {
+							this.instance.updateStatus(InstanceStatus.Ok)
+							this.instance.log(
+								'info',
+								'Connected to MNG_DEBUG' + serialAndFirmware()
+							)
+							newPlatform = 'midra'
 						} else {
 							this.instance.updateStatus(InstanceStatus.ConnectionFailure)
-							this.instance.log('error', 'Connected to an Analog Way device but device type is not compatible with this module')
+							this.instance.log('error', `Connected to an AWJ device of type '${device}', firmware '${fwVersion}'. Device type or firmware can not be determined or is not compatible with this module`)
+							return
 						}
+
+						try {
+							this.instance.setDevice(newPlatform)
+						} catch (error: any) {
+							this.instance.log('error', `setting device platform to ${newPlatform} failed:\n${error}`) 
+						}
+						try {
+							this.instance.subscriptions.initSubscriptions()
+						} catch (error: any) {
+							this.instance.log('error', `setting up subscriptions for device failed:\n${error.stack}`) 
+						}
+
+
+						if (this.instance.config.sync === true && this.hadError === false) {
+							console.log('switching sync on because of config')
+							this.instance.switchSync(1)
+						} else if (this.hadError === true) {
+							this.instance.switchSync(3)
+							console.log('setting sync again after reconnection')
+						} else {
+							this.instance.switchSync(0)
+							console.log('setting sync off by default')
+						}
+						this.hadError = false
+						
+
+						try {
+							const deviceMacaddr = this.instance.choices.getMACaddress()
+							const configMacaddr = this.instance.config.macaddress.split(/[,:-_.\s]/).join(':')
+							if (configMacaddr !== deviceMacaddr) {
+								this.instance.config.macaddress = deviceMacaddr
+								this.instance.saveConfig(this.instance.config)
+							}
+						} catch (error) {
+							this.instance.log('error', 'getting MAC address from device failed ' + error)
+						}
+						return
+						
 					} else {
 						this.instance.log('error', 'Got malformed state from device ' + res)
 					}
@@ -289,7 +305,7 @@ class AWJconnection {
 							data.toString().match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
 							data.toString().match(/"device","system",("deviceList","items","[1-4]",)?"temperature",/) === null
 						) {
-							console.log('debug', 'incoming WS message '+ data.toString().substring(0, 400))
+							// console.log('debug', 'incoming WS message '+ data.toString().substring(0, 400))
 							this.instance.state.apply(JSON.parse(data.toString()))
 						}
 					})
@@ -489,7 +505,7 @@ class AWJconnection {
 	sendRawWSmessage(message: string): void {
 		if (this.websocket?.readyState === 1) {
 			this.websocket?.send(message)
-			this.instance.log('debug', 'sendig WS message ' + this.websocket.url + ' ' + message)
+			// this.instance.log('debug', 'sendig WS message ' + this.websocket.url + ' ' + message)
 		}
 	}
 

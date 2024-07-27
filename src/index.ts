@@ -220,7 +220,7 @@ export class AWJinstance extends InstanceBase<Config> {
 	 * Process an updated configuration array.
 	 */
 	public async configUpdated(config: Config): Promise<void> {
-		console.log('Config Update called', this.oldlabel, this.label)
+		// console.log('Config Update called', this.oldlabel, this.label)
 		const oldconfig = {  ...this.config }
 		this.config = config
 

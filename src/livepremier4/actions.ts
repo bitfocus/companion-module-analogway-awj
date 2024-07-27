@@ -705,7 +705,7 @@ export default class ActionsLivepremier4 extends Actions {
 				const device = action.options.device
 				if (action.options[`in${device}`].length > 0) {
 					const outstart = audioOutputChoices[device -1].findIndex((item) => {
-						return item.id === action.options[`in${device}`]
+						return item.id === action.options[`out${device}`]
 					})
 					if (outstart > -1) {
 						const max = Math.min(audioOutputChoices[device -1].length - outstart, action.options[`in${device}`].length)
@@ -798,6 +798,29 @@ export default class ActionsLivepremier4 extends Actions {
 		}
 
 		return deviceTimerSetup
+	}
+
+	/**
+	 * MARK: Set input keying
+	 */
+	get deviceInputKeying() {		
+		const deviceInputKeying = super.deviceInputKeying
+		
+		deviceInputKeying.options[1] = {
+			id: 'mode',
+			type: 'dropdown',
+			label: 'Mode',
+			choices: [
+				{ id: 'DISABLE', label: 'Keying Disabled' },
+				{ id: 'CHROMA', label: 'Chroma Key' },
+				{ id: 'LUMA', label: 'Luma Key' },
+				{ id: 'CREMATTE3D', label: 'CremaTTe 3D' },
+				{ id: 'CUT_AND_FILL', label: 'Cut and Fill' },
+			],
+			default: 'DISABLE',
+		}
+
+		return deviceInputKeying
 	}
 
 	/**
