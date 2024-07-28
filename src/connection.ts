@@ -1,78 +1,35 @@
 import { AWJinstance } from './index.js'
 import * as dgram from 'dgram'
-import * as net from 'net'
-import URI from 'urijs'
 import ky from 'ky'
+import URI from 'urijs'
 import WebSocket from 'ws'
-import { State } from './state.js'
-import { checkSubscriptions, initSubscriptions } from './subscriptions.js'
-import { mapOut, updateMappings } from './mappings.js'
 import { InstanceStatus } from '@companion-module/base'
 
+const fetchDefaultParameters = {
+	retry: 2,
+	timeout: 15000
+}
 
-class AWJdevice {
+
+class AWJconnection {
 	instance: AWJinstance
-	public state: State
-	tcpsocket: net.Socket | undefined
-	websocket: WebSocket | undefined | null
-	wsTimeout: NodeJS.Timeout | undefined
-	port: number | undefined
-	host: string | undefined
-	addr: string | undefined
-	authcookie = ''
-	reconnectmin = 100
-	reconnectmax = 16_500
-	reconnectinterval = this.reconnectmin
-	readonly delimiter = '!' // '\x04'
-	readonly bufferMaxLength = 64_000
-	buffer = ''
-	shouldBeConnected: boolean
-	hadError: boolean
+	private websocket: WebSocket | undefined | null
+	private wsTimeout: NodeJS.Timeout | undefined
+	private addr: string | undefined
+	private authcookie = ''
+	private readonly reconnectmin = 100
+	private readonly reconnectmax = 16_500
+	private reconnectinterval = this.reconnectmin
+	private readonly delimiter = '!' // '\x04'
+	private readonly bufferMaxLength = 64_000
+	private buffer = ''
+	private shouldBeConnected: boolean
+	private hadError: boolean
 
 	constructor(instance: AWJinstance) {
 		this.instance = instance
-		this.state = instance.state
-		//this.tcpsocket = new net.Socket()
 		this.hadError = false
 		this.shouldBeConnected = false
-		//this.tcpsocket.setNoDelay(true)
-		//this.tcpsocket.setKeepAlive(true, 2500)
-		//this.tcpsocket.setEncoding('utf8')
-		//this.tcpsocket.on('ready', () => {
-		//	this.instance.updateStatus(this.instance.STATUS_OK)
-		//})
-
-		// this.tcpsocket.on('close', () => {
-		// 	console.log('AWJ Client closed')
-		// 	if (this.shouldBeConnected) {
-		// 		this.instance.updateStatus(this.instance.STATUS_ERROR)
-		// 		console.log('Retry AWJ connection in 2s')
-		// 		// setTimeout(() => this.connect(this.host, this.port), 2000)
-		// 	}
-		// })
-
-	// 	this.tcpsocket.on('data', (data: string) => {
-	// 		this.bufferFragment(data)
-	// 		let message: string | null = null
-	// 		// eslint-disable-next-line no-cond-assign
-	// 		while ((message = this.getNextMessage())) {
-	// 			// check if there is data followed by a delimiter
-	// 			console.log('AWJ received ', message)
-	// 			let obj = {}
-	// 			try {
-	// 				obj = JSON.parse(message) // check if the data is a valid json, could be only a fragment
-	// 			} catch (error) {
-	// 				console.log('Received data is no valid JSON')
-	// 				continue
-	// 			}
-	// 			if (Object.prototype.hasOwnProperty.call(obj, 'path') && Object.prototype.hasOwnProperty.call(obj, 'value')) {
-	// 				// check if json has the properties of AWJ
-	// 				console.log('Received valid:', obj)
-	// 			} else {
-	// 				console.log('Received data does not contain required properties', obj)
-	// 			}
-	// 		}
-	// 	})
 	}
 
 	bufferFragment(data: string): void {
@@ -124,7 +81,7 @@ class AWJdevice {
 	 * @param addr the complete base url of the device to connect to, can contain protocol, credentials, host and port
 	 * @returns void
 	 */
-	connect(addr: string | undefined): void {
+	async connect(addr: string | undefined): Promise<void> {
 		this.addr = addr
 		if (this.addr === undefined) return
 		this.shouldBeConnected = true
@@ -134,267 +91,312 @@ class AWJdevice {
 
 		this.instance.updateStatus(InstanceStatus.Connecting, `Init Connection`)
 
-		const handleApiStateResponse = (res: {[name: string]: any}) => {
-			if (res.device) {
-				this.state.setUnmapped('DEVICE', res)
-				//console.log('rest get API device state result')
+		try {
+			const authResponse = await ky.get(`${urlObj.protocol()}://${urlObj.host()}/auth/status`, {
+				...fetchDefaultParameters,
+			}).json<{[name: string]: any}>()
+			// console.log('auth response', authResponse)
+			const isAuth = authResponse.authentication?.isAuthenticationEnabled
+			const deviceObj = authResponse.device || authResponse.devices?.leader || undefined
+			if (isAuth !== undefined && deviceObj !== undefined) {
+				// it seems we are speaking to an AWJ device
 
-				const system = this.state.getUnmapped('DEVICE/device/system')
-				const device = system.pp?.dev ?? system.deviceList?.items?.['1']?.pp?.dev ?? null
-				const fwVersion = this.state.getUnmapped('DEVICE/device/system/version/pp/updater') ?? this.state.getUnmapped('DEVICE/device/system/deviceList/items/1/version/pp/updater') ?? '0.0.0'
+				const handleApiStateResponse = (res: {[name: string]: any}): void => {
+					if (res.device) {
+						this.instance.state.set('DEVICE', res)
+						//console.log('rest get API device state result')
+						this.instance.state.set('LINK', authResponse.device || authResponse.devices)
 
-				const serialAndFirmware = (): string => {
-					// const sn = this.state.getUnmapped('DEVICE/device/system/serial/pp/serialNumber')
-					const sn = system.serial?.pp?.serialNumber ?? system.deviceList?.items?.['1']?.serial?.pp?.serialNumber ?? 'unknown'
-					if (sn.startsWith('ZZ99')) return ` Simulator, fw ${fwVersion}`
-					else return `, S/N: ${sn}, fw ${fwVersion}`
-				}
-
-				if (device) {
-					if (device.substring(0, 3) === 'NLC') {
-						this.instance.updateStatus(InstanceStatus.Ok)
-						this.instance.log(
-							'info',
-							'Connected to ' +
-							device.replace('NLC_', 'Aquilon ') + serialAndFirmware()
-						)
-						const major = parseInt(fwVersion.split('.')[0])
-						if (!isNaN(major) && major >= 0) {
-							this.state.setUnmapped('LOCAL/platform', `livepremier${major}`)
-						} else {
-							this.state.setUnmapped('LOCAL/platform', 'livepremier')
+						const system = res.device.system // this.instance.state.get('DEVICE/device/system')
+						if (!system) {
+							this.instance.updateStatus(InstanceStatus.ConnectionFailure)
+							this.instance.log('error', 'Probably connected to an Analog Way device but device type is not compatible with this module')
+							return
 						}
-					} else if (device.match(/^EIKOS/)) {
-						this.instance.updateStatus(InstanceStatus.Ok)
-						this.instance.log(
-							'info',
-							'Connected to Eikos 4k' + serialAndFirmware()
-						)
-						this.state.setUnmapped('LOCAL/platform', 'midra')
-					} else if (device.match(/^PULSE/)) {
-						this.instance.updateStatus(InstanceStatus.Ok)
-						this.instance.log(
-							'info',
-							'Connected to Pulse 4k' + serialAndFirmware()
-						)
-						this.state.setUnmapped('LOCAL/platform', 'midra')
-					} else if (device.match(/^QMX/)) {
-						this.instance.updateStatus(InstanceStatus.Ok)
-						this.instance.log(
-							'info',
-							'Connected to QuikMatrix 4k' + serialAndFirmware()
-						)
-						this.state.setUnmapped('LOCAL/platform', 'midra')
-					} else if (device.match(/^QVU/)) {
-						this.instance.updateStatus(InstanceStatus.Ok)
-						this.instance.log(
-							'info',
-							'Connected to QuickVu 4k' + serialAndFirmware()
-						)
-						this.state.setUnmapped('LOCAL/platform', 'midra')
-					} else if (device.match(/^ZEN100/)) {
-						this.instance.updateStatus(InstanceStatus.Ok)
-						this.instance.log(
-							'info',
-							'Connected to Zenith 100' + serialAndFirmware()
-						)
-						this.state.setUnmapped('LOCAL/platform', 'midra')
-					} else if (device.match(/^ZEN200/)) {
-						this.instance.updateStatus(InstanceStatus.Ok)
-						this.instance.log(
-							'info',
-							'Connected to Zenith 200' + serialAndFirmware()
-						)
-						this.state.setUnmapped('LOCAL/platform', 'midra')
-					} else if (device.match(/^DBG/)) {
-						this.instance.updateStatus(InstanceStatus.Ok)
-						this.instance.log(
-							'info',
-							'Connected to MNG_DEBUG' + serialAndFirmware()
-						)
-						this.state.setUnmapped('LOCAL/platform', 'midra')
-					} else {
-						this.instance.updateStatus(InstanceStatus.ConnectionFailure)
-						this.instance.log('error', `Connected to an AWJ device of type '${device}', firmware '${fwVersion}'. Device type or firmware can not be determined or is not compatible with this module`)
-						return
-					}
-					try {
-						updateMappings(this.instance)
-					} catch (error) {
-						this.instance.log('error', 'update Mappings failed ' + error)
-					}
-					try {
-						initSubscriptions(this)
-					} catch (error) {
-						this.instance.log('error', 'init Subscriptions failed ' + error)
-					}
 
-					if (this.instance.config.sync === true && this.hadError === false) {
-						console.log('switching sync on because of config')
-						this.instance.switchSync(1)
-					} else if (this.hadError === true) {
-						this.instance.switchSync(3)
-						console.log('setting sync again after reconnection')
-					} else {
-						this.instance.switchSync(0)
-						console.log('setting sync off by default')
-					}
-					this.hadError = false
-					try {
-						checkSubscriptions(this.instance)
-					} catch (error: any) {
-						this.instance.log('error', 'initializing subscriptions failed ' + error + ' ' + error.trace)
-					}
-					try {
-						this.instance.getMACfromDevice()
-					} catch (error) {
-						this.instance.log('error', 'getting MAC address from device failed ' + error)
-					}
-					try {
-						void this.instance.updateInstance()
-					} catch (error) {
-						this.instance.log('error', 'initializing Instance failed ' + error)
-					}
-				} else {
-					this.instance.updateStatus(InstanceStatus.ConnectionFailure)
-					this.instance.log('error', 'Connected to an Analog Way device but device type is not compatible with this module')
-				}
-			} else {
-				this.instance.log('error', 'Got malformed state from device ' + res)
-			}
-		}
+						let deviceroot = system.deviceList.items['1'].pp
+						if (!deviceroot) deviceroot = system.pp
+						if (!deviceroot) {
+							this.instance.updateStatus(InstanceStatus.ConnectionFailure)
+							this.instance.log('error', 'Quite probably connected to an Analog Way device but device type is not compatible with this module')
+							return
+						}
 
-		const webSocketProtocol = urlObj.protocol() === 'https' ? 'wss://' : 'ws://'
+						const device = deviceroot.dev
+						if (!device) {
+							this.instance.updateStatus(InstanceStatus.ConnectionFailure)
+							this.instance.log('error', 'Connected to an Analog Way device but device type is not compatible with this module')
+							return
+						}
 
-		this.websocket = new WebSocket(`${webSocketProtocol}${urlObj.host()}`, { handshakeTimeout: 1234, maxRedirects: 1 })
+						const fwVersion = system.version?.pp?.updater ?? system.deviceList?.items?.['1']?.version?.pp?.updater ?? '0.0.0' // this.state.get('DEVICE/device/system/version/pp/updater') ?? this.state.get('DEVICE/device/system/deviceList/items/1/version/pp/updater') ?? '0.0.0'
 
-		this.websocket.on('open', async () => {
-			this.reconnectinterval = this.reconnectmin
-			let downloaded = 0
+						const serialAndFirmware = (): string => {
+							const sn:string = system.serial?.pp?.serialNumber ?? system.deviceList?.items?.['1']?.serial?.pp?.serialNumber ?? 'unknown'
+							if (sn.startsWith('ZZ9') || deviceroot.isSimulated) return ` Simulator, fw ${fwVersion}`
+							else return `, S/N: ${sn}, fw ${fwVersion}`
+						}
 
-			const getState = async (msg?: string | undefined) => {
-				this.instance.updateStatus(InstanceStatus.Connecting, `Syncing`)
-				msg = msg ? ' '+msg : ''
-				try {
-					const response = await ky.get(`${urlObj.protocol()}://${urlObj.host()}/api/stores/device`,{
-						headers: {
-							cookie: this.authcookie
-						},
-						retry: 2,
-						onDownloadProgress: (progress, _chunk) => {
-							const newDownloaded = Math.floor(progress.transferredBytes / 1024000)
-							if (newDownloaded !== downloaded) {
-								downloaded = newDownloaded
-								this.instance.updateStatus(InstanceStatus.Connecting, `Syncing ${downloaded.toString().padStart(3,'0')}MB`)
+
+						let newPlatform = ''
+						if (device.substring(0, 3) === 'NLC') {
+							this.instance.updateStatus(InstanceStatus.Ok)
+							this.instance.log(
+								'info',
+								'Connected to ' +
+								device.replace('NLC_', 'Aquilon ') + serialAndFirmware()
+							)
+							const major = parseInt(fwVersion.split('.')[0])
+							if (!isNaN(major) && major >= 4) {
+								newPlatform = `livepremier4`
+							} else {
+								newPlatform = 'livepremier'
 							}
+						} else if (device.match(/^EIKOS/)) {
+							this.instance.updateStatus(InstanceStatus.Ok)
+							this.instance.log(
+								'info',
+								'Connected to Eikos 4k' + serialAndFirmware()
+							)
+							newPlatform = 'midra'
+						} else if (device.match(/^PULSE/)) {
+							this.instance.updateStatus(InstanceStatus.Ok)
+							this.instance.log(
+								'info',
+								'Connected to Pulse 4k' + serialAndFirmware()
+							)
+							newPlatform = 'midra'
+						} else if (device.match(/^QMX/)) {
+							this.instance.updateStatus(InstanceStatus.Ok)
+							this.instance.log(
+								'info',
+								'Connected to QuikMatrix 4k' + serialAndFirmware()
+							)
+							newPlatform = 'midra'
+						} else if (device.match(/^QVU/)) {
+							this.instance.updateStatus(InstanceStatus.Ok)
+							this.instance.log(
+								'info',
+								'Connected to QuickVu 4k' + serialAndFirmware()
+							)
+							newPlatform = 'midra'
+						} else if (device.match(/^ZEN100/)) {
+							this.instance.updateStatus(InstanceStatus.Ok)
+							this.instance.log(
+								'info',
+								'Connected to Zenith 100' + serialAndFirmware()
+							)
+							newPlatform = 'midra'
+						} else if (device.match(/^ZEN200/)) {
+							this.instance.updateStatus(InstanceStatus.Ok)
+							this.instance.log(
+								'info',
+								'Connected to Zenith 200' + serialAndFirmware()
+							)
+							newPlatform = 'midra'
+						} else if (device.match(/^DBG/)) {
+							this.instance.updateStatus(InstanceStatus.Ok)
+							this.instance.log(
+								'info',
+								'Connected to MNG_DEBUG' + serialAndFirmware()
+							)
+							newPlatform = 'midra'
+						} else {
+							this.instance.updateStatus(InstanceStatus.ConnectionFailure)
+							this.instance.log('error', `Connected to an AWJ device of type '${device}', firmware '${fwVersion}'. Device type or firmware can not be determined or is not compatible with this module`)
+							return
 						}
-					}).json<any>()
-					handleApiStateResponse(response)
-				} catch (err) {
-					this.instance.updateStatus(InstanceStatus.ConnectionFailure)
-					this.instance.log('error', "Can't retrieve state from device"+ msg + ' ' + err)
+
+						try {
+							this.instance.setDevice(newPlatform)
+						} catch (error: any) {
+							this.instance.log('error', `setting device platform to ${newPlatform} failed:\n${error}`) 
+						}
+						try {
+							this.instance.subscriptions.initSubscriptions()
+						} catch (error: any) {
+							this.instance.log('error', `setting up subscriptions for device failed:\n${error.stack}`) 
+						}
+
+
+						if (this.instance.config.sync === true && this.hadError === false) {
+							console.log('switching sync on because of config')
+							this.instance.switchSync(1)
+						} else if (this.hadError === true) {
+							this.instance.switchSync(3)
+							console.log('setting sync again after reconnection')
+						} else {
+							this.instance.switchSync(0)
+							console.log('setting sync off by default')
+						}
+						this.hadError = false
+						
+
+						try {
+							const deviceMacaddr = this.instance.choices.getMACaddress()
+							const configMacaddr = this.instance.config.macaddress.split(/[,:-_.\s]/).join(':')
+							if (configMacaddr !== deviceMacaddr) {
+								this.instance.config.macaddress = deviceMacaddr
+								this.instance.saveConfig(this.instance.config)
+							}
+						} catch (error) {
+							this.instance.log('error', 'getting MAC address from device failed ' + error)
+						}
+						return
+						
+					} else {
+						this.instance.log('error', 'Got malformed state from device ' + res)
+					}
+					return
 				}
 
-			}
+				const setupDevice = async () => {
+					//const _device = setDevice()
 
-			try {
-				const authResponse = await ky.get(`${urlObj.protocol()}://${urlObj.host()}/auth/status`, {
-					retry: 2	
-				}).json<{[name: string]: any}>()
-				const isAuth = authResponse.authentication?.isAuthenticationEnabled
-				const device = authResponse.devices?.leader?.reference?.enum ?? authResponse.devices?.leader?.reference?.enum
-				const swVerMajor = authResponse.devices?.leader?.version?.major ?? authResponse.devices?.leader?.version?.major
-				const swVerMinor = authResponse.devices?.leader?.version?.minor ?? authResponse.devices?.leader?.version?.minor
-				const swVerPatch = authResponse.devices?.leader?.version?.patch ?? authResponse.devices?.leader?.version?.patch
-				if (isAuth !== undefined && device !== undefined && swVerMajor !== undefined && swVerMinor !== undefined && swVerPatch !== undefined) {
-					// it seems we are speaking to an AWJ device
+					const webSocketProtocol = urlObj.protocol() === 'https' ? 'wss://' : 'ws://'
+					this.websocket = new WebSocket(`${webSocketProtocol}${urlObj.host()}`, { handshakeTimeout: 1234, maxRedirects: 1 })
 
-					if (authResponse?.authentication.isAuthenticationEnabled === true) {
-						// Password required
-						this.instance.updateStatus(InstanceStatus.Connecting, `Logging in`)
-						ky(`${urlObj.protocol()}://${urlObj.host()}/auth/login`, {
+					this.websocket.on('open', async () => {
+						this.reconnectinterval = this.reconnectmin
+						this.instance.log('debug', 'Websocket opened')
+					})
+
+					this.websocket.on('close', () => {
+						// console.log('ws closed', ev.toString(), this.shouldBeConnected ? 'should be connected' : 'should not be connected')
+						if (this.shouldBeConnected) {
+							this.instance.updateStatus(InstanceStatus.Disconnected)
+							this.hadError = true
+							// console.log('ws retry in', this.reconnectinterval)
+							if (this.wsTimeout) clearTimeout(this.wsTimeout)
+							this.wsTimeout = setTimeout(() => {
+								this.connect(this.addr)
+							}, this.reconnectinterval)
+							this.reconnectinterval *= 1.2
+							if (this.reconnectinterval > this.reconnectmax) this.reconnectinterval = this.reconnectmax
+						}
+					})
+
+					this.websocket.on('error', (error) => {
+						this.hadError = true
+						console.log('websocket error', error.toString())
+						this.instance.updateStatus(InstanceStatus.ConnectionFailure)
+						if (error.toString().match(/Error: Opening handshake has timed out/)) {
+							this.instance.log(
+								'error',
+								'Connection attempt to device has timed out, will retry in ' + Math.round(this.reconnectinterval/100)/10 + 's'
+							)
+						}
+						else if (error.toString().match(/Error: self signed certificate/)) {
+							this.instance.log(
+								'error',
+								'Device is presenting a self signed certificate and is considered insecure. No more automatic connection retries.'
+							)
+							this.shouldBeConnected = false
+						} else {
+							this.instance.log('error', 'Socket ' + error)
+						}
+					})
+
+					this.websocket.on('message', (data, isBinary) => {
+						// console.log('debug', 'incoming WS message '+ data.toString().substring(0, 400))
+						if (
+							isBinary != true &&
+							data.toString().match(/"op":"replace","path":"\/system\/status\/current(Device)?Time","value":/) === null &&
+							data.toString().match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
+							data.toString().match(/"device","system",("deviceList","items","[1-4]",)?"temperature",/) === null
+						) {
+							// console.log('debug', 'incoming WS message '+ data.toString().substring(0, 400))
+							this.instance.state.apply(JSON.parse(data.toString()))
+						}
+					})
+
+					const download = await this.downloadDevicestate(urlObj)
+
+					handleApiStateResponse(download)
+
+				}
+
+				if (authResponse?.authentication.isAuthenticationEnabled === true) {
+					// Password required
+					this.instance.updateStatus(InstanceStatus.Connecting, `Logging in`)
+					try {
+						let res = await ky(`${urlObj.protocol()}://${urlObj.host()}/auth/login`, {
 							method: 'post',
 							json: { password: urlObj.password() },
 							retry: 2,
 							redirect: 'error'
-						}).then((res) => {
-							// Got succesful auth response
-							if (res.headers['set-cookie']) {
-								this.authcookie = res.headers['set-cookie']
-								this.instance.log('info', 'Login to device is successful')
-							}
-							getState()
 						})
-						.catch((err) => {
-							this.instance.log('error', 'Password failed ' + err)
-						})
+						// Got succesful auth response
+						if (res.headers['set-cookie']) {
+							this.authcookie = res.headers['set-cookie']
+							this.instance.log('info', 'Login to device is successful')
 
-					} else {
-						// no Password required
-						getState()
+							await setupDevice()
+
+						}
+						
+					} catch (error) {
+						this.instance.log('error', 'Password failed ' + error)
+						return Promise.reject(error)
+					}
+					
+				} else {
+					// no Password required
+					await setupDevice()
+				}
+			} else {
+				this.instance.updateStatus(InstanceStatus.ConnectionFailure, 'No AWJ device')
+				this.instance.log('error', 'Connected to a device, but it is no compatible AWJ device, disconnecting now.')
+				this.disconnect()
+				return Promise.reject('No AWJ device')
+			}
+
+			
+
+		} catch (error) {
+			// console.log('ws close and retry in', this.reconnectinterval)
+			this.disconnect()
+			if (this.wsTimeout) clearTimeout(this.wsTimeout)
+			this.wsTimeout = setTimeout(() => {
+				this.connect(this.addr)
+			}, this.reconnectinterval)
+			this.reconnectinterval *= 1.2
+			if (this.reconnectinterval > this.reconnectmax) this.reconnectinterval = this.reconnectmax
+			const retrysec = Math.round(this.reconnectinterval / 100)/10
+			if(String(error).match(/fetch failed/)) {
+				this.instance.log('error', `Can't connect to device, probably offline. Will retry in ${retrysec}s`)
+			} else if(String(error).match(/terminated/)) {
+				this.instance.log('error', `Connection to device has been terminated unexpectedly. Will retry in ${retrysec}s`)
+			} else {
+				this.instance.log('error', `Can't connect to device webserver. ${error}\nWill retry in ${retrysec}s`)
+			}
+		}		
+	}
+
+	async downloadDevicestate(urlObj) {
+		let downloaded = 0
+		this.instance.updateStatus(InstanceStatus.Connecting, `Syncing`)
+		let response: any
+		try {
+			response = await ky.get(`${urlObj.protocol()}://${urlObj.host()}/api/stores/device`,{
+				headers: {
+					cookie: this.authcookie
+				},
+				...fetchDefaultParameters,
+				onDownloadProgress: (progress, _chunk) => {
+					const newDownloaded = Math.floor(progress.transferredBytes / 1024000)
+					if (newDownloaded !== downloaded) {
+						downloaded = newDownloaded
+						this.instance.updateStatus(InstanceStatus.Connecting, `Syncing ${downloaded.toString().padStart(3,'0')}MB`)
 					}
 				}
-			} catch (error) {
-				console.log(`Can't connect to device webserver.`, error)
-				// console.log('ws close and retry in', this.reconnectinterval)
-				this.disconnect()
-				if (this.wsTimeout) clearTimeout(this.wsTimeout)
-				this.wsTimeout = setTimeout(() => {
-					this.connect(this.addr)
-				}, this.reconnectinterval)
-				this.reconnectinterval *= 1.2
-				if (this.reconnectinterval > this.reconnectmax) this.reconnectinterval = this.reconnectmax
-			}
-		})
-
-		this.websocket.on('close', () => {
-			// console.log('ws closed', ev.toString(), this.shouldBeConnected ? 'should be connected' : 'should not be connected')
-			if (this.shouldBeConnected) {
-				this.instance.updateStatus(InstanceStatus.Disconnected)
-				this.hadError = true
-				// console.log('ws retry in', this.reconnectinterval)
-				if (this.wsTimeout) clearTimeout(this.wsTimeout)
-				this.wsTimeout = setTimeout(() => {
-					this.connect(this.addr)
-				}, this.reconnectinterval)
-				this.reconnectinterval *= 1.2
-				if (this.reconnectinterval > this.reconnectmax) this.reconnectinterval = this.reconnectmax
-			}
-		})
-		this.websocket.on('error', (error) => {
-			this.hadError = true
-			console.log('ws error', error.toString())
+			}).json<any>()
+			return response
+		} catch (err) {
 			this.instance.updateStatus(InstanceStatus.ConnectionFailure)
-			if (error.toString().match(/Error: Opening handshake has timed out/)) {
-				this.instance.log(
-					'error',
-					'Connection attempt to device has timed out, will retry in ' + Math.round(this.reconnectinterval/100)/10 + 's'
-				)
-			}
-			else if (error.toString().match(/Error: self signed certificate/)) {
-				this.instance.log(
-					'error',
-					'Device is presenting a self signed certificate and is considered insecure. No more automatic connection retries.'
-				)
-				this.shouldBeConnected = false
-			} else {
-				this.instance.log('error', 'Socket ' + error)
-			}
-		})
-
-		this.websocket.on('message', (data, isBinary) => {
-			//console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
-			if (
-				isBinary != true &&
-				data.toString().match(/"op":"replace","path":"\/system\/status\/current(Device)?Time","value":/) === null &&
-				data.toString().match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
-				data.toString().match(/"device","system",("deviceList","items","[1-4]",)?"temperature",/) === null
-			) {
-				// console.log('debug', 'incoming WS message '+ data.toString().substring(0, 200))
-				this.state.apply(JSON.parse(data.toString()))
-			}
-		})
-		
+			this.instance.log('error', "Can't retrieve state from device " + err)
+			return Promise.reject(err)
+		}
 	}
 
 	resetReconnectInterval(): void {
@@ -410,7 +412,7 @@ class AWJdevice {
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				retry: 2,
+				...fetchDefaultParameters,
 				redirect: 'error'
 			})
 				//.ok((res) => res.status < 400)
@@ -427,7 +429,7 @@ class AWJdevice {
 					'Content-Type': 'application/json',
 					'Cookie': this.authcookie
 				},
-				retry: 2,
+				...fetchDefaultParameters,
 				redirect: 'error'
 			})
 				//.ok((res) => res.status < 400)
@@ -443,7 +445,7 @@ class AWJdevice {
 				headers: {
 					'Content-Type': 'application/json',
 				},
-				retry: 2,
+				...fetchDefaultParameters,
 				redirect: 'error'
 			})
 				//.ok((res) => res.status < 400)
@@ -459,7 +461,7 @@ class AWJdevice {
 						'Content-Type': 'application/json',
 						'Cookie': this.authcookie
 					},
-					retry: 2,
+					...fetchDefaultParameters,
 					redirect: 'error'
 					})
 					.then((res) => {
@@ -496,22 +498,6 @@ class AWJdevice {
 		this.instance.log('debug', 'Connection has been destroyed due to removal or disable by user')
 	}
 
-	// async sendRawTCPmessage(message: string): Promise<void> {
-	// 	// if (this.tcpsocket.readyState === 'open')
-	// 	return new Promise((resolve, reject) => {
-	// 		this.tcpsocket?.write(message)
-
-	// 		this.tcpsocket?.on('data', (data: void | PromiseLike<void>): void => {
-	// 			resolve(data)
-	// 		})
-
-	// 		this.tcpsocket?.on('error', (err: unknown) => {
-	// 			reject(err)
-	// 			this.instance.updateStatus(this.instance.STATUS_ERROR)
-	// 		})
-	// 	})
-	// }
-
 	/**
 	 * Sends a raw text message to the device via websocket connection
 	 * @param message the message string to send
@@ -519,28 +505,30 @@ class AWJdevice {
 	sendRawWSmessage(message: string): void {
 		if (this.websocket?.readyState === 1) {
 			this.websocket?.send(message)
-			// console.log('sendig WS message', this.websocket.url ,message)
+			// this.instance.log('debug', 'sendig WS message ' + this.websocket.url + ' ' + message)
 		}
 	}
 
 	/**
 	 * Sends an AW message to the device via websocket
 	 * @param path a path in the device object, can be a string with slashes as delimiters or an array of strings. The path will be mapped according to mappings.
-	 * @param value the value to send
+	 * @param values the values to send
 	 */
 	sendWSmessage(
 		path: string | string[],
-		value: string | string[] | number | boolean
+		...values: (string | string[] | number | boolean)[]
 	): void {
-		const mapped = mapOut(this.state.mappings, path, value)
-		const obj = {
-			channel: 'DEVICE',
-			data: {
-				path: mapped.path.split('/'),
-				value: mapped.value
+		
+		for (const value of values) {
+			const obj = {
+				channel: 'DEVICE',
+				data: {
+					path,
+					value
+				}
 			}
+			this.sendRawWSmessage(JSON.stringify(obj))
 		}
-		this.sendRawWSmessage(JSON.stringify(obj))
 	}
 
 	/**
@@ -551,15 +539,15 @@ class AWJdevice {
 	 * @param value
 	 */
 	sendWSpatch(channel: string, op: string, path: string | string[], value: string | number | boolean | object): void {
-		const mapped = mapOut(this.state.mappings, path, value)
+	
 		const obj = {
 			channel,
 			data: {
 				channel: 'PATCH',
 				patch: {
 					op: op,
-					path: '/'+mapped.path,
-					value: mapped.value
+					path,
+					value
 				}
 			}
 		}
@@ -575,69 +563,27 @@ class AWJdevice {
 	 */
 	sendWSdata(channel: string, name: string, path: string | string[], args: unknown[]): void {
 		let obj = {}
+		
 		if (args.length === 0) {
-			const mapped = mapOut(this.state.mappings, path, [])
 			obj = {
 				channel,
 				data: {
 					name,
-					path: '/' + mapped.path,
+					path,
 					args: []
 				}
 			}
 		} else {
-			const mapped = mapOut(this.state.mappings, path, args[0])
-			if (args.length === 1) {
-				obj = {
-					channel,
-					data: {
-						name,
-						path: '/' + mapped.path,
-						args: [mapped.value]
-					}
+			obj = {
+				channel,
+				data: {
+					name,
+					path,
+					args
 				}
-			} else {
-				obj = {
-					channel,
-					data: {
-						name,
-						path: '/' + mapped.path,
-						args: [mapped.value, ...args.splice(1)]
-					}
-				}
-			}
+			}	
 		}
 		this.sendRawWSmessage(JSON.stringify(obj))
-	}
-
-	// sendAWJmessage(_op: string, _path: string, _value: string): void
-	// sendAWJmessage(_op: string, _path: string, _value: number): void
-	// sendAWJmessage(_op: string, _path: string, _value: boolean): void
-	// sendAWJmessage(op: string, path: string, value: string | number | boolean): void {
-	// 	if (typeof value === 'string')
-	// 		return void this.sendRawTCPmessage(`{"op":"${op}, "path":"${path}", "value":"${value}"}${this.delimiter}`)
-	// 	if (typeof value === 'number' || typeof value === 'boolean')
-	// 		return void this.sendRawTCPmessage(
-	// 			`{"op":"${op}, "path":"${path}", "value":${value.toString()}}${this.delimiter}`
-	// 		)
-	// }
-
-	/**
-	 * Sends a global update command
-	 * @param platform 
-	 */
-	sendXupdate(platform?: string): void {
-		if (!platform) platform = this.state.platform
-		const updates: Record<string, string> = {
-			livepremier: '{"channel":"DEVICE","data":{"path":["device","screenGroupList","control","pp","xUpdate"],"value":',
-			midra: '{"channel":"DEVICE","data":{"path":["device","preset","control","pp","xUpdate"],"value":'
-		}
-		const xUpdate = updates[platform]
-		if (xUpdate) {
-			this.sendRawWSmessage(xUpdate + 'false}}')
-			this.sendRawWSmessage(xUpdate + 'true}}')
-		}
-
 	}
 
 	/**
@@ -677,4 +623,4 @@ class AWJdevice {
 	}
 }
 
-export { AWJdevice }
+export { AWJconnection }

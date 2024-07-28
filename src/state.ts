@@ -1,17 +1,15 @@
-import {AWJinstance} from './index.js'
-import { checkForAction, Subscription } from './subscriptions.js'
-import { mapIn, mapOut, MapItem } from './mappings.js'
-//import { InputValue } from './../../../instance_skel_types'
-import { Choicemeta, getAuxArray, getScreensArray } from './choices.js'
+import { AWJinstance } from './index.js'
+import { Subscription } from '../types/Subscription.js'
 import { Config } from './config.js'
 
-type Channel = 'REMOTE' | 'DEVICE' | 'LOCAL'
+type Channel = 'REMOTE' | 'DEVICE' | 'LOCAL' | 'LINK'
 
-class State {
+class StateMachine {
 	instance: AWJinstance
-	stateobj = {
+	state = {
 		REMOTE: {},
 		DEVICE: {},
+		LINK: {},
 		LOCAL: {
 			socketId: '',
 			platform: '',
@@ -22,40 +20,42 @@ class State {
 			presetMode: 'PREVIEW',
 			presetModeLock: {
 				PROGRAM: {
-					...Object.fromEntries(Array.from({length: 24}, (_,b) => {return [`S${b+1}` , false]})),
-					...Object.fromEntries(Array.from({length: 96}, (_,b) => {return [`A${b+1}` , false]})),
+					...Object.fromEntries(Array.from({ length: 24 }, (_, b) => { return [`S${b + 1}`, false] })),
+					...Object.fromEntries(Array.from({ length: 96 }, (_, b) => { return [`A${b + 1}`, false] })),
 				},
 				PREVIEW: {
-					...Object.fromEntries(Array.from({length: 24}, (_,b) => {return [`S${b+1}` , false]})),
-					...Object.fromEntries(Array.from({length: 96}, (_,b) => {return [`A${b+1}` , false]})),
+					...Object.fromEntries(Array.from({ length: 24 }, (_, b) => { return [`S${b + 1}`, false] })),
+					...Object.fromEntries(Array.from({ length: 96 }, (_, b) => { return [`A${b + 1}`, false] })),
 				},
 			},
 			layerIds: [],
 			intelligentParams: {},
 			subscriptions: {} as Record<string, Subscription>,
-			mappings: [] as MapItem[],
+			mappings: [] as unknown[],
 			config: {} as Config
 		},
-	}
-	private lastMsgTimer: NodeJS.Timeout | undefined = undefined
+	};
+	private lastMsgTimer: NodeJS.Timeout | undefined = undefined;
 
-	constructor(instance: AWJinstance) {
+	constructor(instance: AWJinstance, initialState?: {[name: string]: any}) {
 		this.instance = instance
+		if (initialState) {
+			this.set('DEVICE', initialState)
+		}
 	}
 
-	public getUnmapped(path?: string | string[] | undefined, root?: any): any { 
+	public get(path?: string | string[] | undefined, root?: any): any {
 		if (path === undefined) {
-			return this.stateobj
+			return this.state
 		}
 		if (root === undefined) {
-			root = this.stateobj
+			root = this.state
 		}
 		const obj: any = root
 		let first: string
 		let patharray: string[]
 		if (typeof path === 'string') {
-			const npath = path.replace(/^\//, '')
-			;[first, ...patharray] = npath.split('/')
+			const npath = path.replace(/^\//, '');[first, ...patharray] = npath.split('/')
 		} else {
 			[first, ...patharray] = path
 		}
@@ -68,31 +68,41 @@ class State {
 				return undefined
 			}
 			// else if we are at an branch -> go ahead
-			return this.getUnmapped(patharray, obj[first])
+			return this.get(patharray, obj[first])
 		}
 	}
 
-	public get(path?: string | string[] | undefined, root?: any): any {
-		const mapped = mapOut(this.stateobj.LOCAL.mappings, path, null)
-		const val = this.getUnmapped(mapped.path, root) // TODO: root mapping
-		return mapIn(this.stateobj.LOCAL.mappings, mapped.path, val).value
-	}
+	// public get(path?: string | string[] | undefined, root?: any): any {
+	// 	return this.get(path, root)
+	// 	// const mapped = mapOut(this.state.LOCAL.mappings, path, null)
+	// 	// const val = this.get(mapped.path, root) // TODO: root mapping
+	// 	// return mapIn(this.state.LOCAL.mappings, mapped.path, val).value
+	// }
 
-	concat(first: string | string[], second: string | string[]): string | string[] {
-		const trimend = (str: string) => {
-			return str.replace(/\/$/, '')
+	/**
+	 * concatenates parts of paths
+	 * preserves a leading or trailing `/` only if all arguments are strings
+	 * @param args can be strings or arrays of strings or any combination
+	 * @returns a string if all arguments are strings or otherwise an array with the parts
+	 */
+	concat(...args: (string | any[])[]): string | string[] {
+		if (args.length === 0) return []
+		const onlyStrings = args.every(arg => typeof arg === 'string')
+		args = args.flat(Infinity)
+		if (args.length === 1) return args[0] as string[]
+		let lead: string[] = [], trail: string[] = []
+
+		if (onlyStrings) {
+			const first = args[0] as string // needed to avoid error without conditional type predicate
+			if (first.charAt(0) === '/') lead = ['']
+			if (args[args.length - 1].slice(-1) === '/') trail = ['']
 		}
-		const trimstart = (str: string) => {
-			return str.replace(/^\//, '')
-		}
-		if (typeof first === 'string' && typeof second === 'string') {
-			return trimend(first) + '/' + trimstart(second)
-		} else if (typeof first === 'string' && Array.isArray(second)) {
-			return [ ...trimend(first).split('/'), ...second]
-		} else if (typeof second === 'string' && Array.isArray(first)) {
-			return [...first, ...trimstart(second).split('/')]
+
+		args = args.map(part => part.toString().replaceAll(/^\/|\/$/g, '').split('/'))
+		if (onlyStrings) {
+			return [...lead, ...args.flat(Infinity), ...trail].join('/')
 		} else {
-			return [...first, ...second]
+			return args.flat(Infinity)
 		}
 	}
 
@@ -100,24 +110,29 @@ class State {
 	 * Stores the last message to the state with a locking mechanism. Message is only stored if there not had been an attempt to call this function in the last 800ms
 	 * @param msg The message object
 	 */
-	private storeLastMsg(msg: { path: unknown, value: unknown }): void {
+	private storeLastMsg(msg: { path: unknown; value: unknown} ): void {
 		if (this.lastMsgTimer && this.lastMsgTimer.hasRef()) { // there is a running timer
 			this.lastMsgTimer.refresh()
 		} else if (this.lastMsgTimer && this.lastMsgTimer.hasRef() === false) { // there is an elapsed timer
-			this.setUnmapped('LOCAL/lastMsg', msg)
+			this.set('LOCAL/lastMsg', msg)
 			this.lastMsgTimer.ref()
 			this.lastMsgTimer.refresh()
 		} else { // there is no timer
-			this.setUnmapped('LOCAL/lastMsg', msg)
+			this.set('LOCAL/lastMsg', msg)
 			clearTimeout(this.lastMsgTimer)
-			this.lastMsgTimer = setTimeout(() => { this.lastMsgTimer?.unref()  }, 800)
+			this.lastMsgTimer = setTimeout(() => { this.lastMsgTimer?.unref() }, 800)
 		}
-	} 
+	}
 
 	public clearTimers() {
 		clearTimeout(this.lastMsgTimer)
 	}
 
+	/**
+	 * Handles a received object describing a state change, applies it to the local state storage, runs any needed subscriptions, checks feedbacks and eventually handles action recording
+	 * @param obj the AWJ object to apply
+	 * @returns
+	 */
 	public apply(obj: any): void {
 		if (obj.channel === undefined || obj.data === undefined) return
 		const channel: Channel = obj.channel
@@ -125,13 +140,12 @@ class State {
 		let feedbacks: any
 		// eslint-disable-next-line no-prototype-builtins
 		if (data.hasOwnProperty('path') && data.hasOwnProperty('value')) {
-			this.setUnmapped(data.path, data.value, this.stateobj[channel])
-			const mapped = mapIn(this.stateobj.LOCAL.mappings, this.concat(channel, data.path), data.value)
-			feedbacks = checkForAction(this.instance, mapped.path, mapped.value)
+			this.set(data.path, data.value, this.state[channel])
+			feedbacks = this.instance.subscriptions.checkForAction(this.concat(channel, data.path), data.value)
 			if (channel === 'DEVICE' && !data.path.toString().endsWith(',pp,xUpdate')) {
 				this.storeLastMsg({ path: data.path, value: data.value })
 				if (this.instance.isRecording && JSON.stringify(data.value).length <= 132) {
-					const newoptions = { xUpdate: false}
+					const newoptions = { xUpdate: false }
 					newoptions['path'] = this.instance.jsonToAWJpath(data.path)
 					switch (typeof data.value) {
 						case 'string':
@@ -169,50 +183,42 @@ class State {
 						xUpdate: true
 					}
 				})
-			} 
+			}
 		} else if (data?.channel === 'PATCH' && data.patch) {
-			const mapped = mapIn(this.stateobj.LOCAL.mappings, this.concat(channel, data.patch.path), data.patch.value)
 			if (data.patch.op === 'replace') {
 				try {
-					this.setUnmapped(data.patch.path, data.patch.value, this.stateobj[channel])
-					feedbacks = checkForAction(this.instance, mapped.path, mapped.value)
+					this.set(data.patch.path, data.patch.value, this.state[channel])
+					feedbacks = this.instance.subscriptions.checkForAction(this.concat(channel, data.patch.path), data.patch.value)
 				} catch (error) {
-					console.log('could not replace JSON', error)
+					console.log('could not replace JSON\n', error)
 				}
 			}
 			if (data.patch.op === 'add') {
 				try {
-					this.setUnmapped(data.patch.path, data.patch.value, this.stateobj[channel])
-					feedbacks = checkForAction(this.instance, mapped.path, mapped.value)
+					this.set(data.patch.path, data.patch.value, this.state[channel])
+					feedbacks = this.instance.subscriptions.checkForAction(this.concat(channel, data.patch.path), data.patch.value)
 				} catch (error) {
-					console.log('could not add JSON', error)
+					console.log('could not add JSON\n', error)
 				}
 			}
 			if (data.patch.op === 'remove') {
 				try {
-					this.delete(data.patch.path, this.stateobj[channel])
-					feedbacks = checkForAction(this.instance, mapped.path)
+					this.delete(data.patch.path, this.state[channel])
+					feedbacks = this.instance.subscriptions.checkForAction(this.concat(channel, data.patch.path))
 				} catch (error) {
-					console.log('could not remove element from JSON', error)
+					console.log('could not remove element from JSON\n', error)
 				}
 			}
 		} else if (data?.channel === 'INIT') {
 			try {
-				this.stateobj.LOCAL.socketId = data.socketId
-				this.stateobj[channel] = { ...data.snapshot }
-				feedbacks = checkForAction(this.instance)
+				this.state.LOCAL.socketId = data.socketId
+				this.state[channel] = { ...data.snapshot }
+				feedbacks = this.instance.subscriptions.checkForAction()
 			} catch (error) {
-				this.instance.log('debug', 'could not set JSON while init ' + error)
+				this.instance.log('debug', 'could not set JSON while init\n' + error)
 			}
 		}
-		if (feedbacks && typeof feedbacks === 'string') {
-			// console.log('checking feedback from external msg', feedbacks)
-			if (feedbacks.startsWith('id:')) {
-				this.instance.checkFeedbacksById(feedbacks.substring(3))
-			} else {
-				this.instance.checkFeedbacks(feedbacks)
-			}
-		} else if (feedbacks && Array.isArray(feedbacks)) {
+		if (feedbacks && Array.isArray(feedbacks)) {
 			// console.log('checking feedbacks from external msg', feedbacks)
 			feedbacks.forEach((fb) => {
 				if (fb.startsWith('id:')) {
@@ -224,13 +230,12 @@ class State {
 		}
 	}
 
-	public setUnmapped(path: string | string[], value: any, root: any = this.stateobj): void { 
+	public set(path: string | string[], value: any, root: any = this.state): void {
 		const obj: any = root
 		let first: string
 		let patharray: string[]
 		if (typeof path === 'string') {
-			const npath = path.replace(/^\//, '')
-			;[first, ...patharray] = npath.split('/')
+			const npath = path.replace(/^\//, '');[first, ...patharray] = npath.split('/')
 		} else {
 			[first, ...patharray] = path
 		}
@@ -245,7 +250,7 @@ class State {
 				obj[first] = {}
 			}
 			// else if we are at an branch -> go ahead
-			this.setUnmapped(patharray, value, obj[first])
+			this.set(patharray, value, obj[first])
 		}
 	}
 
@@ -256,9 +261,10 @@ class State {
 	 * @param value is the value to set the node to
 	 * @param root is the root object from where the path applies, if not given defaults to the state object
 	 */
-	public set(path: string | string[], value: unknown, root: any = this.stateobj): void {
-		const mapped = mapIn(this.stateobj.LOCAL.mappings, path, value)
-		this.setUnmapped(mapped.path, mapped.value, root) // TODO: root mapping
+	public setUnmapped(path: string | string[], value: unknown, root: any = this.state): void {
+		this.set(path, value, root)
+		// const mapped = mapIn(this.state.LOCAL.mappings, path, value)
+		// this.set(mapped.path, mapped.value, root) // TODO: root mapping
 	}
 
 	/**
@@ -277,13 +283,12 @@ class State {
 	 * @param path can be either a '/'-delimited string or a string array pointing to a node in JSON, similar to JSON-Path
 	 * @param root is the root object from where the path applies, if not given defaults to the state object
 	 */
-	public delete(path: string | string[], root: any = this.stateobj): void {
+	public delete(path: string | string[], root: any = this.state): void {
 		const obj: any = root
 		let first: string
 		let patharray: string[]
 		if (typeof path === 'string') {
-			const npath = path.replace(/^\//, '')
-			;[first, ...patharray] = npath.split('/')
+			const npath = path.replace(/^\//, '');[first, ...patharray] = npath.split('/')
 		} else {
 			[first, ...patharray] = path
 		}
@@ -306,213 +311,22 @@ class State {
 	}
 
 	/**
-	 * Returns the currently selected preset or just the input if a specific preset is given.
-	 * @param preset if omitted or if 'sel' then the currently selected preset is returned
-	 * @param fullName if set to true the return value is PROGRAM/PREVIEW instead of pgm/pvw
-	 * @returns
-	 */
-	public getPresetSelection(preset?: string, fullName = false): 'pgm' | 'pvw' | 'PROGRAM' | 'PREVIEW' {
-		let pst = preset
-		if (preset === undefined || preset.match(/^sel$/i)) {
-			if (this.syncSelection) {
-				pst = this.get('REMOTE/live/screens/presetModeSelection/presetMode')
-			} else {
-				pst = this.get('LOCAL/presetMode')
-			}
-		}
-		if (pst && pst.match(/^pgm|program$/i) && !fullName) {
-			return 'pgm'
-		} else if (pst && pst.match(/^pvw|preview$/i) && !fullName) {
-			return 'pvw'
-		} else if (pst && pst.match(/^pgm|program$/i) && fullName) {
-			return 'PROGRAM'
-		} else if (pst && pst.match(/^pvw|preview$/i) && fullName) {
-			return 'PREVIEW'
-		} else if (fullName) {
-			return 'PREVIEW'
-		} else {
-			return 'pvw'
-		}
-	}
-
-	/**
-	 * Returnes the platform we are currently connected to
+	 * the platform we are currently connected to
 	 */
 	public get platform(): string {
-		return this.stateobj.LOCAL.platform
+		return this.state.LOCAL.platform
+	}
+	public set platform(platform: string) {
+		this.state.LOCAL.platform = platform
 	}
 
 	public get syncSelection(): boolean {
-		return this.stateobj.LOCAL.syncSelection
+		return this.state.LOCAL.syncSelection
 	}
 
-	public get mappings(): MapItem[] {
-		return this.stateobj.LOCAL.mappings
-	}
-
-	public get subscriptions(): Record<string, Subscription> {
-		return this.stateobj.LOCAL.subscriptions
-	}
-
-	public isLocked(screen: string, preset: string): boolean {
-		preset = preset.replace(/pgm/i, 'PROGRAM').replace(/pvw/i, 'PREVIEW')
-		let path = ['LOCAL']
-		if (this.syncSelection) {
-			path = ['REMOTE', 'live', 'screens']
-		}
-		if (screen === 'all') {
-			const allscreens = this.getChosenScreenAuxes('all')
-			return (
-				allscreens.find((scr) => {
-					return this.get([...path, 'presetModeLock', preset, scr]) === false
-				}) === undefined
-			)
-		} else {
-			return this.get([...path, 'presetModeLock', preset, screen])
-		}
-	}
-
-	
-
-	/**
-	 * Returns the actual preset (A or B) representing program or preview of the given input or of the selection
-	 * @param screen S1-S... or A1-A...
-	 * @param preset can be A or B or PGM or PVW or 'sel', A and B are returned unchanged
-	 * @returns A or B, whichever is the actual preset for program or preview, during fades the preset is changed only at the end of the fade
-	 */
-	public getPreset(screen: string, preset: string): string {
-		if (screen.match(/^S|A\d+$/) === null) return ''
-		if (preset.match(/^A|B|PGM|PVW|SEL$/i) === null) return ''
-		if (preset.toLowerCase() === 'sel') {
-			preset = this.getPresetSelection()
-		}
-		let ret: string
-		if (preset.match(/^A|B$/i)) {
-			ret = preset.toUpperCase()
-		} else {
-			ret = this.get(`LOCAL/screens/${screen}/${preset.toLowerCase()}/preset`)
-		}
-		return ret
-	}
-
-	/**
-	 * Returns the program or preview representing the given preset A or B of the screen
-	 * @param screen S1-S... or A1-A...
-	 * @param preset can be A or B
-	 * @param fullName if true returnes PROGRAM/PREVIEW else pgm/pvw
-	 * @returns program or preview, during fades the preset is changed only at the end of the fade
-	 */
-	public getPresetRev(screen: string, preset: 'A' | 'B' | 'a' | 'b', fullName = false): string | null {
-		if (screen.match(/^S|A\d+$/) === null) return null
-		if (preset.match(/^A|B$/i) === null) return null
-		let ret: string
-		if (this.get(`LOCAL/screens/${screen}/pgm/preset`) === preset.toUpperCase()) {
-			ret = fullName ? 'PROGRAM' : 'pgm'
-		} else {
-			ret = fullName ? 'PREVIEW' : 'pvw'
-		}
-		return ret
-	}
-
-	/**
-	 * Returnes the input array of screens but extends it by all active screens or the selected screens if the input array containes 'all' or 'sel'
-	 * @param input array of strings to check
-	 * @returns either all active screens or the input
-	 */
-	public getChosenScreens(input: string | string[]): string[] {
-		if (typeof input === 'string') {
-			input = [input]
-		}
-		let screens: string[] = []
-		// get screens to check
-		if (input.includes('all')) {
-			getScreensArray(this).forEach((screen: Choicemeta) => screens.push('S'+ screen.index))
-		} else if (input.includes('sel')) {
-			screens = [...input]
-			screens.splice(screens.indexOf('sel'), 1)
-			for (const selscr of this.getSelectedScreens()) {
-				if (screens.includes(selscr) === false) {
-					screens.push(selscr)
-				}
-			}
-		} else {
-			screens = input
-		}
-		return screens
-	}
-
-	/**
-	 * Returnes the input array of auxes but extends it by all active auxes or the selected auxes if the input array containes 'all' or 'sel'
-	 * @param input array of strings to check
-	 * @returns either all active auxes or the input
-	 */
-	public getChosenAuxes(input: string | string[]): string[] {
-		if (typeof input === 'string') {
-			input = [input]
-		}
-		let screens: string[] = []
-		// get screens to check
-		if (input.includes('all')) {
-			getAuxArray(this).forEach((screen: Choicemeta) => screens.push('A'+ screen.index))
-		} else if (input.includes('sel')) {
-			screens = [...input]
-			screens.splice(screens.indexOf('sel'), 1)
-			for (const selscr of this.getSelectedScreens()) {
-				if (screens.includes(selscr) === false) {
-					screens.push(selscr)
-				}
-			}
-		} else {
-			screens = input
-		}
-		return screens
-	}
-
-	/**
-	 * Returnes the input array of screens and auxes but extends it by all active screens and auxes or the selected screens/auxes if the input array containes 'all' or 'sel'
-	 * @param input array of strings to check
-	 * @returns either all active screens or the input
-	 */
-	public getChosenScreenAuxes(input: string | string[] | undefined): string[] {
-		if (input === undefined) return []
-		if (typeof input === 'string') {
-			input = [input]
-		}
-		let screens: string[] = []
-		// get screens to check
-		if (input.includes('all')) {
-			screens.push(...this.getChosenScreens('all'))
-			screens.push(...this.getChosenAuxes('all'))
-
-		} else if (input.includes('sel')) {
-			screens = [...input]
-			screens.splice(screens.indexOf('sel'), 1)
-			for (const selscr of this.getSelectedScreens()) {
-				if (screens.includes(selscr) === false) {
-					screens.push(selscr)
-				}
-			}
-		} else {
-			screens = input
-		}
-		return screens
-	}
-
-	public getSelectedScreens(): string[] {
-		let path = 'LOCAL/screenAuxSelection/keys'
-		if (this.syncSelection) {
-			path = 'REMOTE/live/screens/screenAuxSelection/keys'
-		}
-		return [...this.get(path)]
-	}
-
-	public getSelectedLayers(): { screenAuxKey: string; layerKey: string }[] {
-		let path = 'LOCAL/layerIds'
-		if (this.syncSelection) {
-			path = 'REMOTE/live/screens/layerSelection/layerIds'
-		}
-		return this.get(path)
+	public get mappings(): unknown[] {
+		return this.state.LOCAL.mappings
 	}
 }
 
-export { State }
+export { StateMachine }

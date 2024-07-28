@@ -1,23 +1,63 @@
 import {
 	combineRgb,
-	CompanionActionDefinitions,
 	CompanionVariableDefinition,
 	InstanceBase,
 	InstanceStatus,
 	runEntrypoint,
 	SomeCompanionConfigField,
 } from '@companion-module/base'
-import { getActions } from './actions.js'
+import { AWJconnection } from './connection.js'
+import { AWJdevice } from './awjdevice/awjdevice.js'
 import { Config, GetConfigFields } from './config.js'
-import { AWJdevice } from './connection.js'
-import { State } from './state.js'
-import { getFeedbacks } from './feedback.js'
-import { getPresets } from './presets.js'
 import { initVariables } from './variables.js'
-import { Subscription } from './subscriptions.js'
 import { UpgradeScripts } from './upgrades.js'
-
+import { StateMachine } from './state.js'
+import Constants from './awjdevice/constants.js'
+import ConstantsLivepremier from './livepremier/constants.js'
+import ConstantsLivepremier4 from './livepremier4/constants.js'
+import ConstantsMidra from './midra/constants.js'
+import Choices from './awjdevice/choices.js'
+import ChoicesLivepremier from './livepremier/choices.js'
+import ChoicesLivepremier4 from './livepremier4/choices.js'
+import ChoicesMidra from './midra/choices.js'
+import Actions from './awjdevice/actions.js'
+import ActionsLivepremier from './livepremier/actions.js'
+import ActionsLivepremier4 from './livepremier4/actions.js'
+import ActionsMidra from './midra/actions.js'
+import Feedbacks from './awjdevice/feedback.js'
+import FeedbacksLivepremier from './livepremier/feedback.js'
+import FeedbacksLivepremier4 from './livepremier4/feedback.js'
+import FeedbacksMidra from './midra/feedback.js'
+import Presets from './awjdevice/presets.js'
+import PresetsLivepremier from './livepremier/presets.js'
+import PresetsLivepremier4 from './livepremier4/presets.js'
+import PresetsMidra from './midra/presets.js'
+import Subscriptions from './awjdevice/subscriptions.js'
+import SubscriptionsLivepremier from './livepremier/subscriptions.js'
+import SubscriptionsLivepremier4 from './livepremier4/subscriptions.js'
+import SubscriptionsMidra from './midra/subscriptions.js'
 export const regexAWJpath = '^DeviceObject(?:\\/(@items|@props|\\$?[A-Za-z0-9_-]+))+$'
+
+/**
+ * This the general setup of this module:
+ * 1. When module is instanciated, init is called
+ * 2. in init an AWJconnection is created and AWJconnection.connect is called
+ * 3. AWJconnection tries to connect to webserver and if it succeeds it calls AWJinstance.createDevice  
+ *    the created device will hold the internal state and has all the methods to manipulate the state, get the right data out of state and to provide actions, feedbacks and so on
+ * 4. AWJconnection opens the websocket connection to the webserver and hooks all incoming messges to be applied to the internal state
+ * 5. AWJconnection downloads the state object from the API and calls AWJinstance.handleApiStateResponse with it
+ * 6. handleApiStateResponse will call initSubscriptions, which sets up a lot of feedbacks, choices, variables, presets...
+ * Done
+ * 
+ * This module uses several classes:
+ * @class AWJinstance - the Companion class for the module instance derived from InstanceBase
+ * @class AWJconnection - methods for connecting to an AWJ device with REST and websocket
+ * @class AWJState - methods of holding and manipulating state
+ * @class AWJdevice - actually doing all the stuff needed for Companion, derived from State
+ * @class AWJLivePremier - derived from AWJdevice, overriding some stuff for LivePremier devices up to v3
+ * @class AWJLivePremier4 - derived from AWJdevice, overriding some stuff for LivePremier devices with v4
+ * @class AWJMidra - derived from AWJdevice, overriding some stuff for Midra and Alta devices
+ */
 
 /**
  * Companion instance class for the Analog Way AWJ API products.
@@ -26,9 +66,36 @@ export class AWJinstance extends InstanceBase<Config> {
 	/**
 	 * Create an instance of an AWJ module.
 	 */
-	public state!: State
+	public state!: StateMachine
+
+	/** holds all constants for this particular type of device */
+    constants!: typeof Constants
+
+    /** reference to the connection with the device */
+    public connection!: AWJconnection
+
+    /** generates lists and choices from current state */
+    public choices!: Choices
+
+    /** holds action definitions */
+    private actions!: Actions
+
+    /** holds feedback definitions */
+    private feedbacks!: Feedbacks
+
+    /** holds preset definitions */
+    private presets!: Presets
+
+    /** holds subscription definitions and checks incoming data against them */
+    public subscriptions!: Subscriptions
+
+	/** @deprecated device class */
 	public device!: AWJdevice
+	
+	/** variables storage */
 	private variables!: (CompanionVariableDefinition & { id?: string })[]
+	
+	/** the instance configuration */
 	public config!: Config
 	private oldlabel = ''
 	public isRecording = false
@@ -43,13 +110,15 @@ export class AWJinstance extends InstanceBase<Config> {
 	 * is OK to start doing things.
 	 */
 	public async init(config: Config): Promise<void> {
-		this.updateStatus(InstanceStatus.Disconnected) //(this.STATUS_UNKNOWN)
+		this.updateStatus(InstanceStatus.Disconnected, 'Init')
 
 		this.config = config
-		this.variables = []
-		this.state = new State(this)
-		this.device = new AWJdevice(this)
 		this.oldlabel = this.label
+		this.variables = []
+		this.state = new StateMachine(this)
+		this.connection = new AWJconnection(this)
+
+		this.setDevice('awjdevice') // initialize all Companion Bits with the generic AWJ device, while it is still unclear which device we'll connect to
 
 		if (this.config.deviceaddr === undefined) {
 			// config never been set?
@@ -69,16 +138,65 @@ export class AWJinstance extends InstanceBase<Config> {
 			this.config.color_redgrey = combineRgb(79,31,31)		
 			this.saveConfig(this.config)
 		}
-		this.state.setUnmapped('LOCAL/config', this.config)
 
-		this.setFeedbackDefinitions(getFeedbacks(this, this.state)) 
 		this.variables = initVariables(this)
 		this.updateVariableDefinitions(this.variables)
 		this.setVariableValues({connectionLabel: this.label})
-		this.subscribeFeedbacks()
-		this.device.connect(this.config.deviceaddr)
+
+		this.connection.connect(this.config.deviceaddr)
+		//this.device = new AWJdevice(this.state, this.connection)
+
+
 
 		// void this.updateInstance()
+	}
+
+	/**
+	 * Sets all the device dependent members to match the real device.  
+	 * @param platform name of the platform or generic awjdevice if no match
+	 */
+	setDevice(platform: string): void {
+		if (platform !== this.state.platform) {
+			this.state.platform = platform
+			switch (platform) {
+				case 'livepremier':
+					this.constants = ConstantsLivepremier // instanciate first because other classes may need the constants
+					this.choices = new ChoicesLivepremier(this) // instanciate second because actions/feedbacks need choices
+					this.actions = new ActionsLivepremier(this)
+					this.feedbacks = new FeedbacksLivepremier(this)
+					this.presets = new PresetsLivepremier(this)
+					this.subscriptions = new SubscriptionsLivepremier(this)
+					break
+
+				case 'livepremier4':
+					this.constants = ConstantsLivepremier4 // instanciate first because other classes may need the constants
+					this.choices = new ChoicesLivepremier4(this) // instanciate second because actions/feedbacks need choices
+					this.actions = new ActionsLivepremier4(this)
+					this.feedbacks = new FeedbacksLivepremier4(this)
+					this.presets = new PresetsLivepremier4(this)
+					this.subscriptions = new SubscriptionsLivepremier4(this)
+					break
+
+				case 'midra':
+					this.constants = ConstantsMidra // instanciate first because other classes may need the constants
+					this.choices = new ChoicesMidra(this) // instanciate second because actions/feedbacks need choices
+					this.actions = new ActionsMidra(this)
+					this.feedbacks = new FeedbacksMidra(this)
+					this.presets = new PresetsMidra(this)
+					this.subscriptions = new SubscriptionsMidra(this)
+					break
+			
+				default:
+					this.constants = Constants // instanciate first because other classes may need the constants
+					this.choices = new Choices(this) // instanciate second because actions/feedbacks need choices
+					this.actions = new Actions(this)
+					this.feedbacks = new Feedbacks(this)
+					this.presets = new Presets(this)
+					this.subscriptions = new Subscriptions(this)
+					break
+			}
+			this.log('debug', 'switched to platform ' + platform)
+		}
 	}
 
 	/**
@@ -86,7 +204,7 @@ export class AWJinstance extends InstanceBase<Config> {
 	 */
 	public async destroy(): Promise<void> {
 		this.state.clearTimers()
-		this.device.destroy()
+		this.connection.destroy()
 
 		this.log('debug' ,'destroy '+this.id)
 	}
@@ -102,16 +220,15 @@ export class AWJinstance extends InstanceBase<Config> {
 	 * Process an updated configuration array.
 	 */
 	public async configUpdated(config: Config): Promise<void> {
-		console.log('Config Update called', this.oldlabel, this.label)
+		// console.log('Config Update called', this.oldlabel, this.label)
 		const oldconfig = {  ...this.config }
 		this.config = config
-		this.state.setUnmapped('LOCAL/config', this.config)
 
 		if (this.config.deviceaddr !== oldconfig.deviceaddr) {
 			// new address, reconnect
 			this.updateStatus(InstanceStatus.Connecting)
-			this.device.disconnect()
-			this.device.connect(this.config.deviceaddr)
+			this.connection.disconnect()
+			this.connection.connect(this.config.deviceaddr)
 		}
 		if (
 			this.label !== this.oldlabel ||
@@ -133,31 +250,18 @@ export class AWJinstance extends InstanceBase<Config> {
 	}
 
 	/**
-	 * get MAC address and store it in config for WOL
-	 */
-	public getMACfromDevice(): void {
-		const deviceMacaddr = `${this.state
-			.get('DEVICE/device/system/network/adapter/pp/macAddress')
-			.map((elem: number) => {
-				return elem.toString(16).padStart(2,'0')
-			})
-			.join(':')}`
-		const configMacaddr = this.config.macaddress.split(/[,:-_.\s]/).join(':')
-		if (configMacaddr !== deviceMacaddr) {
-			this.config.macaddress = deviceMacaddr
-			this.saveConfig(this.config)
-		}
-	}
-
-	/**
 	 * @description sets actions, variables, presets and feedbacks available for this instance
 	 */
 	public async updateInstance(): Promise<void> {
 
-		this.setFeedbackDefinitions(getFeedbacks(this, this.state))
-		this.setActionDefinitions(getActions(this) as CompanionActionDefinitions)
-		this.setPresetDefinitions(getPresets(this))
+		this.log('debug', 'updating instance')
+
+		this.setFeedbackDefinitions(this.feedbacks.allFeedbacks)
+		this.setActionDefinitions(this.actions.allActions)
+		this.setPresetDefinitions(this.presets.allPresets)
 		this.setVariableValues({ connectionLabel: this.label })
+		this.subscribeFeedbacks()
+		
 		let preset: string,
 				vartext = 'PGM'
 		if (this.state.syncSelection) {
@@ -171,13 +275,9 @@ export class AWJinstance extends InstanceBase<Config> {
 		this.setVariableValues({ selectedPreset: vartext })
 	}
 
-	public sendRaw(_message: string): void {
-		//void this.device.sendRawTCPmessage(message)
-	}
-
 	connectDevice(): void {
 		const address = this.config.deviceaddr
-		this.device.connect(address)
+		this.connection.connect(address)
 	}
 
 	handleStartStopRecordActions(isRecording: boolean): void {
@@ -236,66 +336,14 @@ export class AWJinstance extends InstanceBase<Config> {
 	}
 
 	/**
-	 * Adds one or more subscriptions to the active subscriptions
-	 * @param {Object} subscriptions Object containing one or more subscriptions 
-	 */
-	public addSubscriptions(subscriptions: Record<string, Subscription>): void {
-		Object.keys(subscriptions).forEach(subscription => {
-			this.state.subscriptions[subscription] = subscriptions[subscription]
-		})
-	}
-
-	public removeSubscription(subscriptionId: string): void {
-		delete this.state.subscriptions[subscriptionId]
-	}
-
-	public timeToSeconds(timestring: string): number {
-		let hours = 0
-		let minutes = 0
-		let seconds = 0
-		let direction = 1
-		let result = timestring.match(/(?:^|\D)(-?)(\d|1\d|2[0-3])\D(\d|[0-5]\d)\D(\d|[0-5]\d)(?:\D|$)/)
-		if (result) {
-			direction = result[1] === '-' ? -1 : 1
-			hours = parseInt(result[2])
-			minutes = parseInt(result[3])
-			seconds = parseInt(result[4])
-			return (hours * 3600 + minutes * 60 + seconds) * direction
-		}
-		result = timestring.match(/(?:^|\D)(-?)(\d{0,3})\D(\d|[1-5]\d)(?:\D|$)/)
-		if (result) {
-			direction = result[1] === '-' ? -1 : 1
-			minutes = parseInt(result[2])
-			seconds = parseInt(result[3])
-			return (hours * 3600 + minutes * 60 + seconds) * direction
-		}
-		result = timestring.match(/(?:^|\D)(-?)(\d{0,5})(?:\D|$)/)
-		if (result) {
-			direction = result[1] === '-' ? -1 : 1
-			seconds = parseInt(result[2])
-			return (hours * 3600 + minutes * 60 + seconds) * direction
-		}
-		return 0
-	}
-
-	public deciSceondsToString(time: number): string {
-		return (
-			Math.floor(time / 600)
-				.toString()
-				.padStart(2, '0') +
-			':' +
-			((time % 600) / 10).toFixed(2).padStart(5, '0')
-		)
-	}
-
-	/**
 	 * Switches sync on or off
 	 * @param action 0: switch off, 1: switch on, 2: toggle, 3: resend local sync state
 	 */
 	public switchSync(action: number): void {
-		const clients = this.state.getUnmapped('REMOTE/system/network/websocketServer/clients')
+		const clients = this.state.get('REMOTE/system/network/websocketServer/clients')
+		// this.log('debug', 'REMOTE ' + JSON.stringify(this.device.get('REMOTE')))
 		let syncstate: boolean
-		const myid: string = this.state.getUnmapped('LOCAL/socketId')
+		const myid: string = this.state.get('LOCAL/socketId')
 		const myindex = clients.findIndex((elem: Record<string, unknown>) => {
 			if (elem.id === myid) {
 				return true
@@ -311,7 +359,7 @@ export class AWJinstance extends InstanceBase<Config> {
 				syncstate = true
 				break
 			case 2:
-				if (this.state.getUnmapped(`REMOTE/system/network/websocketServer/clients/${myindex}/isRemoteSelectionEnabled`)) {
+				if (this.state.get(`REMOTE/system/network/websocketServer/clients/${myindex}/isRemoteSelectionEnabled`)) {
 					syncstate = false
 				} else {
 					syncstate = true
@@ -328,10 +376,19 @@ export class AWJinstance extends InstanceBase<Config> {
 				syncstate = false
 				break
 		}
-		this.state.setUnmapped('LOCAL/syncSelection', syncstate)
-		this.device.sendRawWSmessage(
+		this.state.set('LOCAL/syncSelection', syncstate)
+		this.connection.sendRawWSmessage(
 			`{"channel":"REMOTE","data":{"name":"enableRemoteSelection","path":"/system/network/websocketServer/clients/${myindex}","args":[${syncstate}]}}`
 		)
+	}
+
+	/**
+	 * Sends a global update command
+	 * @param platform 
+	 */
+	sendXupdate(): void {
+        this.connection.sendRawWSmessage(`{"channel":"DEVICE","data":{"path":[${this.constants.xUpdatePath}],"value":false}}`)
+        this.connection.sendRawWSmessage(`{"channel":"DEVICE","data":{"path":[${this.constants.xUpdatePath}],"value":true}}`)
 	}
 
 	/**
@@ -370,6 +427,28 @@ export class AWJinstance extends InstanceBase<Config> {
 			parts[6].toLowerCase() === 'pvw'
 		) {
 			if (this.state.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pvw/preset`)) {
+				parts[6] = this.state.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pvw/preset`)
+				if (this.state.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
+			}
+		} else if (
+			parts[1] === 'auxiliaryList' &&
+			parts[2] === 'items' &&
+			parts[4] === 'presetList' &&
+			parts[5] === 'items' &&
+			parts[6].toLowerCase() === 'pgm'
+		) {
+			if (this.state.get(`LOCAL/screens/A${parts[3].replace(/\D/g, '')}/pgm/preset`)) {
+				parts[6] = this.state.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pgm/preset`)
+				if (this.state.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
+			}
+		} else if (
+			parts[1] === 'auxiliaryList' &&
+			parts[2] === 'items' &&
+			parts[4] === 'presetList' &&
+			parts[5] === 'items' &&
+			parts[6].toLowerCase() === 'pvw'
+		) {
+			if (this.state.get(`LOCAL/screens/A${parts[3].replace(/\D/g, '')}/pvw/preset`)) {
 				parts[6] = this.state.get(`LOCAL/screens/S${parts[3].replace(/\D/g, '')}/pvw/preset`)
 				if (this.state.platform === 'midra') parts[6] = parts[6].replace('A', 'DOWN').replace('B', 'UP')
 			}
@@ -416,7 +495,7 @@ export class AWJinstance extends InstanceBase<Config> {
 		tpath = tpath.replace(/\/pp\//g, '/@props/')
 		tpath = tpath.replace(/^device\//, 'DeviceObject/')
 		const apath = tpath.split('/')
-		if (apath[1] === '$screen' && apath[2] === '@items' && apath[4] === '$preset' && apath[5] === '@items') {
+		if ((apath[1] === '$screen' || apath[1] === '$auxiliary' || apath[1] === '$auxiliaryScreen') && apath[2] === '@items' && apath[4] === '$preset' && apath[5] === '@items') {
 			if (this.state.get(`LOCAL/screens/${apath[3]}/pgm/preset`) === apath[6]) {
 				apath[6] = 'pgm'
 			} else {

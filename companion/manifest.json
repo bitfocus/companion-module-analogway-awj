@@ -18,7 +18,7 @@
 		"type": "node18",
 		"api": "nodejs-ipc",
 		"apiVersion": "1.2.0",
-		"entrypoint": "../dist/index.js"
+		"entrypoint": "../dist/src/index.js"
 	},
 	"manufacturer": "Analog Way",
 	"products": [
@@ -29,6 +29,12 @@
 	],
 	"keywords": [
 		"Image Processing",
-		"Video"
+		"Video",
+		"Aquilon",
+		"Zenith",
+		"Pulse",
+		"Switcher",
+		"HDR",
+		"LUT"
 	]
 }

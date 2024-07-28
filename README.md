@@ -13,17 +13,17 @@ This module uses many features Companion provides:
 - Learn function
 - Action Recorder
 
-For a complete explanation see [HELP](HELP.md)
+For a complete explanation see [HELP](companion/HELP.md)
 
 ## :warning: Attention
 
-Starting with release 2.4.0 this module supports also software version 4.x of the LivePremier series. Analog Way did change some internal paths with v4.0 If you are upgrading this module from an earlier version and have programmed AWJ get or AWJ replace actions or custom feedbacks, make sure that the paths you are using are not affected from that change or change them accordingly. Otherwise these actions and feedbacks may stop working or give wrong results.  
+Starting with release 2.4.0 this module supports also software version 4.x of the LivePremier series. Analog Way did change many internal paths with v4.0. If you are upgrading this module from an earlier version and have programmed AWJ get or AWJ replace actions or custom feedbacks, make sure that the paths you are using are not affected from that change or change them accordingly. Otherwise these actions and feedbacks may stop working or give wrong results.  
 
 ## :rocket: Version history:
 
-### 2.4.0 (2024 upcoming)
+### 2.4.0 (2024-07-28)
 * Feature: add compatibility with LivePremier software version 4.x
-    Although this feature itself is not a breaking change, unfortunately some AWJ paths have been changed by Analog Way with LivePremier v4 and if you upgrade to v4 from an earlier version and use such a path, you will have to adjust your actions or feedbacks. 
+    Although this feature itself is not a breaking change, unfortunately many AWJ paths have been changed by Analog Way with LivePremier v4 and if you upgrade to firmware v4 from an earlier version and use such a path, you will have to adjust your actions or feedbacks. 
     Affected:
     - Send custom AWJ replace command
     - Send custom AWJ get command
@@ -38,19 +38,30 @@ Starting with release 2.4.0 this module supports also software version 4.x of th
     - adjust to a given anchor point
     - handle aspect ratios
     - grab parameters with learn button 
+* Feature: add presets for new position and size action 
 * Feature: add support for colors with alpha at Setup Timer action for LivePremier
 * Feature: show more detailed status during connection and synchronization with download progress
+* Feature: add "any screen" to the screen options of the layer selection feedback
+* Feature: add CremaTTe 3D and Cut and Fill to the input key options for LivePremier v4
+* Feature: add the product names Aquilon, Zenith and Pulse to the keywords so the connection can be found better from search
 * Bugfix: input freeze presets were only generated for inputs with a name
-* Chore: update some isVisible functions to newly available syntax avoiding additional code evaluation
+* Bugfix: add default value for feedback showing preset selection
+* Bugfix: add default value for feedback showing screen selection
+* Bugfix: update options when still is renamed on Midra or Alta
+* Bugfix: change several numbers to reflect correct values during initialisation, like number of inputs, number of multiviewer memories...
+* Bugfix: time input field for timers now correctly parses a time where you enter seconds with a leading zero like e.g. :06 instead of :6
+* Chore: update isVisible functions to newly available syntax avoiding additional code evaluation
 * Chore: refactor from commonjs to ESM
-* Chore: replace superagent by ky
+* Chore: replace dependency superagent by ky
 * Chore: bump @companion-module/base from 1.2.1 to 1.7.0
 * Chore: bump @companion-module/tools from 1.2.0 to 1.5.0
 * Chore: bump semver from 6.3.0 to 6.3.1
 * Chore: bump word-wrap from 1.2.3 to 1.2.4
 * Chore: bump eslint from 8.36.0 to 8.57.0
 * Chore: bump @tsconfig/node18 from 1.0.1 to 1.0.3
-* Chore: bump ws from 8.13.0 to 8.16.0
+* Chore: bump ws from 8.13.0 to 8.17.1
+* Chore: bump braces from 3.0.2 to 3.0.3
+* Chore: bump tar from 6.2.0 to 6.2.1
 
 ### 2.3.0 (2023-06-28)
 * Feature: generate screen and aux memory recall presets additionally for each individual screen

@@ -1,7 +1,7 @@
 {
 	"name": "analogway-awj",
 	"version": "2.4.0",
-	"main": "dist/index.js",
+	"main": "dist/src/index.js",
 	"scripts": {
 		"prepare": "husky install",
 		"dev": "yarn build:watch",
@@ -38,6 +38,7 @@
 		"@nx-js/compiler-util": "^2.0.0",
 		"@tsconfig/node18": "^1.0.1",
 		"dgram": "^1.0.1",
+		"got": "13",
 		"ky": "^1.2.3",
 		"urijs": "^1.19.11",
 		"ws": "^8.17.1"
@@ -55,6 +56,6 @@
 		"husky": "^7.0.4",
 		"lint-staged": "^13.1.2",
 		"prettier": "^2.8.4",
-		"typescript": "~4.9.5"
+		"typescript": "~5.4.5"
 	}
 }

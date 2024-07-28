@@ -10,9 +10,10 @@
 		"types": ["node"],
 		"noFallthroughCasesInSwitch": true,
 		"noImplicitReturns": true,
-		"noUnusedLocals": true,
+		"noUnusedLocals": false,
 		"noUnusedParameters": true,
 		"noImplicitAny": false,
+		"strictPropertyInitialization": false,
 	},
 	"compileOnSave": false
 }
