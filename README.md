@@ -21,6 +21,12 @@ Starting with release 2.4.0 this module supports also software version 4.x of th
 
 ## :rocket: Version history:
 
+### 2.4.1 (2024-09-14)
+* Bugfix: Timer colors could not be set to 0% opacity at LivePremier v4.
+* Bugfix: Horizontal Greyscale Testpattern was not working for outputs of LivePremier v4.
+* Bugfix: Could not establish connection to some Midra devices.
+* Chore: bump webpack from 5.90.3 to 5.94.0
+
 ### 2.4.0 (2024-07-28)
 * Feature: add compatibility with LivePremier software version 4.x
     Although this feature itself is not a breaking change, unfortunately many AWJ paths have been changed by Analog Way with LivePremier v4 and if you upgrade to firmware v4 from an earlier version and use such a path, you will have to adjust your actions or feedbacks. 

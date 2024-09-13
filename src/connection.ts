@@ -114,7 +114,7 @@ class AWJconnection {
 							return
 						}
 
-						let deviceroot = system.deviceList.items['1'].pp
+						let deviceroot = system.deviceList?.items['1'].pp
 						if (!deviceroot) deviceroot = system.pp
 						if (!deviceroot) {
 							this.instance.updateStatus(InstanceStatus.ConnectionFailure)

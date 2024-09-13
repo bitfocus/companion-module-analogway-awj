@@ -777,7 +777,7 @@ export default class ActionsLivepremier4 extends Actions {
 			)
 			this.connection.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'background', 'color', 'pp', 'alpha'],
-				Math.round((splitRgb(action.options.bg_color).a || 1) * 255)
+				Math.round((splitRgb(action.options.bg_color).a ?? 1) * 255)
 			)
 			this.connection.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'text', 'color', 'pp', 'red'],
@@ -793,7 +793,7 @@ export default class ActionsLivepremier4 extends Actions {
 			)
 			this.connection.sendWSmessage(
 				['device', 'timerList', 'items', action.options.timer, 'control', 'text', 'color', 'pp', 'alpha'],
-				Math.round((splitRgb(action.options.fg_color).a || 1) * 255)
+				Math.round((splitRgb(action.options.fg_color).a ?? 1) * 255)
 			)
 		}
 
@@ -944,7 +944,7 @@ export default class ActionsLivepremier4 extends Actions {
 					{ id: 'NO_PATTERN', label: 'Off' },
 					{ id: 'COLOR', label: 'Solid Color' },
 					{ id: 'VERTICAL_GREY_SCALE', label: 'Vertical Greyscale' },
-					{ id: 'HORIZONTAL_GREY_SCALE', label: 'Horizontal Greyscale' },
+					{ id: 'HORIZONTAL_GREY_SCALE_1', label: 'Horizontal Greyscale' },
 					{ id: 'HORIZONTAL_GREY_SCALE_2', label: 'Horizontal Greysteps' },
 					{ id: 'VERTICAL_COLOR_BAR', label: 'Vertical Colorbars' },
 					{ id: 'HORIZONTAL_COLOR_BAR', label: 'Horizontal Colorbars' },
