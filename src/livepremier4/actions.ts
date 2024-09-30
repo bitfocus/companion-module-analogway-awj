@@ -73,6 +73,7 @@ export default class ActionsLivepremier4 extends Actions {
 		'deviceTestpatterns',
 		'cstawjcmd',
 		'cstawjgetcmd',
+		'deviceGPO',
 		'devicePower'
 	]
 	
@@ -972,5 +973,69 @@ export default class ActionsLivepremier4 extends Actions {
 		return this.deviceTestpatterns_common(deviceTestpatternsOptions)
 
 	}
+
+	/**
+	 * MARK: Adjust GPO
+	 * Livepremier 4
+	 */
+	get deviceGPO() {
+		type DeviceGPO = {gpo: number, action: number}
+
+		let tooltip: string|undefined = undefined
+		if (this.choices.getLinkedDevicesChoices().length) {
+			tooltip = 'GPO number 1-8 for device #1'
+			for (let device = 1; device < this.choices.getLinkedDevicesChoices().length; device+=1) {
+				tooltip += `, ${device*8 +1}-${device*8 +8} for device #${device+1}`
+			}
+		} 
+		
+		const deviceGPO: AWJaction<DeviceGPO> = {
+			name: 'Set GPO',
+			options: [
+				{
+					id: 'gpo',
+					type: 'number',
+					label: 'GPO',
+					min: 1,
+					max: this.choices.getLinkedDevicesChoices().length * 8,
+					range: true,
+					default: 1,
+					step: 1,
+					tooltip,
+				},
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					choices: [
+						{ id: 0, label: 'Turn off' },
+						{ id: 1, label: 'Turn on' },
+						{ id: 2, label: 'Toggle' },
+					],
+					default: 2,
+				},
+			],
+			callback: (action) => {
+				const gpo = Math.floor((action.options.gpo-1) % 8 +1 ).toString()
+				const device = Math.ceil(action.options.gpo / 8 ).toString()
+				const path = [
+						'device',
+						'gpios',
+						'deviceList', 'items', device,
+						'gpoList', 'items', gpo,
+					]
+				let newstate = false
+				if (action.options.action === 1) {
+					newstate = true
+				} else if (action.options.action === 2) {
+					if (this.state.get(['DEVICE', ...path, 'status', 'pp', 'state']) === false) newstate = true
+				}
+				this.connection.sendWSmessage([...path, 'control', 'pp', 'activate'], newstate)
+			},
+		}
+
+		return deviceGPO
+	}
+
 
 }

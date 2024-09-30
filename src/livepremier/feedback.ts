@@ -184,7 +184,7 @@ export default class FeedbacksLivepremier extends Feedbacks  {
 						'gpio',
 						'gpiList',
 						'items',
-						feedback.options.gpi?.toString() || '1',
+						Math.floor(feedback.options.gpi).toString() ?? '1',
 						'status',
 						'pp',
 						'state',

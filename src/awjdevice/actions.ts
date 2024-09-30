@@ -2809,7 +2809,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 
 		return cstawjgetcmd
 	}
-
+	
 
 	/**
 	 * MARK: Device Power

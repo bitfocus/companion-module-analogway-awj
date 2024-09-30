@@ -21,6 +21,10 @@ Starting with release 2.4.0 this module supports also software version 4.x of th
 
 ## :rocket: Version history:
 
+### 2.4.2 (2024-09-30)
+* Bugfix: Set GPO action was missing on LivePremier and LivePremier v4. 
+* Bugfix: GPO state feedback was not tracking updates on LivePremier v4
+
 ### 2.4.1 (2024-09-14)
 * Bugfix: Timer colors could not be set to 0% opacity at LivePremier v4.
 * Bugfix: Horizontal Greyscale Testpattern was not working for outputs of LivePremier v4.

@@ -123,6 +123,14 @@ export default class FeedbacksLivepremier4 extends Feedbacks  {
 	// MARK: deviceGpioOut - Livepremier4
 	get deviceGpioOut() {
 
+		let tooltip: string|undefined = undefined
+		if (this.choices.getLinkedDevicesChoices().length) {
+			tooltip = 'GPO number 1-8 for device #1'
+			for (let device = 1; device < this.choices.getLinkedDevicesChoices().length; device+=1) {
+				tooltip += `, ${device*8 +1}-${device*8 +8} for device #${device+1}`
+			}
+		} 
+
 		const deviceGpioOut: AWJfeedback<{gpo: number, state: number }> = {
 			type: 'boolean',
 			name: 'GPO State',
@@ -140,7 +148,7 @@ export default class FeedbacksLivepremier4 extends Feedbacks  {
 					max: this.choices.getLinkedDevicesChoices().length * 8,
 					range: true,
 					default: 1,
-					tooltip: 'GPO number 1-8 for device #1, 9-16 for #2, 17-24 for #3, 25-32 for #4',
+					tooltip,
 				},
 				{
 					id: 'state',
@@ -154,19 +162,17 @@ export default class FeedbacksLivepremier4 extends Feedbacks  {
 				},
 			],
 			callback: (feedback) => {
-				const gpo = feedback.options.gpo % 8
+				const gpo = Math.floor(feedback.options.gpo-1) % 8 +1
 				const device = Math.ceil(feedback.options.gpo / 8)
 				const val = feedback.options.state === 1 ? true : false
 				return (
 					this.state.get([
 						'DEVICE',
 						'device',
-						'gpio',
+						'gpios',
 						'deviceList', 'items', device.toString(),
 						'gpoList', 'items', gpo.toString(),
-						'status',
-						'pp',
-						'state',
+						'status', 'pp', 'state',
 					]) === val
 				)
 			},
@@ -178,6 +184,13 @@ export default class FeedbacksLivepremier4 extends Feedbacks  {
 	// MARK: deviceGpioIn - Livepremier4
 	get deviceGpioIn() {
 		
+		let tooltip: string|undefined = undefined
+		if (this.choices.getLinkedDevicesChoices().length) {
+			tooltip = 'GPI number 1-2 for device #1'
+			for (let device = 1; device < this.choices.getLinkedDevicesChoices().length; device+=1) {
+				tooltip += `, ${device*2 +1}-${device*2 +2} for device #${device+1}`
+			}
+		} 
 		const deviceGpioIn: AWJfeedback<{gpi: number, state: number }> = {
 			type: 'boolean',
 			name: 'GPI State',
@@ -195,7 +208,8 @@ export default class FeedbacksLivepremier4 extends Feedbacks  {
 					max: this.choices.getLinkedDevicesChoices().length * 2,
 					range: true,
 					default: 1,
-					tooltip: 'GP1 number 1-2 for device #1, 3-4 for #2, 5-6 for #3, 7-8 for #4'
+					step: 1,
+					tooltip
 				},
 				{
 					id: 'state',
@@ -209,14 +223,14 @@ export default class FeedbacksLivepremier4 extends Feedbacks  {
 				},
 			],
 			callback: (feedback) => {
-				const gpi = feedback.options.gpi % 2
+				const gpi = Math.floor((feedback.options.gpi-1) % 2 +1)
 				const device = Math.ceil(feedback.options.gpi / 2)
 				const val = feedback.options.state === 1 ? true : false
 				return (
 					this.state.get([
 						'DEVICE',
 						'device',
-						'gpio',
+						'gpios',
 						'deviceList', 'items', device.toString(),
 						'gpiList', 'items', gpi.toString(),
 						'status',

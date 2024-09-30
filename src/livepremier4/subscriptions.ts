@@ -27,8 +27,6 @@ export default class SubscriptionsLivepremier4 extends Subscriptions {
 		'selectedPreset',
 		'inputFreeze',
 		'timerState',
-		'gpioOut',
-		'gpioIn',
 		'screenTransitionTime',
 		'screenMemoryLabel',
 		'masterMemory',
@@ -46,6 +44,8 @@ export default class SubscriptionsLivepremier4 extends Subscriptions {
 		'layerCountChange',
 		'memoryColorChange',
 		// LivePremier
+		'gpioOut',
+		'gpioIn',
 		'presetToggle',
 		'screenMemoryChange',
 		'screenMemoryModifiedChange',
@@ -84,14 +84,14 @@ export default class SubscriptionsLivepremier4 extends Subscriptions {
 
 	get gpioOut():Subscription {
 		return {
-			pat: 'device/gpio/deviceList/items/\\d+/gpoList/items/\\d/status/pp/state',
+			pat: 'device/gpios/deviceList/items/\\d+/gpoList/items/\\d/status/pp/state',
 			fbk: 'deviceGpioOut',
 		}
 	}
 
 	get gpioIn():Subscription {
 		return {
-			pat: 'device/gpio/deviceList/items/\\d+/gpiList/items/\\d/status/pp/state',
+			pat: 'device/gpios/deviceList/items/\\d+/gpiList/items/\\d/status/pp/state',
 			fbk: 'deviceGpioIn',
 		}
 	}

@@ -73,6 +73,7 @@ export default class ActionsLivepremier extends Actions {
 		'deviceTestpatterns',
 		'cstawjcmd',
 		'cstawjgetcmd',
+		'deviceGPO',
 		'devicePower'
 	]
 	
@@ -827,6 +828,63 @@ export default class ActionsLivepremier extends Actions {
 
 		return this.deviceTestpatterns_common(deviceTestpatternsOptions)
 
-	}	
+	}
+
+	/**
+	 * MARK: Adjust GPO
+	 * LivePremier
+	 */
+	get deviceGPO() {
+		type DeviceGPO = {gpo: number, action: number}
+		
+		const deviceGPO: AWJaction<DeviceGPO> = {
+			name: 'Set GPO',
+			options: [
+				{
+					id: 'gpo',
+					type: 'number',
+					label: 'GPO',
+					min: 1,
+					max: 8,
+					range: true,
+					default: 1,
+					step: 1,
+				},
+				{
+					id: 'action',
+					type: 'dropdown',
+					label: 'Action',
+					choices: [
+						{ id: 0, label: 'Turn off' },
+						{ id: 1, label: 'Turn on' },
+						{ id: 2, label: 'Toggle' },
+					],
+					default: 2,
+				},
+			],
+			callback: (action) => {
+				const device = Math.ceil(action.options.gpo / 8 )
+				if (device > 1) return
+				const gpo = Math.floor(action.options.gpo).toString()
+				const path = [
+						'device',
+						'gpio',
+						'gpoList',
+						'items',
+						gpo
+					]
+				let newstate = false
+				if (action.options.action === 1) {
+					newstate = true
+				} else if (action.options.action === 2) {
+					if (this.state.get(['DEVICE', ...path, 'status', 'pp', 'state']) === false) newstate = true
+				}
+				this.connection.sendWSmessage([...path, 'control', 'pp', 'activate'], newstate)
+			},
+		}
+
+		return deviceGPO
+	}
+
 
 }
