@@ -2809,7 +2809,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 
 		return cstawjgetcmd
 	}
-	
+
 
 	/**
 	 * MARK: Device Power
@@ -2834,7 +2834,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				},
 			],
 			callback: (action) => {
-				const path = 'device/system/shutdown/cmd/pp/xRequest'
+				const path = ['device','system','shutdown','cmd','pp','xRequest']
 
 				if (action.options.action === 'on') {
 					const mac = this.instance.config.macaddress.split(/[,:-_.\s]/).join('')
@@ -2845,10 +2845,10 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					// this.device.sendWSmessage(path + 'pp/wakeOnLan', true)
 					// this.device.sendWSmessage(path + 'pp/xRequest', false)
 					// this.device.sendWSmessage(path + 'pp/xRequest', true)
-					this.connection.sendWSmessage(path, 'SHUTDOWN')
+					this.connection.sendWSmessage(path, 'NONE', 'SHUTDOWN')
 				}
 				if (action.options.action === 'reboot') {
-					this.connection.sendWSmessage(path, 'REBOOT')
+					this.connection.sendWSmessage(path, 'NONE', 'REBOOT')
 				}
 			}
 		}

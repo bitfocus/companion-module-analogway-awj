@@ -21,6 +21,11 @@ Starting with release 2.4.0 this module supports also software version 4.x of th
 
 ## :rocket: Version history:
 
+### 2.4.3 (2024-10-18)
+* Bugfix: global update was not working on LivePremier v4 having some impact on custom commands and set source in layer
+* Bugfix: screen memory feedback was not working for Auxscreens on LivePremier v4
+* Chore: reformatting of command for Power Off for LivePremier and LivePremier v4
+
 ### 2.4.2 (2024-09-30)
 * Bugfix: Set GPO action was missing on LivePremier and LivePremier v4. 
 * Bugfix: GPO state feedback was not tracking updates on LivePremier v4

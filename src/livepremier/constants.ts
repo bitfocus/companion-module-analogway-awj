@@ -20,8 +20,7 @@ export default class ConstantsLivepremier extends Constants {
 
     static readonly macAddressPath = 'DEVICE/device/system/network/adapter/pp/macAddress'
 
-    static readonly xUpdatePath = '"device","screenGroupList","control","pp","xUpdate"' // livepremier + livepremier4
-    // static readonly xUpdatePath = '""device","preset","control","pp","xUpdate"' // midra
+    static readonly xUpdatePath = '"device","screenGroupList","control","pp","xUpdate"' // livepremier
 
     static readonly screenGroupPath = ['device', 'screenGroupList']
     static readonly auxGroupPath = ['device', 'screenGroupList']

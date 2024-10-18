@@ -27,7 +27,6 @@ export default class ConstantsMidra extends Constants {
 
     static override readonly macAddressPath = 'DEVICE/device/system/network/adapter/pp/macAddress'
 
-    // static override readonly xUpdatePath = '"device","screenGroupList","control","pp","xUpdate"' // livepremier + livepremier4
     static override readonly xUpdatePath = '"device","preset","control","pp","xUpdate"' // midra
 
     static override readonly screenGroupPath = ['device', 'transition', 'screenList']

@@ -80,7 +80,7 @@ export default class FeedbacksLivepremier4 extends Feedbacks  {
 				for (const preset of presets) {
 					const propPath = [
 							'DEVICE', 'device', 'presetBank', 'status', 'presetId',
-							screeninfo.prefixverylong + 'List',
+							screeninfo.isAux ? 'auxiliaryList' : 'screenList',
 							'items',
 							screeninfo.platformId,
 							'presetList',
