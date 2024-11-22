@@ -300,12 +300,16 @@ class AWJconnection {
 					this.websocket.on('message', (data, isBinary) => {
 						// console.log('debug', 'incoming WS message '+ data.toString().substring(0, 400))
 						if (
-							isBinary != true &&
-							data.toString().match(/"op":"replace","path":"\/system\/status\/current(Device)?Time","value":/) === null &&
-							data.toString().match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
-							data.toString().match(/"device","system",("deviceList","items","[1-4]",)?"temperature",/) === null
+							isBinary != true
 						) {
-							// console.log('debug', 'incoming WS message '+ data.toString().substring(0, 400))
+							// if (
+							// 	data.toString().match(/"op":"replace","path":"\/system\/status\/current(Device)?Time","value":/) === null &&
+							// 	data.toString().match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
+							// 	data.toString().match(/"device","system",("deviceList","items","[1-4]",)?"temperature",/) === null &&
+							// 	data.toString().match(/"device","timerList","items","TIMER_\d+","status","pp","value"/) === null
+							// ) {
+							// 	console.log('debug', 'incoming WS message '+ data.toString().substring(0, 400))
+							// }
 							this.instance.state.apply(JSON.parse(data.toString()))
 						}
 					})

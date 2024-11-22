@@ -53,6 +53,8 @@ export default class SubscriptionsLivepremier4 extends Subscriptions {
 		'screenMemoryLabel',
 		'inputLabel',
 		'shutdown',
+		//LivePremier4
+		'timerValue',
 		// Midra
 		// 'presetToggle',
 		// 'screenPreset',
@@ -305,6 +307,23 @@ export default class SubscriptionsLivepremier4 extends Subscriptions {
 		return {
 			pat: 'device/screenAuxGroupList/items/S1/control/pp/copyMode',
 			fbk: 'presetToggle'
+		}
+	}
+
+	get timerValue():Subscription {
+		return {
+			pat: 'DEVICE/device/timerList/items/TIMER_\\d+/status/pp/value',
+			ini: Array.from({ length: this.constants.maxTimers }, (_, i) => (i + 1).toString()),
+			fun: (path, _value) => {
+				if (!path) return false
+				const timer = ( Array.isArray(path) ? path[4] : path.split('/')[4] ).replaceAll(/\D/g, '')
+				const time = this.instance.state.get(path)
+
+				this.instance.setVariableValues({[`timer${timer}`]: time})
+
+
+				return false
+			}
 		}
 	}
 

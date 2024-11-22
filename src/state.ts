@@ -142,7 +142,15 @@ class StateMachine {
 		if (data.hasOwnProperty('path') && data.hasOwnProperty('value')) {
 			this.set(data.path, data.value, this.state[channel])
 			feedbacks = this.instance.subscriptions.checkForAction(this.concat(channel, data.path), data.value)
-			if (channel === 'DEVICE' && !data.path.toString().endsWith(',pp,xUpdate')) {
+			if (
+				channel === 'DEVICE' && 
+				!data.path.toString().endsWith(',pp,xUpdate') && 
+				data.toString().match(/"op":"replace","path":"\/system\/status\/current(Device)?Time","value":/) === null &&
+				data.toString().match(/"op":"(add|remove)","path":"\/system\/temperature\/externalTempHistory\//) === null &&
+				JSON.stringify(data).match(/"device","system",("deviceList","items","\d+",)?"temperature",/) === null &&
+				data.path.toString().match(/device,timerList,items,TIMER_\d+,status,pp,value/) === null
+			) {
+				console.log('last msg', JSON.stringify(data))
 				this.storeLastMsg({ path: data.path, value: data.value })
 				if (this.instance.isRecording && JSON.stringify(data.value).length <= 132) {
 					const newoptions = { xUpdate: false }

@@ -137,4 +137,87 @@ export default class PresetsLivepremier4 extends Presets {
 		return presets
 	}
 
+	// MARK: Timers
+	get timers() {
+		const presets = super.timers
+
+		for (const timer of this.choices.getTimerChoices()) {
+			const timerNum = timer.label.replace(/\D/g, '')
+			presets['Time ' + timer.label] = {
+				type: 'button',
+				name: 'Time' + timer.label,
+				category: 'Timer',
+				style: {
+					text: `\`Timer ${timerNum} \\n\${msToTimestamp($(AWJdevice:timer${timerNum}), 'hh:mm:ss')}\``,
+					textExpression: true,
+					size: '14',
+					color: this.config.color_bright,
+					bgcolor: this.config.color_dark,
+				},
+				steps: [
+					{
+						down: [
+							{
+								actionId: 'deviceTimerTransport',
+								options: {
+									timer: timer.id,
+									cmd: 'tgl_start_stop',
+								},
+							},
+						],
+						up: [],
+					},
+				],
+				feedbacks: [
+					{
+						feedbackId: 'timerState',
+						options: {
+							timer: timer.id,
+							state: 'RUNNING'
+						},
+						style: {
+							color: this.inverseColorBW(this.config.color_green),
+							bgcolor: this.config.color_green,
+						},
+					},
+					{
+						feedbackId: 'timerState',
+						options: {
+							timer: timer.id,
+							state: 'PAUSED'
+						},
+						style: {
+							color: this.inverseColorBW(this.config.color_greendark),
+							bgcolor: this.config.color_greendark,
+						},
+					},
+					{
+						feedbackId: 'timerState',
+						options: {
+							timer: timer.id,
+							state: 'IDLE'
+						},
+						style: {
+							color: this.inverseColorBW(this.config.color_greendark),
+							bgcolor: this.config.color_greendark,
+						},
+					},
+					{
+						feedbackId: 'timerState',
+						options: {
+							timer: timer.id,
+							state: 'ELAPSED'
+						},
+						style: {
+							bgcolor: this.config.color_red,
+							color: this.config.color_redgrey,
+						},
+					},
+				],
+			}
+		}
+
+		return presets
+	}
+
 }

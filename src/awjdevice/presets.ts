@@ -1930,7 +1930,7 @@ export default class Presets {
 				category: 'Timer',
 				style: {
 					text: timer.label.replace(/\D/g, '') + '⏯',
-					size: '44',
+					size: '30',
 					color: this.config.color_bright,
 					bgcolor: this.config.color_dark,
 				},
@@ -1998,13 +1998,15 @@ export default class Presets {
 						},
 					},
 				],
-			},
-			{
-				label: 'Stop ' + timer.label,
+			}
+
+			presets['Stop ' + timer.label] = {
+				type: 'button',
+				name: 'Stop ' + timer.label,
 				category: 'Timer',
 				style: {
 					text: timer.label.replace(/\D/g, '') + ' ⏹',
-					size: '44',
+					size: '30',
 					color: this.config.color_bright,
 					bgcolor: this.config.color_dark,
 				},

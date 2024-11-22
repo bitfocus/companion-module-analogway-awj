@@ -1,6 +1,6 @@
 {
 	"name": "analogway-awj",
-	"version": "2.4.3",
+	"version": "2.5.0",
 	"main": "dist/src/index.js",
 	"scripts": {
 		"prepare": "husky install",
@@ -34,7 +34,7 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"@companion-module/base": "~1.7.0",
+		"@companion-module/base": "~1.9.0",
 		"@nx-js/compiler-util": "^2.0.0",
 		"@tsconfig/node18": "^1.0.1",
 		"dgram": "^1.0.1",

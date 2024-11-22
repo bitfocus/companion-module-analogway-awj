@@ -21,6 +21,16 @@ Starting with release 2.4.0 this module supports also software version 4.x of th
 
 ## :rocket: Version history:
 
+### 2.5.0 (2024-11-22)
+* Feature: add variables for current time of timers (only LivePremier >= v4.3)
+* Feature: don't block access to device temperature path any more
+* Bugfix: take of multiple screens would fail for the second or higher screens when the preset was not at DOWN
+* Bugfix: repair of stop timer presets
+* Bugfix: update of timer times are not recorded by action recorder any more
+* Bugfix: update of timer times are not considered by learn button any more
+* Chore: bump @companion-module/base from 1.7.0 to 1.9.0, the module will now require at least Companion v3.4
+* Chore: bump cross-spawn from 7.0.3 to 7.0.6
+
 ### 2.4.3 (2024-10-18)
 * Bugfix: global update was not working on LivePremier v4 having some impact on custom commands and set source in layer
 * Bugfix: screen memory feedback was not working for Auxscreens on LivePremier v4

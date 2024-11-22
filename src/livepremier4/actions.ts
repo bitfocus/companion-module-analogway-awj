@@ -90,10 +90,15 @@ export default class ActionsLivepremier4 extends Actions {
 	get deviceTakeScreen() {
 		const deviceTakeScreen = super.deviceTakeScreen
 		deviceTakeScreen.callback = (action) => {
-			let dir = 'xTakeUp'
+			let dir = ''
 			for (const screen of this.choices.getChosenScreenAuxes(action.options.screens)) {
-				if (this.choices.getPreset(screen, 'pgm') === 'B') {
+				let pgm = this.choices.getPreset(screen, 'pgm')
+				if (pgm === 'A') {
+					dir = 'xTakeUp'
+				} else if (pgm === 'B') {
 					dir = 'xTakeDown'
+				} else {
+					return
 				}
 				this.connection.sendWSmessage(['device', 'screenAuxGroupList', 'items', screen, 'control', 'pp', dir], true)
 			}

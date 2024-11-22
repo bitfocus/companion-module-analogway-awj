@@ -579,7 +579,7 @@ export default class Choices {
 	 * Returns the actual preset (A or B) representing program or preview of the given input or of the selection
 	 * @param screen S1-S... or A1-A...
 	 * @param preset can be A or B or PGM or PVW or 'sel', A and B are returned unchanged
-	 * @returns A or B, whichever is the actual preset for program or preview, during fades the preset is changed only at the end of the fade
+	 * @returns A or B or '', whichever is the actual preset for program or preview, during fades the preset is changed only at the end of the fade
 	 */
 	public getPreset(screen: string, preset: string): string {
 		if (screen.match(/^S|A\d+$/) === null) return ''
