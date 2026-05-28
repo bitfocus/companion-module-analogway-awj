@@ -41,7 +41,7 @@
 		"got": "13",
 		"ky": "^1.2.3",
 		"urijs": "^1.19.11",
-		"ws": "^8.17.1"
+		"ws": "^8.20.1"
 	},
 	"devDependencies": {
 		"@companion-module/tools": "^1.5.2",
