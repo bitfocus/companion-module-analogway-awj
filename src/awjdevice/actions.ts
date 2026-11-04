@@ -3,6 +3,7 @@ import {AWJinstance} from '../index.js'
 import Choices, { Choicemeta } from './choices.js'
 import {
 	CompanionActionDefinitions,
+	CompanionActionContext,
 	CompanionActionEvent,
 	CompanionInputFieldDropdown,
 	DropdownChoice,
@@ -25,7 +26,7 @@ type AWJaction<T> = {
 	description?: string
 	tooltip?: string,
 	options: SomeAWJactionInputfield<T>[]
-	callback?: (action: ActionEvent<T>) => void
+	callback?: (action: ActionEvent<T>, context: CompanionActionContext) => void
 	subscribe?: (action: ActionEvent<T>) => void
 	unsubscribe?: (action: ActionEvent<T>) => void
 	learn?: (
@@ -160,6 +161,7 @@ export default class Actions {
 				},
 			],
 			callback: () => {
+				// Overridden by the device implementation.
 			},
 		}
 
@@ -304,7 +306,7 @@ export default class Actions {
 					default: true,
 				},
 			],
-			callback: () => {},
+			callback: () => { /* Overridden by the device implementation. */ },
 		}
 	return deviceAuxMemory
 	}
@@ -428,7 +430,7 @@ export default class Actions {
 					default: ['sel'],
 				},
 			],
-			callback: () => {}, // override
+			callback: () => { /* Overridden by the device implementation. */ }, // override
 		}
 		return deviceTakeScreen
 	}
@@ -630,7 +632,7 @@ export default class Actions {
 					}
 				},
 			],
-			callback: () => {},
+			callback: () => { /* Overridden by the device implementation. */ },
 		}
 
 		return deviceSelectSource
@@ -755,8 +757,8 @@ export default class Actions {
 						label: 'Layer ' + screen.id,
 						choices: [{id:'NATIVE', label: 'Background Layer'}, ...this.choices.getLayerChoices(screen.id, false)],
 						default: ['1'],
-						isVisibleData: screen.id,
-						isVisible: (options, screenId) => {
+						isVisibleData: { value: screen.id },
+						isVisible: (options, { value: screenId }) => {
 							return options.screen.includes(screenId)
 						},
 					}
@@ -778,10 +780,10 @@ export default class Actions {
 					const screeninfo = this.choices.getScreenInfo(screen)
 					for (const layer of action.options[`layer${screen}`]) {
 						let val = false
-						let path: string[] = [
+						const path: string[] = [
 							'device', 
 							screeninfo.prefixverylong + 'List', 
-							'items', screeninfo.numstr, 
+							'items', screeninfo.numstr,
 						]
 						if (layer === 'NATIVE') {
 							path.push('background', 'control', 'pp', 'freeze')
@@ -836,9 +838,9 @@ export default class Actions {
 					let val = false
 					const path = [
 						'device', 
-						 screeninfo.prefixverylong + 'List',
-						 'items', screeninfo.numstr, 
-						 'control', 'pp', 'freeze']
+						screeninfo.prefixverylong + 'List',
+						'items', screeninfo.numstr,
+						'control', 'pp', 'freeze']
 					if (action.options.mode === 1) {
 						val = true
 					} else if (action.options.mode === 2) {
@@ -1112,8 +1114,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 						tooltip: 'When using "selected layer" and screen or preset are not using "Selected", you can narrow the selection',
 						choices: [{ id: 'sel', label: 'Selected Layer(s)' }, ...this.choices.getLayerChoices(screen.id, false)],
 						default: 'sel',
-						isVisibleData: screen.id,
-						isVisible: (options: any, screenID: string) => {
+						isVisibleData: { value: screen.id },
+						isVisible: (options: any, { value: screenID }) => {
 							return options.screen === screenID
 						}
 					}
@@ -1240,8 +1242,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 
 				const [xAnchorParsed, yAnchorParsed] = await Promise.all([xAnchorPromise, yAnchorPromise])
 
-				let   xAnchor     = parseExpressionString(xAnchorParsed, context, 0)
-				let   yAnchor     = parseExpressionString(yAnchorParsed, context, 0)
+				const   xAnchor     = parseExpressionString(xAnchorParsed, context, 0)
+				const   yAnchor     = parseExpressionString(yAnchorParsed, context, 0)
 				
 				
 				newoptions.w = context.lw.toString()
@@ -1280,7 +1282,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 
 				const allLayerValues = getAllLayerValues(layers)
 				
-				for  (var i = 0; i<layers.length; i += 1) {  // (const layerIndex in layers) {
+				for  (let i = 0; i<layers.length; i += 1) {  // (const layerIndex in layers) {
 					const layer: any = layers[i]
 					const context = getLayerContext(layer, i+1 , preset, boundingBoxes, allLayerValues )
 
@@ -1455,7 +1457,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					default: 'on',
 				},
 			],
-			callback: () => {}
+			callback: () => { /* Overridden by the device implementation. */ }
 		}
 
 		return devicePresetToggle
@@ -1502,7 +1504,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					default: 'selectExclusive',
 				},
 			],
-			callback: () => {},
+			callback: () => { /* Overridden by the device implementation. */ },
 		}
 
 		return remoteMultiviewerSelectWidget
@@ -1532,7 +1534,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					default: this.choices.getWidgetSourceChoices()[0]?.id,
 				},
 			],
-			callback: () => {},
+			callback: () => { /* Overridden by the device implementation. */ },
 		}
 
 		return deviceMultiviewerSource
@@ -1962,8 +1964,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				label: 'Layer ' + screen.id,
 				choices: layerChoices,
 				default: [defaultChoice],
-				isVisibleData: screen.id,
-				isVisible: (options, screenId) => {
+				isVisibleData: { value: screen.id },
+				isVisible: (options, { value: screenId }) => {
 					return options.method.startsWith('spec') && options.screen.includes(screenId)
 				},
 			})
@@ -2141,8 +2143,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					id: 'device',
 					choices: this.choices.getLinkedDevicesChoices(),
 					default: '1',
-					isVisibleData: this.choices.getLinkedDevicesChoices(),
-					isVisible: (_opt, choices) => {return choices.length > 1},
+					isVisibleData: { value: this.choices.getLinkedDevicesChoices() },
+					isVisible: (_opt, { value: choices }) => {return choices.length > 1},
 					minChoicesForSearch: 3,
 				},
 				{
@@ -2195,8 +2197,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					id: 'device',
 					choices: this.choices.getLinkedDevicesChoices(),
 					default: 1,
-					isVisibleData: this.choices.getLinkedDevicesChoices(),
-					isVisible: (_opt, choices) => {return choices.length > 1},
+					isVisibleData: { value: this.choices.getLinkedDevicesChoices() },
+					isVisible: (_opt, { value: choices }) => {return choices.length > 1},
 					minChoicesForSearch: 3,
 				},
 				{
@@ -2293,7 +2295,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					default: `rgba(${splitRgb(this.config.color_dark).r},${splitRgb(this.config.color_dark).g},${splitRgb(this.config.color_dark).b},0.7)`,
 				},
 			],
-			callback: () => {},
+			callback: () => { /* Overridden by the device implementation. */ },
 		}
 
 		return deviceTimerSetup
@@ -2764,7 +2766,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					label: 'Variable to store type'
 				},
 			],
-			callback: async (action) => {
+			callback: async (action, context) => {
 				let value: string | number | boolean | object= 'undefined'
 				let type = 'undefined'
 				try {
@@ -2784,10 +2786,10 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 				if (typeof value !== 'string') value = value.toString()
 
 				if (typeof action.options.variableValue === 'string') {
-					this.instance.setCustomVariableValue(action.options.variableValue, value)
+					context.setCustomVariableValue(action.options.variableValue, value)
 				}
 				if (typeof action.options.variableType === 'string') {
-					this.instance.setCustomVariableValue(action.options.variableType, type)
+					context.setCustomVariableValue(action.options.variableType, type)
 				}
 			},
 			learn: (action) => {

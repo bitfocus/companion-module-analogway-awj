@@ -252,6 +252,8 @@ export default class PresetsMidra extends Presets {
 	get chooseInput() {
 		const presets: CompanionPresetDefinitions = {}
 		const ilabel = this.instance.label
+		// The nested preset builder retains this instance.
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const self = this
 
 		function makeInputSelectionPreset(input: Dropdown<string>, layertypes: string[], layerdescription: string) {

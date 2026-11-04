@@ -1,3 +1,4 @@
+import type { CompanionActionContext } from '@companion-module/base'
 import {AWJinstance} from '../index.js'
 
 import {
@@ -16,7 +17,7 @@ type AWJaction<T> = {
 	description?: string
 	tooltip?: string,
 	options: SomeAWJactionInputfield<T>[]
-	callback?: (action: ActionEvent<T>) => void
+	callback?: (action: ActionEvent<T>, context: CompanionActionContext) => void
 	subscribe?: (action: ActionEvent<T>) => void
 	unsubscribe?: (action: ActionEvent<T>) => void
 	learn?: (
@@ -484,8 +485,8 @@ export default class ActionsMidra extends Actions {
 				label: 'Layer ' + screen.id,
 				choices: this.choices.getLayerChoices(screen.id),
 				default: ['1'],
-				isVisibleData: screen.id,
-				isVisible: (options, screenId) => {
+				isVisibleData: { value: screen.id },
+				isVisible: (options, { value: screenId }) => {
 					return options.method === 'spec' && options.screen.includes(screenId)	
 				},
 			})
@@ -570,7 +571,7 @@ export default class ActionsMidra extends Actions {
 		const deviceInputKeying = super.deviceInputKeying
 
 		deviceInputKeying.callback = (action) => {
-			let input = action.options.input.replace('IN_', 'INPUT_')
+			const input = action.options.input.replace('IN_', 'INPUT_')
 			this.connection.sendWSmessage(
 				[
 					'device',
@@ -648,8 +649,8 @@ export default class ActionsMidra extends Actions {
 							label: 'Plug',
 							choices: plugs,
 							default: plugs[0].id,
-							isVisibleData: input.id,
-							isVisible: (options, inputId: string) => {return options.input == inputId}
+							isVisibleData: { value: input.id },
+							isVisible: (options, { value: inputId }) => {return options.input == inputId}
 						}
 					}
 				),

@@ -1,3 +1,4 @@
+import type { CompanionActionContext } from '@companion-module/base'
 import {AWJinstance} from '../index.js'
 
 import {
@@ -16,7 +17,7 @@ type AWJaction<T> = {
 	description?: string
 	tooltip?: string,
 	options: SomeAWJactionInputfield<T>[]
-	callback?: (action: ActionEvent<T>) => void
+	callback?: (action: ActionEvent<T>, context: CompanionActionContext) => void
 	subscribe?: (action: ActionEvent<T>) => void
 	unsubscribe?: (action: ActionEvent<T>) => void
 	learn?: (
@@ -92,7 +93,7 @@ export default class ActionsLivepremier4 extends Actions {
 		deviceTakeScreen.callback = (action) => {
 			let dir = ''
 			for (const screen of this.choices.getChosenScreenAuxes(action.options.screens)) {
-				let pgm = this.choices.getPreset(screen, 'pgm')
+				const pgm = this.choices.getPreset(screen, 'pgm')
 				if (pgm === 'A') {
 					dir = 'xTakeUp'
 				} else if (pgm === 'B') {
@@ -297,8 +298,8 @@ export default class ActionsLivepremier4 extends Actions {
 				label: 'Layer ' + screen.id,
 				choices: this.choices.getLayerChoices(screen.id, isScreen),
 				default: ['1'],
-				isVisibleData: screen.id,
-				isVisible: (options, screenId) => {
+				isVisibleData: { value: screen.id },
+				isVisible: (options, { value: screenId }) => {
 					return options.method === 'spec' && options.screen.includes(screenId)
 				},
 			})
@@ -583,8 +584,8 @@ export default class ActionsLivepremier4 extends Actions {
 					id: 'device',
 					choices: this.choices.getLinkedDevicesChoices(),
 					default: 1,
-					isVisibleData: devices,
-					isVisible: (_opt, devices) => {return devices > 1},
+					isVisibleData: { value: devices },
+					isVisible: (_opt, { value: devices }) => {return devices > 1},
 					minChoicesForSearch: 3,
 				},
 				...audioOutputChoices.map((choices, i) => {
@@ -595,8 +596,8 @@ export default class ActionsLivepremier4 extends Actions {
 						choices: choices,
 						default: choices[0]?.id,
 						minChoicesForSearch: 0,
-						isVisibleData: i + 1,
-						isVisible: (opt, device) => {return opt.device == device}
+						isVisibleData: { value: i + 1 },
+						isVisible: (opt, { value: device }) => {return opt.device == device}
 					}
 				}),
 				...audioInputChoices.map((choices, i) => {
@@ -607,8 +608,8 @@ export default class ActionsLivepremier4 extends Actions {
 						choices: choices,
 						default: choices[0]?.id,
 						minChoicesForSearch: 0,
-						isVisibleData: i + 1,
-						isVisible: (opt, device) => {return opt.device == device}
+						isVisibleData: { value: i + 1 },
+						isVisible: (opt, { value: device }) => {return opt.device == device}
 					}
 				}),
 				{
@@ -677,8 +678,8 @@ export default class ActionsLivepremier4 extends Actions {
 					id: 'device',
 					choices: this.choices.getLinkedDevicesChoices(),
 					default: 1,
-					isVisibleData: devices,
-					isVisible: (_opt, devices) => {return devices > 1},
+					isVisibleData: { value: devices },
+					isVisible: (_opt, { value: devices }) => {return devices > 1},
 					minChoicesForSearch: 3,
 				},
 				...audioOutputChoices.map((choices, i) => {
@@ -689,8 +690,8 @@ export default class ActionsLivepremier4 extends Actions {
 						choices: choices,
 						default: choices[0]?.id,
 						minChoicesForSearch: 0,
-						isVisibleData: i + 1,
-						isVisible: (opt, device) => {return opt.device == device}
+						isVisibleData: { value: i + 1 },
+						isVisible: (opt, { value: device }) => {return opt.device == device}
 					}
 				}),
 				...audioInputChoices.map((choices, i) => {
@@ -702,8 +703,8 @@ export default class ActionsLivepremier4 extends Actions {
 						default: ['NONE'],
 						minChoicesForSearch: 0,
 						minSelection: 0,
-						isVisibleData: i + 1,
-						isVisible: (opt, device) => {return opt.device == device}
+						isVisibleData: { value: i + 1 },
+						isVisible: (opt, { value: device }) => {return opt.device == device}
 					}
 				}),
 			],

@@ -1,3 +1,4 @@
+import { refreshFeedbackSubscriptions } from '../feedback-subscriptions.js'
 import { Config } from '../config.js'
 import {AWJinstance, regexAWJpath} from '../index.js'
 import { StateMachine } from '../state.js'
@@ -76,7 +77,7 @@ export default class Feedbacks {
             this.feedbacksToUse.map((key) => [key, this[key]])
         )
         
-        return feedbackDefinitions
+        return refreshFeedbackSubscriptions(feedbackDefinitions)
 	}
 
 	// MARK: syncselection
@@ -807,8 +808,8 @@ export default class Feedbacks {
 								{id:'NATIVE', label: 'Background Layer'}
 							],
 							default: '1',
-							isVisibleData: screen.id,
-							isVisible: (options: any, screenID: string) => {
+							isVisibleData: { value: screen.id },
+							isVisible: (options: any, { value: screenID }) => {
 								return options.screen === screenID
 							}
 						}

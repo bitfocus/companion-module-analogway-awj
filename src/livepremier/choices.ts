@@ -207,7 +207,7 @@ export default class ChoicesLivepremier extends Choices {
 			return ret
 		} else if (typeof param === 'string') {
 			if (bkg === undefined || bkg === true) ret.push({ id: 'NATIVE', label: 'Background', longname: 'BKG' })
-			let layercount = this.state.get(`DEVICE/device/screenList/items/${param}/status/pp/layerCount`) ?? 1
+			const layercount = this.state.get(`DEVICE/device/screenList/items/${param}/status/pp/layerCount`) ?? 1
 			for (let i = 1; i <= layercount; i += 1) {
 				ret.push({ id: `${i}`, label: `Layer ${i}`, longname:`L${i}` })
 			}
