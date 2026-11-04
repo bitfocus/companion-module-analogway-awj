@@ -161,7 +161,6 @@ export default class Actions {
 				},
 			],
 			callback: () => {
-				// Overridden by the device implementation.
 			},
 		}
 
@@ -306,7 +305,7 @@ export default class Actions {
 					default: true,
 				},
 			],
-			callback: () => { /* Overridden by the device implementation. */ },
+			callback: () => {},
 		}
 	return deviceAuxMemory
 	}
@@ -430,7 +429,7 @@ export default class Actions {
 					default: ['sel'],
 				},
 			],
-			callback: () => { /* Overridden by the device implementation. */ }, // override
+			callback: () => {}, // override
 		}
 		return deviceTakeScreen
 	}
@@ -632,7 +631,7 @@ export default class Actions {
 					}
 				},
 			],
-			callback: () => { /* Overridden by the device implementation. */ },
+			callback: () => {},
 		}
 
 		return deviceSelectSource
@@ -780,7 +779,7 @@ export default class Actions {
 					const screeninfo = this.choices.getScreenInfo(screen)
 					for (const layer of action.options[`layer${screen}`]) {
 						let val = false
-						const path: string[] = [
+						let path: string[] = [
 							'device', 
 							screeninfo.prefixverylong + 'List', 
 							'items', screeninfo.numstr,
@@ -1242,8 +1241,8 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 
 				const [xAnchorParsed, yAnchorParsed] = await Promise.all([xAnchorPromise, yAnchorPromise])
 
-				const   xAnchor     = parseExpressionString(xAnchorParsed, context, 0)
-				const   yAnchor     = parseExpressionString(yAnchorParsed, context, 0)
+				let   xAnchor     = parseExpressionString(xAnchorParsed, context, 0)
+				let   yAnchor     = parseExpressionString(yAnchorParsed, context, 0)
 				
 				
 				newoptions.w = context.lw.toString()
@@ -1457,7 +1456,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					default: 'on',
 				},
 			],
-			callback: () => { /* Overridden by the device implementation. */ }
+			callback: () => {}
 		}
 
 		return devicePresetToggle
@@ -1504,7 +1503,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					default: 'selectExclusive',
 				},
 			],
-			callback: () => { /* Overridden by the device implementation. */ },
+			callback: () => {},
 		}
 
 		return remoteMultiviewerSelectWidget
@@ -1534,7 +1533,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					default: this.choices.getWidgetSourceChoices()[0]?.id,
 				},
 			],
-			callback: () => { /* Overridden by the device implementation. */ },
+			callback: () => {},
 		}
 
 		return deviceMultiviewerSource
@@ -2295,7 +2294,7 @@ sw: screen width, sh: screen height, sa: screen aspect ratio, layer: layer name,
 					default: `rgba(${splitRgb(this.config.color_dark).r},${splitRgb(this.config.color_dark).g},${splitRgb(this.config.color_dark).b},0.7)`,
 				},
 			],
-			callback: () => { /* Overridden by the device implementation. */ },
+			callback: () => {},
 		}
 
 		return deviceTimerSetup

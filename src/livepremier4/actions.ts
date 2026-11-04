@@ -93,7 +93,7 @@ export default class ActionsLivepremier4 extends Actions {
 		deviceTakeScreen.callback = (action) => {
 			let dir = ''
 			for (const screen of this.choices.getChosenScreenAuxes(action.options.screens)) {
-				const pgm = this.choices.getPreset(screen, 'pgm')
+				let pgm = this.choices.getPreset(screen, 'pgm')
 				if (pgm === 'A') {
 					dir = 'xTakeUp'
 				} else if (pgm === 'B') {

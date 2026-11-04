@@ -569,7 +569,7 @@ export default class Subscriptions {
 			}
 			return false
 		})
-		const ret: string[] = []
+		let ret: string[] = []
 		subscriptionlist.forEach((subscription) => {
 			// console.log('found subscription', subscription)
 			const subscriptionobj = subscriptions[subscription]
