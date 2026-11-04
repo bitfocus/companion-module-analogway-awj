@@ -209,7 +209,7 @@ export default class ChoicesLivepremier4 extends Choices {
 			if (bkg === undefined || bkg === true) ret.push({ id: 'NATIVE', label: 'Background', longname: 'BKG' })
 			const screeninfo = this.getScreenInfo(param)
 			const screenlist = screeninfo.isAux ? 'auxiliaryList' : 'screenList'
-			let layercount = this.state.get(`DEVICE/device/${screenlist}/items/${screeninfo.id}/status/pp/layerCount`) ?? 1
+			const layercount = this.state.get(`DEVICE/device/${screenlist}/items/${screeninfo.id}/status/pp/layerCount`) ?? 1
 			for (let i = 1; i <= layercount; i += 1) {
 				ret.push({ id: `${i}`, label: `Layer ${i}`, longname:`L${i}` })
 			}

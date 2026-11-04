@@ -324,7 +324,7 @@ class AWJconnection {
 					// Password required
 					this.instance.updateStatus(InstanceStatus.Connecting, `Logging in`)
 					try {
-						let res = await ky(`${urlObj.protocol()}://${urlObj.host()}/auth/login`, {
+						const res = await ky(`${urlObj.protocol()}://${urlObj.host()}/auth/login`, {
 							method: 'post',
 							json: { password: urlObj.password() },
 							retry: 2,

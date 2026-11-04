@@ -571,7 +571,7 @@ export default class ActionsMidra extends Actions {
 		const deviceInputKeying = super.deviceInputKeying
 
 		deviceInputKeying.callback = (action) => {
-			let input = action.options.input.replace('IN_', 'INPUT_')
+			const input = action.options.input.replace('IN_', 'INPUT_')
 			this.connection.sendWSmessage(
 				[
 					'device',
@@ -602,7 +602,7 @@ export default class ActionsMidra extends Actions {
 		const deviceInputFreeze = super.deviceInputFreeze
 			
 		deviceInputFreeze.callback = (action) => {
-			let input = action.options.input.replace('IN_', 'INPUT_')
+			const input = action.options.input.replace('IN_', 'INPUT_')
 			let val = false
 			if (action.options.mode === 1) {
 				val = true
