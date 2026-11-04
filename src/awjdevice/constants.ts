@@ -3,7 +3,7 @@
  * Mainly these are paths where a feature is located in the AWJ device model.
  */
 export default class Constants {
-    constructor() {}
+	constructor() { /* Constants do not require initialization. */ }
 
     static readonly maxScreens: number = 24
     static readonly maxAuxScreens: number = 96

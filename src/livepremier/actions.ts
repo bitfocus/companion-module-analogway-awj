@@ -1,3 +1,4 @@
+import type { CompanionActionContext } from '@companion-module/base'
 import {AWJinstance} from '../index.js'
 
 import {
@@ -16,7 +17,7 @@ type AWJaction<T> = {
 	description?: string
 	tooltip?: string,
 	options: SomeAWJactionInputfield<T>[]
-	callback?: (action: ActionEvent<T>) => void
+	callback?: (action: ActionEvent<T>, context: CompanionActionContext) => void
 	subscribe?: (action: ActionEvent<T>) => void
 	unsubscribe?: (action: ActionEvent<T>) => void
 	learn?: (
@@ -280,8 +281,8 @@ export default class ActionsLivepremier extends Actions {
 				label: 'Layer ' + screen.id,
 				choices: this.choices.getLayerChoices(screen.id, isScreen),
 				default: ['1'],
-				isVisibleData: screen.id,
-				isVisible: (options, screenId) => {
+				isVisibleData: { value: screen.id },
+				isVisible: (options, { value: screenId }) => {
 					return options.method === 'spec' && options.screen.includes(screenId)
 				},
 			})

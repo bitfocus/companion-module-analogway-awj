@@ -288,7 +288,7 @@ export default class Choices {
 	}
 
 	public getScreenMemoryArray(): Choicemeta[] {
-		let bankpath = this.constants.screenMemoryPath
+		const bankpath = this.constants.screenMemoryPath
 
 		return (
 			this.state.get(this.state.concat('DEVICE', bankpath, 'itemKeys'))?.filter((mem: string) => {
